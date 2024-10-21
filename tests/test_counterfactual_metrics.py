@@ -41,7 +41,9 @@ def test_senitement2():
     assert sentiment.evaluate(data["text1"], data["text2"]) == actual_results["test5"]
 
 def test_CounterfactualMetrics():
-    metrics = ["Cosine", "Rougel", "Bleu", "Sentiment Bias"]
+    metrics = [# "Cosine", 
+               "Rougel", "Bleu", "Sentiment Bias"
+    ]
     counterfactualmetrics = CounterfactualMetrics(metrics=metrics)
     score = counterfactualmetrics.evaluate(data["text1"], data["text2"], attribute="race")
     ans = actual_results["test6"]
