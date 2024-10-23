@@ -40,11 +40,11 @@ sentence-transformers = "^2.7.0"
 scikit-learn = "^1.4.2"
 typing = "<3.10"
 tiktoken = "^0.6.0"
+langchain-openai = "^0.1.6"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "3.7.1"
 ruff = "^0.4.8"
-langchain-openai = "^0.1.6"
 
 [tool.ruff.lint]
 extend-select = ["I"] # lets Ruff catch and fix unsorted imports
