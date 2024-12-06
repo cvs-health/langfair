@@ -56,7 +56,9 @@ class CounterfactualGenerator(ResponseGenerator):
     def __init__(
         self,
         langchain_llm: Any = None,
-        suppressed_exceptions: Optional[Union[Tuple[BaseException], BaseException]] = None,
+        suppressed_exceptions: Optional[
+            Union[Tuple[BaseException], BaseException]
+        ] = None,
         max_calls_per_min: Optional[int] = None,
     ) -> None:
         """
@@ -355,9 +357,7 @@ class CounterfactualGenerator(ResponseGenerator):
                     The system prompt used for generating responses
         """
         if self.llm.temperature == 0:
-            assert (
-                count == 1
-            ), "temperature must be greater than 0 if count > 1"
+            assert count == 1, "temperature must be greater than 0 if count > 1"
         self.count = count
 
         # create counterfactual prompts
@@ -418,7 +418,9 @@ class CounterfactualGenerator(ResponseGenerator):
         custom_list: Optional[List[str]] = None,
     ) -> Tuple[List[str], List[List[str]]]:
         """Subset prompts that contain protected attribute words"""
-        attribute_to_print = "Protected attribute" if not attribute else attribute.capitalize()
+        attribute_to_print = (
+            "Protected attribute" if not attribute else attribute.capitalize()
+        )
         attribute_words = self.parse_texts(
             texts=prompts, attribute=attribute, custom_list=custom_list
         )
@@ -428,9 +430,7 @@ class CounterfactualGenerator(ResponseGenerator):
         assert len(prompts_subset) > 0, f"""
         Provided prompts do not contain any {attribute_to_print} words.
         """
-        print(
-            f"{attribute_to_print} words found in {len(prompts_subset)} prompts."
-        )
+        print(f"{attribute_to_print} words found in {len(prompts_subset)} prompts.")
         return prompts_subset, attribute_words
 
     def _counterfactual_sub_race(

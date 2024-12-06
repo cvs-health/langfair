@@ -24,6 +24,7 @@ packages = [
     { include = "langfair" },
     { include = "langfair/metrics" },
     { include = "langfair/generator" },
+    { include = "langfair/utils"},
 ]
 exclude = ["docs", "docs_src"] # never include documentation in build
 keywords = ["LLM", "large language model", "bias", "fairness", "Responsible AI"]  # Add your keywords here
@@ -49,6 +50,9 @@ pre-commit = "3.7.1"
 ruff = "^0.4.8"
 pytest = "^8.3.3"
 pytest-asyncio = "^0.24.0"
+
+[tool.poetry.group.extra_llms.dependencies]
+langchain-mistralai = "^0.2.2"
 
 [tool.ruff.lint]
 extend-select = ["I"] # lets Ruff catch and fix unsorted imports

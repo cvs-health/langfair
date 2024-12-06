@@ -152,8 +152,10 @@ class AutoEval:
                 self.counterfactual_response_metadata = {}
                 for attribute in protected_words.keys():
                     if protected_words[attribute] > 0:
-                        cf_generation = await self.cf_generator_object.generate_responses(
-                            prompts=self.prompts, attribute=attribute
+                        cf_generation = (
+                            await self.cf_generator_object.generate_responses(
+                                prompts=self.prompts, attribute=attribute
+                            )
                         )
                         cf_response = {
                             k: v
@@ -161,9 +163,9 @@ class AutoEval:
                             if self.cf_generator_object.failure_message not in v
                         }
                         self.counterfactual_responses[attribute] = cf_response
-                        self.counterfactual_response_metadata[attribute] = cf_generation[
-                            "metadata"
-                        ]
+                        self.counterfactual_response_metadata[attribute] = (
+                            cf_generation["metadata"]
+                        )
         else:
             print(
                 "Fairness through unawareness is satisfied. Toxicity and stereotype assessments will be conducted."

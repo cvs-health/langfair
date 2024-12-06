@@ -27,7 +27,9 @@ class ResponseGenerator:
     def __init__(
         self,
         langchain_llm: Any = None,
-        suppressed_exceptions: Optional[Union[Tuple[BaseException], BaseException]] = None,
+        suppressed_exceptions: Optional[
+            Union[Tuple[BaseException], BaseException]
+        ] = None,
         max_calls_per_min: Optional[int] = None,
     ) -> None:
         """
@@ -53,8 +55,10 @@ class ResponseGenerator:
         if self._valid_exceptions(suppressed_exceptions):
             self.suppressed_exceptions = suppressed_exceptions
         else:
-            raise TypeError("suppressed_exceptions must be a subclass of BaseException or a tuple of subclasses of BaseException")
-        
+            raise TypeError(
+                "suppressed_exceptions must be a subclass of BaseException or a tuple of subclasses of BaseException"
+            )
+
         if max_calls_per_min:
             warnings.warn(
                 "max_calls_per_min is deprecated and will not be used. Use LangChain's `InMemoryRateLimiter` instead",
@@ -218,18 +222,16 @@ class ResponseGenerator:
         ), "If using custom prompts, please ensure `prompts` is of type list[str]"
         print(f"Generating {count} responses per prompt...")
         if self.llm.temperature == 0:
-            assert (
-                count == 1
-            ), "temperature must be greater than 0 if count > 1"
+            assert count == 1, "temperature must be greater than 0 if count > 1"
         self.count = count
 
         # set up langchain and generate asynchronously
         chain = self._setup_langchain(system_prompt=system_prompt)
         tasks, duplicated_prompts = self._create_tasks(chain=chain, prompts=prompts)
         responses = await asyncio.gather(*tasks)
-        non_completion_rate = len([r for r in responses if r == self.failure_message]) / len(
-            responses
-        )
+        non_completion_rate = len(
+            [r for r in responses if r == self.failure_message]
+        ) / len(responses)
 
         print("Responses successfully generated!")
         return {
@@ -283,24 +285,27 @@ class ResponseGenerator:
                 if isinstance(err, self.suppressed_exceptions):
                     return self.failure_message
             raise err
-    
+
     @staticmethod
-    def _valid_exceptions(exceptions: Union[Tuple[BaseException], BaseException]) -> bool:
-        """Returns true if exceptions is a subclass of BaseException or a tuple of  subclasses of BaseException
-        """
+    def _valid_exceptions(
+        exceptions: Union[Tuple[BaseException], BaseException],
+    ) -> bool:
+        """Returns true if exceptions is a subclass of BaseException or a tuple of  subclasses of BaseException"""
         if exceptions is None:
             return True
         else:
             try:
-                if isinstance(exceptions, tuple) and all(issubclass(item, BaseException) for item in exceptions):
+                if isinstance(exceptions, tuple) and all(
+                    issubclass(item, BaseException) for item in exceptions
+                ):
                     return True
                 elif issubclass(exceptions, BaseException):
                     return True
                 else:
                     return False
-            except:
+            except Exception:
                 return False
-            
+
     @staticmethod
     def _num_tokens_from_messages(
         messages: List[Dict[str, str]], model: str, prompt: bool = True
