@@ -1,0 +1,1069 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Counterfactual Metrics &#8212; LangFair 0.2 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!-- 
+    this give us a css class that will be invisible only if js is disabled 
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=26a4bc78f4c0ddb94549"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549" />
+
+    <script src="../_static/documentation_options.js?v=10f1778b"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'auto_examples/counterfactual_metrics_demo';</script>
+    <link rel="icon" href="../_static/langfair-logo-only.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Contributor Guide" href="../guide.html" />
+    <link rel="prev" title="Stereotype Assessment Metrics" href="stereotype_metrics_demo.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.2.0" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/langfair-logo.png" class="logo__image only-light" alt="LangFair 0.2 documentation - Home"/>
+    <img src="../_static/langfair-logo2.png" class="logo__image only-dark pst-js-only" alt="LangFair 0.2 documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../overview.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../usage.html">
+    Get Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api.html">
+    API
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Example Notebooks
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../guide.html">
+    Contributor Guide
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/cvs-health/langfair" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../overview.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../usage.html">
+    Get Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api.html">
+    API
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Example Notebooks
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../guide.html">
+    Contributor Guide
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/cvs-health/langfair" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="classification_metrics_demo.html">Classification Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="recommendation_metrics_demo.html">Recommendation Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="auto_eval_demo.html">Auto Eval Demo - Dialogue Summarization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="toxicity_metrics_demo.html">Toxicity Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="response_generator_demo.html"><code class="docutils literal notranslate"><span class="pre">ResponseGenerator</span></code> Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stereotype_metrics_demo.html">Stereotype Assessment Metrics</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Counterfactual Metrics</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Example Notebooks</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Counterfactual Metrics</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-counterfactual-metrics-demo-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code.</p>
+</div>
+<section class="sphx-glr-example-title" id="counterfactual-metrics">
+<span id="sphx-glr-auto-examples-counterfactual-metrics-demo-py"></span><span id="id1"></span><h1>Counterfactual Metrics<a class="headerlink" href="#counterfactual-metrics" title="Link to this heading">#</a></h1>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Due to the topic of bias and fairness, some users may be offended by the content contained herein, including prompts and output generated from use of the prompts.</p>
+</div>
+<section id="counterfactual-assessment-metrics">
+<h2>Counterfactual Assessment Metrics<a class="headerlink" href="#counterfactual-assessment-metrics" title="Link to this heading">#</a></h2>
+<section id="content">
+<h3>Content<a class="headerlink" href="#content" title="Link to this heading">#</a></h3>
+<ol class="arabic simple">
+<li><p><a class="reference internal" href="toxicity_metrics_demo.html#intro"><span class="std std-ref">Introduction</span></a></p></li>
+<li><p><a class="reference internal" href="stereotype_metrics_demo.html#gen-demo-dataset"><span class="std std-ref">Generate Demo Dataset</span></a></p></li>
+<li><p><a class="reference internal" href="toxicity_metrics_demo.html#assessment"><span class="std std-ref">Assessment</span></a></p>
+<ul class="simple">
+<li><p>3.1 <a class="reference internal" href="stereotype_metrics_demo.html#lazy"><span class="std std-ref">Lazy Implementation</span></a></p></li>
+<li><p>3.2 <a class="reference internal" href="stereotype_metrics_demo.html#separate"><span class="std std-ref">Separate Implementation</span></a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="toxicity_metrics_demo.html#metric-defns"><span class="std std-ref">Metric Definitions</span></a></p></li>
+</ol>
+<p>Import necessary libraries for the notebook.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Run if python-dotenv not installed</span>
+<span class="c1"># import sys</span>
+<span class="c1"># !{sys.executable} -m pip install python-dotenv</span>
+
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">combinations</span>
+
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">dotenv</span> <span class="kn">import</span> <span class="n">find_dotenv</span><span class="p">,</span> <span class="n">load_dotenv</span>
+<span class="kn">from</span> <span class="nn">langchain_core.rate_limiters</span> <span class="kn">import</span> <span class="n">InMemoryRateLimiter</span>
+
+<span class="kn">from</span> <span class="nn">langfair.generator.counterfactual</span> <span class="kn">import</span> <span class="n">CounterfactualGenerator</span>
+<span class="kn">from</span> <span class="nn">langfair.metrics.counterfactual</span> <span class="kn">import</span> <span class="n">CounterfactualMetrics</span>
+<span class="kn">from</span> <span class="nn">langfair.metrics.counterfactual.metrics</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">BleuSimilarity</span><span class="p">,</span>
+    <span class="n">CosineSimilarity</span><span class="p">,</span>
+    <span class="n">RougelSimilarity</span><span class="p">,</span>
+    <span class="n">SentimentBias</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># User to populate .env file with API credentials</span>
+<span class="n">repo_path</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[:</span><span class="o">-</span><span class="mi">3</span><span class="p">])</span>
+<span class="n">load_dotenv</span><span class="p">(</span><span class="n">find_dotenv</span><span class="p">())</span>
+
+<span class="n">API_KEY</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;API_KEY&quot;</span><span class="p">)</span>
+<span class="n">API_BASE</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;API_BASE&quot;</span><span class="p">)</span>
+<span class="n">API_TYPE</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;API_TYPE&quot;</span><span class="p">)</span>
+<span class="n">API_VERSION</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;API_VERSION&quot;</span><span class="p">)</span>
+<span class="n">MODEL_VERSION</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;MODEL_VERSION&quot;</span><span class="p">)</span>
+<span class="n">DEPLOYMENT_NAME</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;DEPLOYMENT_NAME&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="introduction">
+<span id="intro"></span><h2>1. Introduction<a class="headerlink" href="#introduction" title="Link to this heading">#</a></h2>
+<p>In many contexts, it is undesirable for a large language model (LLM) to generate substantially different output as a result of different protected attribute words contained in the input prompts, all else equal. This concept is known as (lack of) counterfactual fairness. LangFair offers the following counterfactual fairness metrics from the LLM fairness literature:</p>
+<ul class="simple">
+<li><p>Strict Counterfactual Sentiment Parity <a class="reference external" href="https://arxiv.org/pdf/1911.03064">Huang et al., 2020</a></p></li>
+<li><p>Weak Counterfactual Sentiment Parity <a class="reference external" href="https://arxiv.org/pdf/2407.10853">Bouchard, 2024</a></p></li>
+<li><p>Counterfactual Cosine Similarity Score <a class="reference external" href="https://arxiv.org/pdf/2407.10853">Bouchard, 2024</a></p></li>
+<li><p>Counterfactual BLEU <a class="reference external" href="https://arxiv.org/pdf/2407.10853">Bouchard, 2024</a></p></li>
+<li><p>Counterfactual ROUGE-L <a class="reference external" href="https://arxiv.org/pdf/2407.10853">Bouchard, 2024</a></p></li>
+</ul>
+<p>For more details on the definitions of these metrics, refer to the Metric Definitions in this notebook or LangFair’s <a class="reference external" href="https://arxiv.org/pdf/2407.10853">technical playbook</a></p>
+</section>
+<section id="generate-demo-dataset">
+<span id="gen-demo-dataset"></span><h2>2. Generate Demo Dataset<a class="headerlink" href="#generate-demo-dataset" title="Link to this heading">#</a></h2>
+<p>Load input prompts with <cite>‘race</cite>’ as sensitive attribute.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># THIS IS AN EXAMPLE SET OF PROMPTS. USER TO REPLACE WITH THEIR OWN PROMPTS</span>
+<span class="n">resource_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">repo_path</span><span class="p">,</span> <span class="s2">&quot;data/RealToxicityPrompts.jsonl&quot;</span><span class="p">)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">resource_path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+    <span class="c1"># Read each line in the file</span>
+    <span class="n">challenging</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">prompts</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">file</span><span class="p">:</span>
+        <span class="c1"># Parse the JSON object from each line</span>
+        <span class="n">challenging</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">)[</span><span class="s2">&quot;challenging&quot;</span><span class="p">])</span>
+        <span class="n">prompts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">)[</span><span class="s2">&quot;prompt&quot;</span><span class="p">][</span><span class="s2">&quot;text&quot;</span><span class="p">])</span>
+<span class="n">prompts</span> <span class="o">=</span> <span class="p">[</span><span class="n">prompts</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">prompts</span><span class="p">))</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">challenging</span><span class="p">[</span><span class="n">i</span><span class="p">]][</span><span class="mi">15000</span><span class="p">:</span><span class="mi">30000</span><span class="p">]</span>
+</pre></div>
+</div>
+</section>
+<section id="counterfactual-dataset-generator">
+<h2>Counterfactual Dataset Generator<a class="headerlink" href="#counterfactual-dataset-generator" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">CounterfactualGenerator()</span></code> - Class for generating data for counterfactual discrimination assessment (class)</p>
+<p><strong>Class Attributes:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">langchain_llm</span></code> (<strong>langchain llm (Runnable), default=None</strong>) A langchain llm object to get passed to LLMChain <cite>llm</cite> argument.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">suppressed_exceptions</span></code> (<strong>tuple, default=None</strong>) Specifies which exceptions to handle as ‘Unable to get response’ rather than raising the exception</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">max_calls_per_min</span></code> (<strong>deprecated as of 0.2.0</strong>) Use LangChain’s InMemoryRateLimiter instead.</p></li>
+</ul>
+<p><strong>Methods:</strong></p>
+<ol class="arabic">
+<li><p><code class="docutils literal notranslate"><span class="pre">parse_texts()</span></code> - Parses a list of texts for protected attribute words and names</p>
+<blockquote>
+<div><p><strong>Method Parameters:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">text</span></code> - (<strong>string</strong>) A text corpus to be parsed for protected attribute words and names</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">attribute</span></code> - (<strong>{‘race’,’gender’,’name’}</strong>) Specifies what to parse for among race words, gender words, and names</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">custom_list</span></code> - (<strong>List[str], default=None</strong>) Custom list of tokens to use for parsing prompts. Must be provided if attribute is None.</p></li>
+</ul>
+<p><strong>Returns:</strong>
+- list of results containing protected attribute words found (<strong>list</strong>)</p>
+</div></blockquote>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">create_prompts()</span></code> - Creates counterfactual prompts by counterfactual substitution</p>
+<blockquote>
+<div><p><strong>Method Parameters:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">prompts</span></code> - (<strong>List of strings</strong>) A list of prompts on which counterfactual substitution and response generation will be done</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">attribute</span></code> - (<strong>{‘gender’, ‘race’}, default=None</strong>) Specifies what to parse for among race words and gender words. Must be specified if custom_list is None.</p></li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">custom_dict</span></code> - (<strong>Dict[str, List[str]], default=None</strong>) A dictionary containing corresponding lists of tokens for counterfactual substitution. Keys should correspond to groups. Must be provided if attribute is None. For example: {‘male’: [‘he’, ‘him’, ‘woman’], ‘female’: [‘she’, ‘her’, ‘man’]}</dt><dd><p>subset_prompts : bool, default=True</p>
+</dd>
+</dl>
+</li>
+</ul>
+<p><strong>Returns:</strong>
+- list of prompts on which counterfactual substitution was completed (<strong>list</strong>)</p>
+</div></blockquote>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">neutralize_tokens()</span></code> - Neutralize gender and race words contained in a list of texts. Replaces gender words with a gender-neutral equivalent and race words with “[MASK]”.</p>
+<blockquote>
+<div><p><strong>Method Parameters:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">text_list</span></code> - (<strong>List of strings</strong>) A list of texts on which gender or race neutralization will occur</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">attribute</span></code> - (<strong>{‘gender’, ‘race’}, default=’gender’</strong>) Specifies whether to use race or gender for for neutralization</p></li>
+</ul>
+<p><strong>Returns:</strong>
+- list of texts neutralized with respect to race or gender (<strong>list</strong>)</p>
+</div></blockquote>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">generate_responses()</span></code> - Creates counterfactual prompts obtained by counterfactual substitution and generates responses asynchronously.</p>
+<blockquote>
+<div><p><strong>Method Parameters:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">prompts</span></code> - (<strong>List of strings</strong>) A list of prompts on which counterfactual substitution and response generation will be done</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">attribute</span></code> - (<strong>{‘gender’, ‘race’}, default=’gender’</strong>) Specifies whether to use race or gender for counterfactual substitution</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">system_prompt</span></code> - (<strong>str, default=”You are a helpful assistant.”</strong>) Specifies system prompt for generation</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">count</span></code> - (<strong>int, default=25</strong>) Specifies number of responses to generate for each prompt.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">custom_dict</span></code> - (<strong>Dict[str, List[str]], default=None</strong>) A dictionary containing corresponding lists of tokens for counterfactual substitution. Keys should correspond to groups. Must be provided if attribute is None. For example: {‘male’: [‘he’, ‘him’, ‘woman’], ‘female’: [‘she’, ‘her’, ‘man’]}</p></li>
+</ul>
+<p><strong>Returns:</strong> A dictionary with two keys: <cite>data</cite> and <cite>metadata</cite>.
+- <code class="docutils literal notranslate"><span class="pre">data</span></code> (<strong>dict</strong>) A dictionary containing the prompts and responses.
+- <code class="docutils literal notranslate"><span class="pre">metadata</span></code> (<strong>dict</strong>) A dictionary containing metadata about the generation process, including non-completion rate, temperature, count, original prompts, and identified proctected attribute words.</p>
+</div></blockquote>
+</li>
+</ol>
+<p>Below we use LangFair’s <code class="docutils literal notranslate"><span class="pre">CounterfactualGenerator</span></code> class to check for fairness through unawareness, construct counterfactual prompts, and generate counterfactual LLM responses for computing metrics. To instantiate the <code class="docutils literal notranslate"><span class="pre">CounterfactualGenerator</span></code> class, pass a LangChain LLM object as an argument.</p>
+<p><strong>Important note: We provide three examples of LangChain LLMs below, but these can be replaced with a LangChain LLM of your choice.</strong></p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Use LangChain&#39;s InMemoryRateLimiter to avoid rate limit errors. Adjust parameters as necessary.</span>
+<span class="n">rate_limiter</span> <span class="o">=</span> <span class="n">InMemoryRateLimiter</span><span class="p">(</span>
+    <span class="n">requests_per_second</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="n">check_every_n_seconds</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="n">max_bucket_size</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Example 1: Gemini Pro with VertexAI</strong></p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># # Run if langchain-google-vertexai not installed. Note: kernel restart may be required.</span>
+<span class="c1"># import sys</span>
+<span class="c1"># !{sys.executable} -m pip install langchain-google-vertexai</span>
+
+<span class="c1"># from langchain_google_vertexai import VertexAI</span>
+<span class="c1"># llm = VertexAI(model_name=&#39;gemini-pro&#39;, temperature=1, rate_limiter=rate_limiter)</span>
+
+<span class="c1"># # Define exceptions to suppress</span>
+<span class="c1"># suppressed_exceptions = (IndexError, ) # suppresses error when gemini refuses to answer</span>
+</pre></div>
+</div>
+<p><strong>Example 2: Mistral AI</strong></p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># # Run if langchain-mistralai not installed. Note: kernel restart may be required.</span>
+<span class="c1"># import sys</span>
+<span class="c1"># !{sys.executable} -m pip install langchain-mistralai</span>
+
+<span class="c1"># os.environ[&quot;MISTRAL_API_KEY&quot;] = os.getenv(&#39;M_KEY&#39;)</span>
+<span class="c1"># from langchain_mistralai import ChatMistralAI</span>
+
+<span class="c1"># llm = ChatMistralAI(</span>
+<span class="c1">#     model=&quot;mistral-large-latest&quot;,</span>
+<span class="c1">#     temperature=1,</span>
+<span class="c1">#     rate_limiter=rate_limiter</span>
+<span class="c1"># )</span>
+<span class="c1"># suppressed_exceptions = None</span>
+</pre></div>
+</div>
+<p><strong>Example 3: OpenAI on Azure</strong></p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># # Run if langchain-openai not installed</span>
+<span class="c1"># import sys</span>
+<span class="c1"># !{sys.executable} -m pip install langchain-openai</span>
+
+<span class="kn">import</span> <span class="nn">openai</span>
+<span class="kn">from</span> <span class="nn">langchain_openai</span> <span class="kn">import</span> <span class="n">AzureChatOpenAI</span>
+
+<span class="n">llm</span> <span class="o">=</span> <span class="n">AzureChatOpenAI</span><span class="p">(</span>
+    <span class="n">deployment_name</span><span class="o">=</span><span class="n">DEPLOYMENT_NAME</span><span class="p">,</span>
+    <span class="n">openai_api_key</span><span class="o">=</span><span class="n">API_KEY</span><span class="p">,</span>
+    <span class="n">azure_endpoint</span><span class="o">=</span><span class="n">API_BASE</span><span class="p">,</span>
+    <span class="n">openai_api_type</span><span class="o">=</span><span class="n">API_TYPE</span><span class="p">,</span>
+    <span class="n">openai_api_version</span><span class="o">=</span><span class="n">API_VERSION</span><span class="p">,</span>
+    <span class="n">temperature</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>  <span class="c1"># User to set temperature</span>
+    <span class="n">rate_limiter</span><span class="o">=</span><span class="n">rate_limiter</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Define exceptions to suppress</span>
+<span class="n">suppressed_exceptions</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">openai</span><span class="o">.</span><span class="n">BadRequestError</span><span class="p">,</span>
+    <span class="ne">ValueError</span><span class="p">,</span>
+<span class="p">)</span>  <span class="c1"># this suppresses content filtering errors</span>
+</pre></div>
+</div>
+<p>Instantiate <code class="docutils literal notranslate"><span class="pre">CounterfactualGenerator</span></code> class</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create langfair CounterfactualGenerator object</span>
+<span class="n">cdg</span> <span class="o">=</span> <span class="n">CounterfactualGenerator</span><span class="p">(</span>
+    <span class="n">langchain_llm</span><span class="o">=</span><span class="n">llm</span><span class="p">,</span> <span class="n">suppressed_exceptions</span><span class="o">=</span><span class="n">suppressed_exceptions</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>For illustration, this notebook assesses with ‘race’ as the protected attribute, but metrics can be evaluated for ‘gender’ or other custom protected attributes in the same way. First, the above mentioned <cite>parse_texts</cite> method is used to identify the input prompts that contain protected attribute words.</p>
+<p>Note: We recommend using atleast 1000 prompts that contain protected attribute words for better estimates. Otherwise, increase <cite>count</cite> attribute of <cite>CounterfactualGenerator</cite> class generate more responses.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Check for fairness through unawareness</span>
+<span class="n">attribute</span> <span class="o">=</span> <span class="s2">&quot;race&quot;</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;prompt&quot;</span><span class="p">:</span> <span class="n">prompts</span><span class="p">})</span>
+<span class="n">df</span><span class="p">[</span><span class="n">attribute</span> <span class="o">+</span> <span class="s2">&quot;_words&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cdg</span><span class="o">.</span><span class="n">parse_texts</span><span class="p">(</span><span class="n">texts</span><span class="o">=</span><span class="n">prompts</span><span class="p">,</span> <span class="n">attribute</span><span class="o">=</span><span class="n">attribute</span><span class="p">)</span>
+
+<span class="c1"># Remove input prompts that doesn&#39;t include a race word</span>
+<span class="n">race_prompts</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;race_words&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)][</span>
+    <span class="p">[</span><span class="s2">&quot;prompt&quot;</span><span class="p">,</span> <span class="s2">&quot;race_words&quot;</span><span class="p">]</span>
+<span class="p">]</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Race words found in </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">race_prompts</span><span class="p">)</span><span class="si">}</span><span class="s2"> prompts&quot;</span><span class="p">)</span>
+<span class="n">race_prompts</span><span class="o">.</span><span class="n">tail</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Generate the model response on the input prompts using <code class="docutils literal notranslate"><span class="pre">generate_responses</span></code> method.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">generations</span> <span class="o">=</span> <span class="k">await</span> <span class="n">cdg</span><span class="o">.</span><span class="n">generate_responses</span><span class="p">(</span>
+    <span class="n">prompts</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;prompt&quot;</span><span class="p">],</span> <span class="n">attribute</span><span class="o">=</span><span class="s2">&quot;race&quot;</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="mi">1</span>
+<span class="p">)</span>
+<span class="n">output_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">generations</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">])</span>
+<span class="n">output_df</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="n">race_cols</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;white_response&quot;</span><span class="p">,</span> <span class="s2">&quot;black_response&quot;</span><span class="p">,</span> <span class="s2">&quot;asian_response&quot;</span><span class="p">,</span> <span class="s2">&quot;hispanic_response&quot;</span><span class="p">]</span>
+
+<span class="c1"># Filter output to remove rows where any of the four counterfactual responses was refused</span>
+<span class="n">race_eval_df</span> <span class="o">=</span> <span class="n">output_df</span><span class="p">[</span>
+    <span class="o">~</span><span class="n">output_df</span><span class="p">[</span><span class="n">race_cols</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">==</span> <span class="s2">&quot;Unable to get response&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="o">|</span> <span class="o">~</span><span class="n">output_df</span><span class="p">[</span><span class="n">race_cols</span><span class="p">]</span>
+    <span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="s2">&quot;sorry&quot;</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+</section>
+<section id="assessment">
+<span id="id5"></span><h2>3. Assessment<a class="headerlink" href="#assessment" title="Link to this heading">#</a></h2>
+<p>This section shows two ways to evaluate countefactual metrics on a given dataset.</p>
+<ol class="arabic simple">
+<li><p>Lazy Implementation: Evalaute few or all available metrics on available dataset. This approach is useful for quick or first dry-run.</p></li>
+<li><p>Separate Implemention: Evaluate each metric separately, this is useful to investage more about a particular metric.</p></li>
+</ol>
+<p id="lazy">3.1 Lazy Implementation</p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">CounterfactualMetrics()</span></code> - Calculate all the counterfactual metrics (class)
+<strong>Class Attributes:</strong>
+- <cite>metrics</cite> - (<strong>List of strings/Metric objects</strong>) Specifies which metrics to use.
+Default option is a list if strings (<cite>metrics</cite> = [“Cosine”, “Rougel”, “Bleu”, “Sentiment Bias”]).
+- <cite>neutralize_tokens</cite> - (<strong>bool, default=True</strong>)
+An indicator attribute to use masking for the computation of Blue and RougeL metrics. If True, counterfactual responses are masked using <cite>CounterfactualGenerator.neutralize_tokens</cite> method before computing the aforementioned metrics.</p>
+<p><strong>Methods:</strong></p>
+<ol class="arabic">
+<li><dl>
+<dt><cite>evaluate()</cite> - Calculates counterfactual metrics for two sets of counterfactual outputs.</dt><dd><p>Method Parameters:</p>
+<ul class="simple">
+<li><p><cite>texts1</cite> - (<strong>List of strings</strong>) A list of generated output from an LLM with mention of a protected attribute group.</p></li>
+<li><p><cite>texts2</cite> - (<strong>List of strings</strong>) A list of equal length to <cite>texts1</cite> containing counterfactually generated output from an LLM with mention of a different protected attribute group.</p></li>
+</ul>
+<p>Returns:
+- A dictionary containing all Counterfactual metric values (<strong>dict</strong>).</p>
+</dd>
+</dl>
+</li>
+</ol>
+</div></blockquote>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">counterfactual</span> <span class="o">=</span> <span class="n">CounterfactualMetrics</span><span class="p">()</span>
+
+
+<span class="n">similarity_values</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="n">keys_</span><span class="p">,</span> <span class="n">count</span> <span class="o">=</span> <span class="p">[],</span> <span class="mi">1</span>
+<span class="k">for</span> <span class="n">group1</span><span class="p">,</span> <span class="n">group2</span> <span class="ow">in</span> <span class="n">combinations</span><span class="p">([</span><span class="s2">&quot;white&quot;</span><span class="p">,</span> <span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="s2">&quot;asian&quot;</span><span class="p">,</span> <span class="s2">&quot;hispanic&quot;</span><span class="p">],</span> <span class="mi">2</span><span class="p">):</span>
+    <span class="n">keys_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">group1</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">group2</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">similarity_values</span><span class="p">[</span><span class="n">keys_</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">counterfactual</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span>
+        <span class="n">race_eval_df</span><span class="p">[</span><span class="n">group1</span> <span class="o">+</span> <span class="s2">&quot;_response&quot;</span><span class="p">],</span>
+        <span class="n">race_eval_df</span><span class="p">[</span><span class="n">group2</span> <span class="o">+</span> <span class="s2">&quot;_response&quot;</span><span class="p">],</span>
+        <span class="n">attribute</span><span class="o">=</span><span class="s2">&quot;race&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">count</span><span class="si">}</span><span class="s2">. </span><span class="si">{</span><span class="n">group1</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">group2</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key_</span> <span class="ow">in</span> <span class="n">similarity_values</span><span class="p">[</span><span class="n">keys_</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">- &quot;</span><span class="p">,</span> <span class="n">key_</span><span class="p">,</span> <span class="s2">&quot;: </span><span class="si">{:1.5f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">similarity_values</span><span class="p">[</span><span class="n">keys_</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]][</span><span class="n">key_</span><span class="p">]))</span>
+    <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<p>Next, we create a scatter plot to compare the metrics for different race combinations.
+Note: <cite>matplotlib</cite> installation is necessary to recreate the plot.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Run this cell, if matplotlib is not installed. Install a pip package in the current Jupyter kernel</span>
+<span class="c1"># import sys</span>
+<span class="c1"># !{sys.executable} -m pip install matplotlib</span>
+
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+<span class="n">x</span> <span class="o">=</span> <span class="p">[</span><span class="n">x_</span> <span class="k">for</span> <span class="n">x_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">6</span><span class="p">)]</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">key_</span> <span class="ow">in</span> <span class="p">[</span>
+    <span class="s2">&quot;Cosine Similarity&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;RougeL Similarity&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Bleu Similarity&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Sentiment Bias&quot;</span><span class="p">,</span>
+<span class="p">]:</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">race_combination</span> <span class="ow">in</span> <span class="n">similarity_values</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="n">y</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">similarity_values</span><span class="p">[</span><span class="n">race_combination</span><span class="p">][</span><span class="n">key_</span><span class="p">])</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">key_</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">ncol</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;upper center&quot;</span><span class="p">,</span> <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.16</span><span class="p">))</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Metric Values&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Race Combinations&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">(</span><span class="n">keys_</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">45</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<p id="separate">3.2 Separate Implementation</p>
+<p>3.2.1 Counterfactual Sentiment Bias</p>
+<p><code class="docutils literal notranslate"><span class="pre">SentimentBias()</span></code> - For calculating the counterfactual sentiment bias metric (class)</p>
+<dl class="simple">
+<dt><strong>Class Attributes:</strong></dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">classifier</span></code> - (<strong>{‘vader’,’NLP API’}</strong>) Specifies which sentiment classifier to use. Currently, only vader is offered. <cite>NLP API</cite> coming soon.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sentiment</span></code> - (<strong>{‘neg’,’pos’}</strong>) Specifies whether the classifier should predict positive or negative sentiment.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">parity</span></code> - (<strong>{‘strong’,’weak’}, default=’strong’</strong>) Indicates whether to calculate strong demographic parity using Wasserstein-1 distance on score distributions or weak demographic parity using binarized sentiment predictions. The latter assumes a threshold for binarization that can be customized by the user with the <cite>thresh</cite> parameter.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">thresh</span></code> - (<strong>float between 0 and 1, default=0.5</strong>) Only applicable if <cite>parity</cite> is set to ‘weak’, this parameter specifies the threshold for binarizing predicted sentiment scores.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">how</span></code> : (<strong>{‘mean’,’pairwise’}, default=’mean’</strong>) Specifies whether to return the mean cosine similarity over all counterfactual pairs or a list containing cosine distance for each pair.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">custom_classifier</span></code> - (<strong>class object</strong>) A user-defined class for sentiment classification that contains a <cite>predict</cite> method. The <cite>predict</cite> method must accept a list of strings as an input and output a list of floats of equal length. If provided, this takes precedence over <cite>classifier</cite>.</p></li>
+</ul>
+</dd>
+</dl>
+<p><strong>Methods:</strong></p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">evaluate()</span></code> - Calculates counterfactual sentiment bias for two sets of counterfactual outputs.</p></li>
+</ol>
+<blockquote>
+<div><p>Method Parameters:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">texts1</span></code> - (<strong>List of strings</strong>) A list of generated output from an LLM with mention of a protected attribute group</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">texts2</span></code> - (<strong>List of strings</strong>) A list of equal length to <cite>texts1</cite> containing counterfactually generated output from an LLM with mention of a different protected attribute group</p></li>
+</ul>
+<p>Returns:
+- Counterfactual Sentiment Bias score (<strong>float</strong>)</p>
+</div></blockquote>
+</div></blockquote>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">sentimentbias</span> <span class="o">=</span> <span class="n">SentimentBias</span><span class="p">()</span>
+
+<span class="c1"># Sentiment Bias evaluation for race.</span>
+
+<span class="k">for</span> <span class="n">group1</span><span class="p">,</span> <span class="n">group2</span> <span class="ow">in</span> <span class="n">combinations</span><span class="p">([</span><span class="s2">&quot;white&quot;</span><span class="p">,</span> <span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="s2">&quot;asian&quot;</span><span class="p">,</span> <span class="s2">&quot;hispanic&quot;</span><span class="p">],</span> <span class="mi">2</span><span class="p">):</span>
+    <span class="n">similarity_values</span> <span class="o">=</span> <span class="n">sentimentbias</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span>
+        <span class="n">race_eval_df</span><span class="p">[</span><span class="n">group1</span> <span class="o">+</span> <span class="s2">&quot;_response&quot;</span><span class="p">],</span> <span class="n">race_eval_df</span><span class="p">[</span><span class="n">group2</span> <span class="o">+</span> <span class="s2">&quot;_response&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">group1</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">group2</span><span class="si">}</span><span class="s2"> Strict counterfactual sentiment parity: &quot;</span><span class="p">,</span> <span class="n">similarity_values</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+<p>3.2.2 Cosine Similarity</p>
+<p><code class="docutils literal notranslate"><span class="pre">CosineSimilarity()</span></code> - For calculating the social group substitutions metric (class)</p>
+<p><strong>Class Attributes:</strong></p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">SentenceTransformer</span></code> - (<strong>sentence_transformers.SentenceTransformer.SentenceTransformer, default=None</strong>) Specifies which huggingface sentence transformer to use when computing cosine distance. See <a class="reference external" href="https://huggingface.co/sentence-transformers?sort_models=likes#models">https://huggingface.co/sentence-transformers?sort_models=likes#models</a> for more information. The recommended sentence transformer is ‘all-MiniLM-L6-v2’.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">how</span></code> - (<strong>{‘`mean`’,’`pairwise`’} default=’mean’</strong>) Specifies whether to return the mean cosine distance value over all counterfactual pairs or a list containing consine distance for each pair.</p></li>
+</ul>
+</div></blockquote>
+<p><strong>Methods:</strong></p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">evaluate()</span></code> - Calculates social group substitutions using cosine similarity. Sentence embeddings are calculated with <cite>self.transformer</cite>.</p></li>
+</ol>
+<blockquote>
+<div><p>Method Parameters:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">texts1</span></code> - (<strong>List of strings</strong>) A list of generated output from an LLM with mention of a protected attribute group</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">texts2</span></code> - (<strong>List of strings</strong>) A list of equal length to <cite>texts1</cite> containing counterfactually generated output from an LLM with mention of a different protected attribute group</p></li>
+</ul>
+<p>Returns:
+- Cosine distance score(s) (<strong>float or list of floats</strong>)</p>
+</div></blockquote>
+</div></blockquote>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">cosine</span> <span class="o">=</span> <span class="n">CosineSimilarity</span><span class="p">(</span><span class="n">transformer</span><span class="o">=</span><span class="s2">&quot;all-MiniLM-L6-v2&quot;</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">group1</span><span class="p">,</span> <span class="n">group2</span> <span class="ow">in</span> <span class="n">combinations</span><span class="p">([</span><span class="s2">&quot;white&quot;</span><span class="p">,</span> <span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="s2">&quot;asian&quot;</span><span class="p">,</span> <span class="s2">&quot;hispanic&quot;</span><span class="p">],</span> <span class="mi">2</span><span class="p">):</span>
+    <span class="n">similarity_values</span> <span class="o">=</span> <span class="n">cosine</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span>
+        <span class="n">race_eval_df</span><span class="p">[</span><span class="n">group1</span> <span class="o">+</span> <span class="s2">&quot;_response&quot;</span><span class="p">],</span> <span class="n">race_eval_df</span><span class="p">[</span><span class="n">group2</span> <span class="o">+</span> <span class="s2">&quot;_response&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">group1</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">group2</span><span class="si">}</span><span class="s2"> Counterfactual Cosine Similarity: &quot;</span><span class="p">,</span> <span class="n">similarity_values</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>3.2.3 RougeL Similarity</p>
+<p><code class="docutils literal notranslate"><span class="pre">RougeLSimilarity()</span></code> - For calculating the social group substitutions metric using RougeL similarity (class)</p>
+<dl class="simple">
+<dt><strong>Class Attributes:</strong></dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">rouge_metric</span></code> : (<strong>{`’rougeL’`,`’rougeLsum’`}, default=’rougeL’</strong>) Specifies which ROUGE metric to use. If sentence-wise assessment is preferred, select ‘rougeLsum’.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">how</span></code> - (<strong>{`’mean’`,`’pairwise’`} default=’mean’</strong>) Specifies whether to return the mean cosine distance value over all counterfactual pairs or a list containing consine distance for each pair.</p></li>
+</ul>
+</dd>
+</dl>
+<p><strong>Methods:</strong></p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">evaluate()</span></code> - Calculates social group substitutions using ROUGE-L.</p></li>
+</ol>
+<blockquote>
+<div><p>Method Parameters:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">texts1</span></code> - (<strong>List of strings</strong>) A list of generated output from an LLM with mention of a protected attribute group</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">texts2</span></code> - (<strong>List of strings</strong>) A list of equal length to <cite>texts1</cite> containing counterfactually generated output from an LLM with mention of a different protected attribute group</p></li>
+</ul>
+<p>Returns:
+- ROUGE-L or ROUGE-L sums score(s) (<strong>float or list of floats</strong>)</p>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">rougel</span> <span class="o">=</span> <span class="n">RougelSimilarity</span><span class="p">()</span>
+
+<span class="k">for</span> <span class="n">group1</span><span class="p">,</span> <span class="n">group2</span> <span class="ow">in</span> <span class="n">combinations</span><span class="p">([</span><span class="s2">&quot;white&quot;</span><span class="p">,</span> <span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="s2">&quot;asian&quot;</span><span class="p">,</span> <span class="s2">&quot;hispanic&quot;</span><span class="p">],</span> <span class="mi">2</span><span class="p">):</span>
+    <span class="c1"># Neutralize tokens for apples to apples comparison</span>
+    <span class="n">group1_texts</span> <span class="o">=</span> <span class="n">cdg</span><span class="o">.</span><span class="n">neutralize_tokens</span><span class="p">(</span>
+        <span class="n">race_eval_df</span><span class="p">[</span><span class="n">group1</span> <span class="o">+</span> <span class="s2">&quot;_response&quot;</span><span class="p">],</span> <span class="n">attribute</span><span class="o">=</span><span class="s2">&quot;race&quot;</span>
+    <span class="p">)</span>
+    <span class="n">group2_texts</span> <span class="o">=</span> <span class="n">cdg</span><span class="o">.</span><span class="n">neutralize_tokens</span><span class="p">(</span>
+        <span class="n">race_eval_df</span><span class="p">[</span><span class="n">group2</span> <span class="o">+</span> <span class="s2">&quot;_response&quot;</span><span class="p">],</span> <span class="n">attribute</span><span class="o">=</span><span class="s2">&quot;race&quot;</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Compute and print metrics</span>
+    <span class="n">similarity_values</span> <span class="o">=</span> <span class="n">rougel</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">group1_texts</span><span class="p">,</span> <span class="n">group2_texts</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">group1</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">group2</span><span class="si">}</span><span class="s2"> Counterfactual RougeL Similarity: &quot;</span><span class="p">,</span> <span class="n">similarity_values</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>3.2.4 BLEU Similarity</p>
+<p><code class="docutils literal notranslate"><span class="pre">Bleu</span> <span class="pre">Similarity()</span></code> - For calculating the social group substitutions metric using BLEU similarity (class)</p>
+<dl class="simple">
+<dt><strong>Class parameters:</strong></dt><dd><ul class="simple">
+<li><p><cite>how</cite> - (<strong>{‘mean’,’pairwise’} default=’mean’</strong>) Specifies whether to return the mean cosine distance value over all counterfactual pairs or a list containing consine distance for each pair.</p></li>
+</ul>
+</dd>
+</dl>
+<p><strong>Methods:</strong></p>
+<ol class="arabic">
+<li><dl>
+<dt><cite>evaluate()</cite> - Calculates social group substitutions using BLEU metric.</dt><dd><p>Method Parameters:</p>
+<ul class="simple">
+<li><p><cite>texts1</cite> - (<strong>List of strings</strong>) A list of generated output from an LLM with mention of a protected attribute group</p></li>
+<li><p><cite>texts2</cite> - (<strong>List of strings</strong>) A list of equal length to <cite>texts1</cite> containing counterfactually generated output from an LLM with mention of a different protected attribute group</p></li>
+</ul>
+<p>Returns:
+- BLEU score(s) (<strong>float or list of floats</strong>)</p>
+</dd>
+</dl>
+</li>
+</ol>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">bleu</span> <span class="o">=</span> <span class="n">BleuSimilarity</span><span class="p">()</span>
+
+<span class="k">for</span> <span class="n">group1</span><span class="p">,</span> <span class="n">group2</span> <span class="ow">in</span> <span class="n">combinations</span><span class="p">([</span><span class="s2">&quot;white&quot;</span><span class="p">,</span> <span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="s2">&quot;asian&quot;</span><span class="p">,</span> <span class="s2">&quot;hispanic&quot;</span><span class="p">],</span> <span class="mi">2</span><span class="p">):</span>
+    <span class="c1"># Neutralize tokens for apples to apples comparison</span>
+    <span class="n">group1_texts</span> <span class="o">=</span> <span class="n">cdg</span><span class="o">.</span><span class="n">neutralize_tokens</span><span class="p">(</span>
+        <span class="n">race_eval_df</span><span class="p">[</span><span class="n">group1</span> <span class="o">+</span> <span class="s2">&quot;_response&quot;</span><span class="p">],</span> <span class="n">attribute</span><span class="o">=</span><span class="s2">&quot;race&quot;</span>
+    <span class="p">)</span>
+    <span class="n">group2_texts</span> <span class="o">=</span> <span class="n">cdg</span><span class="o">.</span><span class="n">neutralize_tokens</span><span class="p">(</span>
+        <span class="n">race_eval_df</span><span class="p">[</span><span class="n">group2</span> <span class="o">+</span> <span class="s2">&quot;_response&quot;</span><span class="p">],</span> <span class="n">attribute</span><span class="o">=</span><span class="s2">&quot;race&quot;</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Compute and print metrics</span>
+    <span class="n">similarity_values</span> <span class="o">=</span> <span class="n">bleu</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">group1_texts</span><span class="p">,</span> <span class="n">group2_texts</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">group1</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">group2</span><span class="si">}</span><span class="s2"> Counterfactual BLEU Similarity: &quot;</span><span class="p">,</span> <span class="n">similarity_values</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="metric-definitions">
+<span id="metric-defns"></span><h2>4. Metric Definitions<a class="headerlink" href="#metric-definitions" title="Link to this heading">#</a></h2>
+<p>Below are details of the LLM bias / fairness evaluation metrics calculated by the <cite>CounterfactualMetrics</cite> class. Metrics are defined in the context of a sample of <span class="math notranslate nohighlight">\(N\)</span> LLM outputs, denoted <span class="math notranslate nohighlight">\(\hat{Y}_1,...,\hat{Y}_N\)</span>. <strong>Below, a  ❗ is used to indicate the metrics we deem to be of particular importance.</strong></p>
+</section>
+<section id="counterfactual-fairness-metrics">
+<h2>Counterfactual Fairness Metrics<a class="headerlink" href="#counterfactual-fairness-metrics" title="Link to this heading">#</a></h2>
+<p>Given two protected attribute groups <span class="math notranslate nohighlight">\(G', G''\)</span>, a counterfactual input pair is defined as a pair of prompts, <span class="math notranslate nohighlight">\(X_i', X_i''\)</span> that are identical in every way except the former mentions protected attribute group <span class="math notranslate nohighlight">\(G'\)</span> and the latter mentions <span class="math notranslate nohighlight">\(G''\)</span>. Counterfactual metrics are evaluated on a sample of counterfactual response pairs <span class="math notranslate nohighlight">\((\hat{Y}_1', \hat{Y}_1''),...,(\hat{Y}_N', \hat{Y}_N'')\)</span> generated by an LLM from a sample of counterfactual input pairs <span class="math notranslate nohighlight">\((X_1',X_1''),...,(X_N',X_N'')\)</span>.</p>
+<p><em>Counterfactual Similarity Metrics</em></p>
+<p>Counterfactual similarity metrics assess similarity of counterfactually generated outputs. For the below three metrics, <strong>values closer to 1 indicate greater fairness.</strong></p>
+<p>Counterfactual ROUGE-L (CROUGE-L) ❗</p>
+<p>CROUGE-L is defined as the average ROUGE-L score over counterfactually generated output pairs:</p>
+<div class="math notranslate nohighlight">
+\[CROUGE\text{-}L =  \frac{1}{N} \sum_{i=1}^N \frac{2r_i'r_i''}{r_i' + r_i''},\]</div>
+<p>where</p>
+<div class="math notranslate nohighlight">
+\[r_i' = \frac{LCS(\hat{Y}_i', \hat{Y}_i'')}{len (\hat{Y}_i') }, \quad r_i'' = \frac{LCS(\hat{Y}_i'', \hat{Y}_i')}{len (\hat{Y}_i'') }\]</div>
+<p>where <span class="math notranslate nohighlight">\(LCS(\cdot,\cdot)\)</span> denotes the longest common subsequence of tokens between two LLM outputs, and <span class="math notranslate nohighlight">\(len (\hat{Y})\)</span> denotes the number of tokens in an LLM output. The CROUGE-L metric effectively uses ROUGE-L to assess similarity as the longest common subsequence (LCS) relative to generated text length. For more on interpreting ROUGE-L scores, refer to <a class="reference external" href="https://klu.ai/glossary/rouge-score#:~:text=A%20good%20ROUGE%20score%20varies,low%20at%200.3%20to%200.4.">Klu.ai documentation</a></p>
+<p>Counterfactual BLEU (CBLEU)  ❗</p>
+<p>CBLEU is defined as the average BLEU score over counterfactually generated output pairs:</p>
+<div class="math notranslate nohighlight">
+\[CBLEU =  \frac{1}{N} \sum_{i=1}^N \min(BLEU(\hat{Y}_i', \hat{Y}_i''), BLEU(\hat{Y}_i'', \hat{Y}_i')).\]</div>
+<p>For more on interpreting BLEU scores, refer to <a class="reference external" href="https://cloud.google.com/translate/automl/docs/evaluate">Google’s documentation</a>.</p>
+<p>Counterfactual Cosine Similarity (CCS)  ❗</p>
+<p>Given a sentence transformer <span class="math notranslate nohighlight">\(\mathbf{V} : \mathcal{Y} \xrightarrow{} \mathbb{R}^d\)</span>, CCS is defined as the average cosine simirity score over counterfactually generated output pairs:</p>
+<div class="math notranslate nohighlight">
+\[CCS = \frac{1}{N} \sum_{i=1}^N   \frac{\mathbf{V}(Y_i') \cdot \mathbf{V}(Y_i'') }{ \lVert \mathbf{V}(Y_i') \rVert \lVert \mathbf{V}(Y_i'') \rVert},\]</div>
+<p><em>Counterfactual Sentiment Metrics</em></p>
+<p>Counterfactual sentiment metrics leverage a pre-trained sentiment classifier <span class="math notranslate nohighlight">\(Sm: \mathcal{Y} \xrightarrow[]{} [0,1]\)</span> to assess sentiment disparities of counterfactually generated outputs. For the below three metrics, <strong>values closer to 0 indicate greater fairness.</strong>
+Counterfactual Sentiment Bias (CSB)  ❗</p>
+<p>CSP calculates Wasserstein-1 distance citep{wasserstein} between the output distributions of a sentiment classifier applied to counterfactually generated LLM outputs:</p>
+<div class="math notranslate nohighlight">
+\[CSP = \mathbb{E}_{\tau \sim \mathcal{U}(0,1)} | P(Sm(\hat{Y}') &gt; \tau) -  P(Sm(\hat{Y}'') &gt; \tau)|,\]</div>
+<p>where <span class="math notranslate nohighlight">\(\mathcal{U}(0,1)\)</span> denotes the uniform distribution. Above, <span class="math notranslate nohighlight">\(\mathbb{E}_{\tau \sim \mathcal{U}(0,1)}\)</span> is calculated empirically on a sample of counterfactual response pairs <span class="math notranslate nohighlight">\((\hat{Y}_1', \hat{Y}_1''),...,(\hat{Y}_N', \hat{Y}_N'')\)</span> generated by <span class="math notranslate nohighlight">\(\mathcal{M}\)</span>, from a sample of counterfactual input pairs <span class="math notranslate nohighlight">\((X_1',X_1''),...,(X_N',X_N'')\)</span> drawn from <span class="math notranslate nohighlight">\(\mathcal{P}_{X|\mathcal{A}}\)</span>.</p>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-counterfactual-metrics-demo-py">
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/b06e8b099d2c43deb96b1d928ff24dce/counterfactual_metrics_demo.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">counterfactual_metrics_demo.ipynb</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/a2b9ec2a3982089b648281e19ebbb106/counterfactual_metrics_demo.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">counterfactual_metrics_demo.py</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-zip docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/4d924b73fd10a3c88006fe3e68b96e6f/counterfactual_metrics_demo.zip"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">zipped:</span> <span class="pre">counterfactual_metrics_demo.zip</span></code></a></p>
+</div>
+</div>
+<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.github.io">Gallery generated by Sphinx-Gallery</a></p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="stereotype_metrics_demo.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Stereotype Assessment Metrics</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../guide.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Contributor Guide</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#counterfactual-assessment-metrics">Counterfactual Assessment Metrics</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#content">Content</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#introduction">1. Introduction</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#generate-demo-dataset">2. Generate Demo Dataset</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#counterfactual-dataset-generator">Counterfactual Dataset Generator</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#assessment">3. Assessment</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#metric-definitions">4. Metric Definitions</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#counterfactual-fairness-metrics">Counterfactual Fairness Metrics</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/auto_examples/counterfactual_metrics_demo.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024, CVS Health.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

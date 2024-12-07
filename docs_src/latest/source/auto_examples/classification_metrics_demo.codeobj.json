@@ -1,0 +1,20 @@
+{
+ "ClassificationMetrics": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "langfair.metrics.classification",
+   "module_short": "langfair.metrics.classification",
+   "name": "ClassificationMetrics"
+  }
+ ],
+ "np.random.binomial": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy.random",
+   "module_short": "numpy.random",
+   "name": "binomial"
+  }
+ ]
+}

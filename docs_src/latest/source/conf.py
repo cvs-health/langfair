@@ -7,7 +7,9 @@ import importlib.metadata
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath("../../../langfair"))  # lets sphinx find llambda code
+sys.path.insert(
+    0, os.path.abspath("../../../langfair")
+)  # lets sphinx find llambda code
 
 project = "LangFair"
 copyright = "2024, CVS Health"
@@ -23,6 +25,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx_autodoc_typehints",
     "sphinxcontrib.bibtex",
+    "sphinx_gallery.gen_gallery",
 ]
 
 bibtex_bibfiles = ["refs.bib"]
@@ -50,3 +53,14 @@ html_theme_options = {
 }
 
 html_favicon = "_static/images/langfair-logo-only.png"
+
+sphinx_gallery_conf = {
+    # "reference_url": {"langfair": None},
+    "examples_dirs": "../../../example_scripts",
+    "gallery_dirs": "auto_examples",
+    # pypandoc enables rst to md conversion in downloadable notebooks
+    # "pypandoc": True,
+    # "doc_module": ("langfair",),
+}
+
+source_suffix = [".rst"]

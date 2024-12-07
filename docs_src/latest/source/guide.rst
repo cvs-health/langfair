@@ -1,3 +1,4 @@
+.. _guide:
 Contributor Guide
 =================
 

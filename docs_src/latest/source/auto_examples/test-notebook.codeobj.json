@@ -1,0 +1,65 @@
+{
+ "__name__": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "str"
+  }
+ ],
+ "langfair.__author__": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "langfair",
+   "module_short": "langfair",
+   "name": "__author__"
+  }
+ ],
+ "langfair.__doc__": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "langfair",
+   "module_short": "langfair",
+   "name": "__doc__"
+  }
+ ],
+ "langfair.__file__": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "langfair",
+   "module_short": "langfair",
+   "name": "__file__"
+  }
+ ],
+ "langfair.__license__": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "langfair",
+   "module_short": "langfair",
+   "name": "__license__"
+  }
+ ],
+ "langfair.__path__": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "langfair",
+   "module_short": "langfair",
+   "name": "__path__"
+  }
+ ],
+ "langfair.__version__": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "langfair",
+   "module_short": "langfair",
+   "name": "__version__"
+  }
+ ]
+}

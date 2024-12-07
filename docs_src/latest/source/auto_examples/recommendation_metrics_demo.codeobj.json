@@ -1,0 +1,11 @@
+{
+ "RecommendationMetrics": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "langfair.metrics.recommendation",
+   "module_short": "langfair.metrics.recommendation",
+   "name": "RecommendationMetrics"
+  }
+ ]
+}

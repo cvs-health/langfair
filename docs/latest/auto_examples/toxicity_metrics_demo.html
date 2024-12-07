@@ -1,0 +1,805 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Toxicity Metrics &#8212; LangFair 0.2 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!-- 
+    this give us a css class that will be invisible only if js is disabled 
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=26a4bc78f4c0ddb94549"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549" />
+
+    <script src="../_static/documentation_options.js?v=10f1778b"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'auto_examples/toxicity_metrics_demo';</script>
+    <link rel="icon" href="../_static/langfair-logo-only.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="ResponseGenerator Class" href="response_generator_demo.html" />
+    <link rel="prev" title="Auto Eval Demo - Dialogue Summarization" href="auto_eval_demo.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.2.0" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/langfair-logo.png" class="logo__image only-light" alt="LangFair 0.2 documentation - Home"/>
+    <img src="../_static/langfair-logo2.png" class="logo__image only-dark pst-js-only" alt="LangFair 0.2 documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../overview.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../usage.html">
+    Get Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api.html">
+    API
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Example Notebooks
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../guide.html">
+    Contributor Guide
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/cvs-health/langfair" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../overview.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../usage.html">
+    Get Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api.html">
+    API
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Example Notebooks
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../guide.html">
+    Contributor Guide
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/cvs-health/langfair" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="classification_metrics_demo.html">Classification Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="recommendation_metrics_demo.html">Recommendation Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="auto_eval_demo.html">Auto Eval Demo - Dialogue Summarization</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Toxicity Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="response_generator_demo.html"><code class="docutils literal notranslate"><span class="pre">ResponseGenerator</span></code> Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stereotype_metrics_demo.html">Stereotype Assessment Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="counterfactual_metrics_demo.html">Counterfactual Metrics</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Example Notebooks</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Toxicity Metrics</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-toxicity-metrics-demo-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code.</p>
+</div>
+<section class="sphx-glr-example-title" id="toxicity-metrics">
+<span id="sphx-glr-auto-examples-toxicity-metrics-demo-py"></span><span id="id1"></span><h1>Toxicity Metrics<a class="headerlink" href="#toxicity-metrics" title="Link to this heading">#</a></h1>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Due to the topic of bias and fairness, some users may be offended by the content contained herein, including prompts and output generated from use of the prompts.</p>
+</div>
+<section id="content">
+<h2>Content<a class="headerlink" href="#content" title="Link to this heading">#</a></h2>
+<ol class="arabic simple">
+<li><p><a class="reference internal" href="#intro"><span class="std std-ref">Introduction</span></a></p></li>
+<li><p><a class="reference internal" href="#gen-evaluation-dataset"><span class="std std-ref">Generate Evaluation Dataset</span></a></p></li>
+<li><p><a class="reference internal" href="#assessment"><span class="std std-ref">Assessment</span></a></p></li>
+<li><p><a class="reference internal" href="#metric-defns"><span class="std std-ref">Metric Definitions</span></a></p></li>
+</ol>
+<p>Import necessary libraries for the notebook.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Run if python-dotenv not installed</span>
+<span class="c1"># import sys</span>
+<span class="c1"># !{sys.executable} -m pip install python-dotenv</span>
+
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">dotenv</span> <span class="kn">import</span> <span class="n">find_dotenv</span><span class="p">,</span> <span class="n">load_dotenv</span>
+<span class="kn">from</span> <span class="nn">langchain_core.rate_limiters</span> <span class="kn">import</span> <span class="n">InMemoryRateLimiter</span>
+
+<span class="kn">from</span> <span class="nn">langfair.generator</span> <span class="kn">import</span> <span class="n">ResponseGenerator</span>
+<span class="kn">from</span> <span class="nn">langfair.metrics.toxicity</span> <span class="kn">import</span> <span class="n">ToxicityMetrics</span>
+
+<span class="c1"># User to populate .env file with API credentials</span>
+<span class="n">repo_path</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[:</span><span class="o">-</span><span class="mi">3</span><span class="p">])</span>
+<span class="n">load_dotenv</span><span class="p">(</span><span class="n">find_dotenv</span><span class="p">())</span>
+
+<span class="n">API_KEY</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;API_KEY&quot;</span><span class="p">)</span>
+<span class="n">API_BASE</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;API_BASE&quot;</span><span class="p">)</span>
+<span class="n">API_TYPE</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;API_TYPE&quot;</span><span class="p">)</span>
+<span class="n">API_VERSION</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;API_VERSION&quot;</span><span class="p">)</span>
+<span class="n">MODEL_VERSION</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;MODEL_VERSION&quot;</span><span class="p">)</span>
+<span class="n">DEPLOYMENT_NAME</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;DEPLOYMENT_NAME&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<section id="introduction">
+<span id="intro"></span><h3>1. Introduction<a class="headerlink" href="#introduction" title="Link to this heading">#</a></h3>
+<p>Toxicity in large language model (LLM) outputs refers to offensive language that 1) launches attacks, issues threats, or
+incites hate or violence against a social group, or 2) includes the usage of pejorative slurs, insults, or any other forms of
+expression that specifically target and belittle a social group. LangFair offers the following toxicity metrics from the LLM fairness literature:</p>
+<ul class="simple">
+<li><p>Expected Maximum Toxicity <a class="reference external" href="https://arxiv.org/pdf/2009.11462">Gehman et al., 2020</a></p></li>
+<li><p>Toxicity Probability <a class="reference external" href="https://arxiv.org/pdf/2009.11462">Gehman et al., 2020</a></p></li>
+<li><p>Toxic Fraction <a class="reference external" href="https://arxiv.org/pdf/2211.09110">Liang et al., 2023</a></p></li>
+</ul>
+<p>For more details on the definitions of these metrics, refer to the [metric definitions](#section4’) in this notebook or LangFair’s <a class="reference external" href="https://arxiv.org/pdf/2407.10853">technical playbook</a>.</p>
+</section>
+<section id="generate-evaluation-dataset-skip-if-responses-already-generated">
+<span id="gen-evaluation-dataset"></span><h3>2. Generate Evaluation Dataset (skip if responses already generated)<a class="headerlink" href="#generate-evaluation-dataset-skip-if-responses-already-generated" title="Link to this heading">#</a></h3>
+<p>Here, we will use <code class="docutils literal notranslate"><span class="pre">ResponseGenerator</span></code> to generate a large sample of responses with our LLM of choice. The user should replace our example prompts with actual prompts from their use case. <strong>If the user already has a large number of responses generated, they may skip this step.</strong></p>
+<p>Read in prompts</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># THIS IS AN EXAMPLE SET OF PROMPTS. USER TO REPLACE WITH THEIR OWN PROMPTS</span>
+<span class="n">resource_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">repo_path</span><span class="p">,</span> <span class="s2">&quot;data/RealToxicityPrompts.jsonl&quot;</span><span class="p">)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">resource_path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+    <span class="c1"># Read each line in the file</span>
+    <span class="n">challenging</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">prompts</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">file</span><span class="p">:</span>
+        <span class="c1"># Parse the JSON object from each line</span>
+        <span class="n">challenging</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">)[</span><span class="s2">&quot;challenging&quot;</span><span class="p">])</span>
+        <span class="n">prompts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">)[</span><span class="s2">&quot;prompt&quot;</span><span class="p">][</span><span class="s2">&quot;text&quot;</span><span class="p">])</span>
+<span class="n">prompts</span> <span class="o">=</span> <span class="p">[</span><span class="n">prompts</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">prompts</span><span class="p">))</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">challenging</span><span class="p">[</span><span class="n">i</span><span class="p">]][</span><span class="mi">0</span><span class="p">:</span><span class="mi">100</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Note that sample size is intentionally kept low to reduce execution time of this notebook. User should use all the available propmpts and can use <cite>ResponseGenerator</cite> class to generate more response from a model.</p>
+<p>Evaluation Dataset Generation</p>
+<p><code class="docutils literal notranslate"><span class="pre">ResponseGenerator()</span></code> - Class for generating data for evaluation from provided set of prompts (class)</p>
+<p>Class parameters:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">langchain_llm</span></code> (<strong>langchain llm (Runnable), default=None</strong>) A langchain llm object to get passed to LLMChain <cite>llm</cite> argument.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">suppressed_exceptions</span></code> (<strong>tuple, default=None</strong>) Specifies which exceptions to handle as ‘Unable to get response’ rather than raising the exception</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">max_calls_per_min</span></code> (<strong>Deprecated as of 0.2.0</strong>) Use LangChain’s InMemoryRateLimiter instead.</p></li>
+</ul>
+</div></blockquote>
+<p>Methods:</p>
+<p><code class="docutils literal notranslate"><span class="pre">generate_responses()</span></code> -  Generates evaluation dataset from a provided set of prompts. For each prompt, <cite>self.count</cite> responses are generated.
+Method Parameters:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">prompts</span></code> - (<strong>list of strings</strong>) A list of prompts</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">system_prompt</span></code> - (<strong>str or None, default=”You are a helpful assistant.”</strong>) Specifies the system prompt used when generating LLM responses.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">count</span></code> - (<strong>int, default=25</strong>) Specifies number of responses to generate for each prompt.</p></li>
+</ul>
+<p>Returns:
+A dictionary with two keys: <code class="docutils literal notranslate"><span class="pre">data</span></code> and <code class="docutils literal notranslate"><span class="pre">metadata</span></code>.
+- <code class="docutils literal notranslate"><span class="pre">data</span></code> (<strong>dict</strong>) A dictionary containing the prompts and responses.
+- <code class="docutils literal notranslate"><span class="pre">metadata</span></code> (<strong>dict</strong>) A dictionary containing metadata about the generation process, including non-completion rate, temperature, and count.</p>
+<p>Below we use LangFair’s <cite>ResponseGenerator</cite> class to generate LLM responses, which will be used to compute evaluation metrics. To instantiate the <cite>ResponseGenerator</cite> class, pass a LangChain LLM object as an argument.</p>
+<p><strong>Important note: We provide three examples of LangChain LLMs below, but these can be replaced with a LangChain LLM of your choice.</strong></p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Use LangChain&#39;s InMemoryRateLimiter to avoid rate limit errors. Adjust parameters as necessary.</span>
+<span class="n">rate_limiter</span> <span class="o">=</span> <span class="n">InMemoryRateLimiter</span><span class="p">(</span>
+    <span class="n">requests_per_second</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="n">check_every_n_seconds</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="n">max_bucket_size</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Example 1: Gemini Pro with VertexAI</strong></p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># # Run if langchain-google-vertexai not installed. Note: kernel restart may be required.</span>
+<span class="c1"># import sys</span>
+<span class="c1"># !{sys.executable} -m pip install langchain-google-vertexai</span>
+
+<span class="c1"># from langchain_google_vertexai import VertexAI</span>
+<span class="c1"># llm = VertexAI(model_name=&#39;gemini-pro&#39;, temperature=1, rate_limiter=rate_limiter)</span>
+
+<span class="c1"># # Define exceptions to suppress</span>
+<span class="c1"># suppressed_exceptions = (IndexError, ) # suppresses error when gemini refuses to answer</span>
+</pre></div>
+</div>
+<p><strong>Example 2: Mistral AI</strong></p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># # Run if langchain-mistralai not installed. Note: kernel restart may be required.</span>
+<span class="c1"># import sys</span>
+<span class="c1"># !{sys.executable} -m pip install langchain-mistralai</span>
+
+<span class="c1"># os.environ[&quot;MISTRAL_API_KEY&quot;] = os.getenv(&#39;M_KEY&#39;)</span>
+<span class="c1"># from langchain_mistralai import ChatMistralAI</span>
+
+<span class="c1"># llm = ChatMistralAI(</span>
+<span class="c1">#     model=&quot;mistral-large-latest&quot;,</span>
+<span class="c1">#     temperature=1,</span>
+<span class="c1">#     rate_limiter=rate_limiter</span>
+<span class="c1"># )</span>
+<span class="c1"># suppressed_exceptions = None</span>
+</pre></div>
+</div>
+<p><strong>Example 3: OpenAI on Azure</strong></p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># # Run if langchain-openai not installed</span>
+<span class="c1"># import sys</span>
+<span class="c1"># !{sys.executable} -m pip install langchain-openai</span>
+
+<span class="kn">import</span> <span class="nn">openai</span>
+<span class="kn">from</span> <span class="nn">langchain_openai</span> <span class="kn">import</span> <span class="n">AzureChatOpenAI</span>
+
+<span class="n">llm</span> <span class="o">=</span> <span class="n">AzureChatOpenAI</span><span class="p">(</span>
+    <span class="n">deployment_name</span><span class="o">=</span><span class="n">DEPLOYMENT_NAME</span><span class="p">,</span>
+    <span class="n">openai_api_key</span><span class="o">=</span><span class="n">API_KEY</span><span class="p">,</span>
+    <span class="n">azure_endpoint</span><span class="o">=</span><span class="n">API_BASE</span><span class="p">,</span>
+    <span class="n">openai_api_type</span><span class="o">=</span><span class="n">API_TYPE</span><span class="p">,</span>
+    <span class="n">openai_api_version</span><span class="o">=</span><span class="n">API_VERSION</span><span class="p">,</span>
+    <span class="n">temperature</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>  <span class="c1"># User to set temperature</span>
+    <span class="n">rate_limiter</span><span class="o">=</span><span class="n">rate_limiter</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Define exceptions to suppress</span>
+<span class="n">suppressed_exceptions</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">openai</span><span class="o">.</span><span class="n">BadRequestError</span><span class="p">,</span>
+    <span class="ne">ValueError</span><span class="p">,</span>
+<span class="p">)</span>  <span class="c1"># this suppresses content filtering errors</span>
+</pre></div>
+</div>
+<p>Instantiate LangFair <code class="docutils literal notranslate"><span class="pre">ResponseGenerator</span></code> class</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create langfair ResponseGenerator object</span>
+<span class="n">rg</span> <span class="o">=</span> <span class="n">ResponseGenerator</span><span class="p">(</span><span class="n">langchain_llm</span><span class="o">=</span><span class="n">llm</span><span class="p">,</span> <span class="n">suppressed_exceptions</span><span class="o">=</span><span class="n">suppressed_exceptions</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Generate responses for toxicity evaluation</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Generate 25 responses per prompt</span>
+<span class="n">generations</span> <span class="o">=</span> <span class="k">await</span> <span class="n">rg</span><span class="o">.</span><span class="n">generate_responses</span><span class="p">(</span>
+    <span class="n">prompts</span><span class="o">=</span><span class="n">prompts</span><span class="p">,</span>  <span class="c1"># user to provide their own prompts</span>
+    <span class="n">count</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span>
+    <span class="n">system_prompt</span><span class="o">=</span><span class="s2">&quot;You are a helpful assistant.&quot;</span><span class="p">,</span>  <span class="c1"># user to replace with use case&#39;s system prompt</span>
+<span class="p">)</span>
+
+
+<span class="n">df_evaluate</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">generations</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">])</span>
+<span class="n">df_evaluate</span><span class="o">.</span><span class="n">info</span><span class="p">()</span>
+
+<span class="n">df_evaluate</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="toxicity-assessment">
+<span id="assessment"></span><h3>3. Toxicity Assessment<a class="headerlink" href="#toxicity-assessment" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">ToxicityMetrics()</span></code> - For calculating the toxicity bias metrics (class)</p>
+<p><strong>Class Attributes:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">classifiers</span></code> - (<strong>list containing subset of {‘detoxify_unbiased’, detoxify_original, ‘roberta-hate-speech-dynabench-r4-target’,’toxigen’}, default = [‘detoxify_unbiased’]</strong>) Specifies which LLM toxicity classifier to use.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">toxic_threshold</span></code> - (<strong>float, default=0.325</strong>) Specifies which threshold to use when binarizing toxicity probabilities.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">batch_size</span></code> - (<strong>int, default=250</strong>) Specifies the batch size for scoring toxicity of texts. Avoid setting too large to prevent the kernel from dying.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">custom_classifier</span></code> - (<strong>class object</strong>) A user-defined class for toxicity classification that contains a <cite>predict</cite> method. The <cite>predict</cite> method must accept a list of strings as an input and output a list of floats of equal length. If provided, this takes precedence over <cite>classifiers</cite>.</p></li>
+</ul>
+<p><strong>Methods:</strong></p>
+<ol class="arabic">
+<li><dl>
+<dt><code class="docutils literal notranslate"><span class="pre">get_toxicity_scores()</span></code> - Calculate toxicity scores for ensemble of toxicity classifiers.</dt><dd><p><strong>Method Parameters:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">texts</span></code> - (<strong>List of strings</strong>) A list of texts to be scored with a toxicity classifierbenign_toxic</p></li>
+</ul>
+<p>Returns:
+- vector of toxicity probabilities (<strong>List of floats</strong>)</p>
+</dd>
+</dl>
+</li>
+<li><dl>
+<dt><code class="docutils literal notranslate"><span class="pre">evaluate_metrics()</span></code> - Calculate toxicity scores and calculate toxic fraction, expected maximum toxicity, and toxicity probability metrics.</dt><dd><p><strong>Method Parameters:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">responses</span></code> - (<strong>List of strings</strong>) A list of generated output from an LLM</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">prompts</span></code> - (<strong>List of strings, default=None</strong>) A list of prompts from which <cite>responses</cite> were generated. If provided, expected maximum toxicity and toxicity probability are included in metrics.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">return_data</span></code> - (<strong>Bool, default=False</strong>) Specifies whether to return response-level toxicity scores and corresponding responses</p></li>
+</ul>
+<p>Returns:
+- Dictionary containing metric values. If <cite>return_data</cite> is True, response-level scores and corresponding responses are also returned</p>
+</dd>
+</dl>
+</li>
+</ol>
+<p>Calculate toxicity metrics</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># import torch</span>
+<span class="c1"># device = torch.device(&quot;cuda&quot;) # use if GPU is available</span>
+<span class="n">t</span> <span class="o">=</span> <span class="n">ToxicityMetrics</span><span class="p">(</span>
+    <span class="n">classifiers</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;detoxify_unbiased&quot;</span><span class="p">],</span>
+    <span class="c1"># device = device</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Please note that evaluating toxicity metrics may take some time due to being computationally intensive. For faster processing, consider using GPU acceleration</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">t</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span>
+    <span class="n">prompts</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span>
+        <span class="n">df_evaluate</span><span class="p">[</span><span class="s2">&quot;prompt&quot;</span><span class="p">]</span>
+    <span class="p">),</span>  <span class="c1"># If using only one response per prompt, set to None</span>
+    <span class="n">responses</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">df_evaluate</span><span class="p">[</span><span class="s2">&quot;response&quot;</span><span class="p">]),</span>
+    <span class="n">return_data</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">result</span><span class="p">[</span><span class="s2">&quot;metrics&quot;</span><span class="p">]</span>
+
+<span class="n">toxicity_responses</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">])</span>
+<span class="n">toxicity_responses</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+
+<span class="c1"># Check which responses were toxic</span>
+<span class="n">toxicity_responses</span><span class="p">[</span><span class="n">toxicity_responses</span><span class="p">[</span><span class="s2">&quot;score&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">toxic_threshold</span><span class="p">]</span>
+</pre></div>
+</div>
+</section>
+<section id="metric-definitions">
+<span id="metric-defns"></span><h3>4. Metric Definitions<a class="headerlink" href="#metric-definitions" title="Link to this heading">#</a></h3>
+<p>Below are details of the LLM bias / fairness evaluation metrics calculated by the <cite>ToxicityMetrics</cite> class. Metrics are defined in the context of a sample of <span class="math notranslate nohighlight">\(N\)</span> LLM outputs, denoted <span class="math notranslate nohighlight">\(\hat{Y}_1,...,\hat{Y}_N\)</span>. <strong>Below, a ❗ is used to indicate the metrics we deem to be of particular importance.</strong></p>
+</section>
+</section>
+<section id="id3">
+<h2>Toxicity Metrics<a class="headerlink" href="#id3" title="Link to this heading">#</a></h2>
+<p>Toxicity metrics leverage a pre-trained toxicity classifier <span class="math notranslate nohighlight">\(T: \mathcal{Y} \xrightarrow[]{} [0,1]\)</span> that maps texts to toxicity scores. Below, let <span class="math notranslate nohighlight">\(\tau\)</span> denote the threshold for mapping toxicity scores to <span class="math notranslate nohighlight">\(\{0,1\}\)</span>. <strong>For all toxicity metrics, values closer to 0 indicate greater fairness.</strong></p>
+<p>Toxic Fraction (TF) ❗</p>
+<p>Toxic fraction measures the proportion of generations that are classified as toxic:</p>
+<div class="math notranslate nohighlight">
+\[TF = \frac{1}{N} \sum_{i=1}^N I(T(\hat{Y}_i) &gt; \tau).\]</div>
+<p>Responses classified as toxic can be investigated by setting <cite>return_df=True</cite>.</p>
+<p>Expected Maximum Toxicity (EMT)</p>
+<p>EMT estimates the maximum predicted toxicity probability among the top 25 generations:</p>
+<div class="math notranslate nohighlight">
+\[EMT = \frac{1}{N} \sum_{i=1}^N  \max_{ 1 \leq j \leq 25} T(\hat{Y}_{ij}).\]</div>
+<p>Toxicity Probability (TP)</p>
+<p>TP is calculated as the empirical probability of having at least one toxic prediction among the top 25 generations:</p>
+<div class="math notranslate nohighlight">
+\[TP = \frac{1}{N} \sum_{i=1}^N I( \max_{ 1 \leq j \leq 25} T (\hat{Y}_{ij}) \geq \tau).\]</div>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-toxicity-metrics-demo-py">
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/4553ae0fda4b911838f7da5da7e7fd75/toxicity_metrics_demo.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">toxicity_metrics_demo.ipynb</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/dd06640a866f23d2550360ad379bcfec/toxicity_metrics_demo.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">toxicity_metrics_demo.py</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-zip docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/518ec8e9fb109a95ae49649b9f645ee1/toxicity_metrics_demo.zip"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">zipped:</span> <span class="pre">toxicity_metrics_demo.zip</span></code></a></p>
+</div>
+</div>
+<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.github.io">Gallery generated by Sphinx-Gallery</a></p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="auto_eval_demo.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Auto Eval Demo - Dialogue Summarization</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="response_generator_demo.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title"><code class="docutils literal notranslate"><span class="pre">ResponseGenerator</span></code> Class</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#content">Content</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#introduction">1. Introduction</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#generate-evaluation-dataset-skip-if-responses-already-generated">2. Generate Evaluation Dataset (skip if responses already generated)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#toxicity-assessment">3. Toxicity Assessment</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#metric-definitions">4. Metric Definitions</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Toxicity Metrics</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/auto_examples/toxicity_metrics_demo.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024, CVS Health.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
