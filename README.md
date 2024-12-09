@@ -31,9 +31,9 @@ pip install langfair
 ```
 
 ### Usage Example
-Below is a sample of code illustrating how to use LangFair's `AutoEval` class for text generation and summarization use cases. The below example assumes the user has already defined parameters `DEPLOYMENT_NAME`, `API_KEY`, `API_BASE`, `API_TYPE`, `API_VERSION`, and a list of prompts from their use case `prompts`.
+Below is a sample of code illustrating how to use LangFair's `AutoEval` class for text generation and summarization use cases. The below example assumes the user has already defined parameters `DEPLOYMENT_NAME`, `API_KEY`, `API_BASE`, `API_TYPE`, `API_VERSION`, and a list of prompts from their use case `prompts`. 
 
-Create `langchain` LLM object.
+Create `langchain` LLM object. Any of LangChain’s LLM classes may be used in place of `AzureChatOpenAI`.
 ```python
 from langchain_openai import AzureChatOpenAI
 # import torch # uncomment if GPU is available

@@ -13,7 +13,7 @@ maintainers = ["Dylan Bouchard <dylan.bouchard@cvshealth.com>",
 repository = "https://github.com/cvs-health/langfair"
 homepage = "https://github.com/cvs-health/langfair"
 documentation = "https://cvs-health.github.io/langfair/latest/index.html"
-license = "Apache-2.0, MIT"
+license = "Apache-2.0 AND MIT"
 classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "Operating System :: OS Independent",
