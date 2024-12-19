@@ -88,7 +88,7 @@ class AutoEval:
         self.metrics = self._validate_metrics(metrics)
         self.toxicity_device = toxicity_device
         self.neutralize_tokens = neutralize_tokens
-        self.results = {}
+        self.results = {'metrics': {}, 'data': {}}
 
         self.cf_generator_object = CounterfactualGenerator(
             langchain_llm=langchain_llm,
@@ -102,7 +102,7 @@ class AutoEval:
         )
 
     async def evaluate(
-        self, metrics: MetricTypes = None
+        self, metrics: MetricTypes = None, return_data: bool = False
     ) -> Dict[str, Dict[str, float]]:
         """
         Compute all the metrics based on the provided data.
@@ -111,6 +111,9 @@ class AutoEval:
         ----------
         metrics : dict or list of str, optional
             Specifies which metrics to evaluate. If None, computes all supported metrics.
+
+        return_data : bool, default=False
+            Indicates whether to include response-level counterfactual scores in results dictionary returned by this method.
 
         Returns
         -------
@@ -182,10 +185,11 @@ class AutoEval:
         toxicity_results = toxicity_object.evaluate(
             prompts=list(self.prompts), responses=list(self.responses), return_data=True
         )
-        self.results["Toxicity"], self.toxicity_data = (
-            toxicity_results["metrics"],
-            toxicity_results["data"],
-        )
+        self.results["metrics"]["Toxicity"] = toxicity_results["metrics"]
+
+        del toxicity_results["data"]['response'], toxicity_results["data"]["prompt"]
+        self.toxicity_scores = toxicity_results["data"]
+        del toxicity_results
 
         # 5. Calculate stereotype metrics
         print("\n\033[1mStep 5: Evaluate Stereotype Metrics\033[0m")
@@ -202,17 +206,19 @@ class AutoEval:
             return_data=True,
             categories=attributes,
         )
-        self.results["Stereotype"], self.stereotype_data = (
-            stereotype_results["metrics"],
-            stereotype_results["data"],
-        )
+        self.results["metrics"]["Stereotype"] = stereotype_results["metrics"]
+
+        del stereotype_results["data"]['response'], stereotype_results["data"]["prompt"]
+        self.stereotype_scores = stereotype_results["data"]
+        del stereotype_results
 
         # 6. Calculate CF metrics (if FTU not satisfied)
         if total_protected_words > 0:
             print("\n\033[1mStep 6: Evaluate Counterfactual Metrics\033[0m")
             print("---------------------------------------")
             print("Evaluating metrics...")
-            cf_results = {}
+            self.results["metrics"]["Counterfactual"] = {}
+            self.counterfactual_data = {}
             counterfactual_object = CounterfactualMetrics(
                 neutralize_tokens=self.neutralize_tokens
             )
@@ -233,7 +239,7 @@ class AutoEval:
                             for i in range(len(group1_response))
                             if group1_response[i] != fm and group2_response[i] != fm
                         ]
-                        cf_results[f"{group1}-{group2}"] = (
+                        cf_group_results = (
                             counterfactual_object.evaluate(
                                 texts1=[
                                     group1_response[i]
@@ -244,14 +250,33 @@ class AutoEval:
                                     for i in successful_response_index
                                 ],
                                 attribute=attribute,
+                                return_data=True
                             )
                         )
-                    self.results["Counterfactual"] = cf_results
+                        self.results["metrics"]["Counterfactual"][f"{group1}-{group2}"] = cf_group_results['metrics']
+                        self.counterfactual_data[f"{group1}-{group2}"] = cf_group_results['data']
         else:
             print("\n\033[1m(Skipping) Step 6: Evaluate Counterfactual Metrics\033[0m")
             print("--------------------------------------------------")
+        
+        if return_data:
+            self.results["data"]["Toxicity"] = self.toxicity_data
+            self.results["data"]["Stereotype"] = self.stereotype_data
+            self.results["data"]["Counterfactual"] = self.counterfactual_data
 
         return self.results
+    
+    @property
+    def toxicity_data(self):
+        self.toxicity_scores['prompt'] = self.prompts
+        self.toxicity_scores['response'] = self.responses
+        return self.toxicity_scores
+    
+    @property
+    def stereotype_data(self):
+        self.stereotype_scores['prompt'] = self.prompts
+        self.stereotype_scores['response'] = self.responses
+        return self.stereotype_scores
 
     def print_results(self) -> None:
         """
@@ -284,38 +309,37 @@ class AutoEval:
         result_list.append(
             start_heading + "1. Toxicity Assessment" + end_heading + " \n"
         )
-        for key in self.results["Toxicity"]:
+        for key in self.results["metrics"]["Toxicity"]:
             result_list.append(
-                "- {:<40} {:1.4f} \n".format(key, self.results["Toxicity"][key])
+                "- {:<40} {:1.4f} \n".format(key, self.results["metrics"]["Toxicity"][key])
             )
 
-        if "Stereotype" in self.results:
-            result_list.append(
-                start_heading + "2. Stereotype Assessment" + end_heading + " \n"
-            )
-            for key in self.results["Stereotype"]:
-                tmp = "- {:<40} {:1.4f} \n"
-                if self.results["Stereotype"][key] is None:
-                    tmp = "- {:<40} {} \n"
-                result_list.append(tmp.format(key, self.results["Stereotype"][key]))
+        result_list.append(
+            start_heading + "2. Stereotype Assessment" + end_heading + " \n"
+        )
+        for key in self.results["metrics"]["Stereotype"]:
+            tmp = "- {:<40} {:1.4f} \n"
+            if self.results["metrics"]["Stereotype"][key] is None:
+                tmp = "- {:<40} {} \n"
+            result_list.append(tmp.format(key, self.results["metrics"]["Stereotype"][key]))
 
-        if "Counterfactual" in self.results:
+        if "Counterfactual" in self.results["metrics"]:
             result_list.append(
                 start_heading + "3. Counterfactual Assessment" + end_heading + " \n"
             )
             tmp = ["{:<25}".format(" ")]
-            for key in self.results["Counterfactual"]:
+            for key in self.results["metrics"]["Counterfactual"]:
                 tmp.append("{:<15}".format(key))
             tmp.append(" \n")
             result_list.append("".join(tmp))
 
-            for metric_name in list(self.results["Counterfactual"].values())[0]:
+            for metric_name in list(self.results["metrics"]["Counterfactual"].values())[0]:
                 tmp = ["- ", "{:<25}".format(metric_name)]
-                for key in self.results["Counterfactual"]:
+                for key in self.results["metrics"]["Counterfactual"]:
                     tmp.append(
                         "{:<15}".format(
                             "{:1.4f}".format(
-                                self.results["Counterfactual"][key][metric_name]
+                                self.results["metrics"]["Counterfactual"][key][metric_name]
                             )
                         )
                     )
