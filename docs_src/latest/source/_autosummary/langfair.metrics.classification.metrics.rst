@@ -28,10 +28,10 @@ langfair.metrics.classification.metrics
    :template: module.rst
    :recursive:
 
-   baseclass
-   false_discovery
-   false_negative
-   false_omission
-   false_positive
-   predicted_prevalence
+   langfair.metrics.classification.metrics.baseclass
+   langfair.metrics.classification.metrics.false_discovery
+   langfair.metrics.classification.metrics.false_negative
+   langfair.metrics.classification.metrics.false_omission
+   langfair.metrics.classification.metrics.false_positive
+   langfair.metrics.classification.metrics.predicted_prevalence
 

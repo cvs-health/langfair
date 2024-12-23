@@ -1,4 +1,4 @@
-﻿langfair.metrics.classification.metrics.predicted\_prevalence.PredictedPrevalenceRateParity
+langfair.metrics.classification.metrics.predicted\_prevalence.PredictedPrevalenceRateParity
 ===========================================================================================
 
 .. currentmodule:: langfair.metrics.classification.metrics.predicted_prevalence

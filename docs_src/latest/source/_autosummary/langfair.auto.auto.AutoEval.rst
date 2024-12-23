@@ -1,4 +1,4 @@
-﻿langfair.auto.auto.AutoEval
+langfair.auto.auto.AutoEval
 ===========================
 
 .. currentmodule:: langfair.auto.auto

@@ -28,6 +28,6 @@ langfair.metrics.classification
    :template: module.rst
    :recursive:
 
-   classification
-   metrics
+   langfair.metrics.classification.classification
+   langfair.metrics.classification.metrics
 

@@ -45,7 +45,11 @@ html_theme = "pydata_sphinx_theme"
 html_theme_options = {
     "github_url": "https://github.com/cvs-health/langfair",
     "navbar_align": "left",
-    "navbar_end": ["theme-switcher", "navbar-icon-links"],
+    "navbar_end": ["version-switcher", "theme-switcher", "navbar-icon-links"],
+    "switcher": {
+        "json_url": "https://cvs-health.github.io/langfair/versions.json",
+        "version_match": release,
+    },
     "logo": {
         "image_light": "_static/images/langfair-logo.png",
         "image_dark": "_static/images/langfair-logo2.png",

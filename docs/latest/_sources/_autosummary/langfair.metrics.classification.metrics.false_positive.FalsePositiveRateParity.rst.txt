@@ -1,4 +1,4 @@
-﻿langfair.metrics.classification.metrics.false\_positive.FalsePositiveRateParity
+langfair.metrics.classification.metrics.false\_positive.FalsePositiveRateParity
 ===============================================================================
 
 .. currentmodule:: langfair.metrics.classification.metrics.false_positive

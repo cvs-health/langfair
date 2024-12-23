@@ -28,6 +28,6 @@ langfair.metrics.recommendation
    :template: module.rst
    :recursive:
 
-   metrics
-   recommendation
+   langfair.metrics.recommendation.metrics
+   langfair.metrics.recommendation.recommendation
 

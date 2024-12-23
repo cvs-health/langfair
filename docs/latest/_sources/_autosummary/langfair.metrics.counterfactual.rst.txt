@@ -28,6 +28,6 @@ langfair.metrics.counterfactual
    :template: module.rst
    :recursive:
 
-   counterfactual
-   metrics
+   langfair.metrics.counterfactual.counterfactual
+   langfair.metrics.counterfactual.metrics
 

@@ -28,8 +28,8 @@ langfair.metrics.recommendation.metrics
    :template: module.rst
    :recursive:
 
-   baseclass
-   jaccard
-   prag
-   serp
+   langfair.metrics.recommendation.metrics.baseclass
+   langfair.metrics.recommendation.metrics.jaccard
+   langfair.metrics.recommendation.metrics.prag
+   langfair.metrics.recommendation.metrics.serp
 

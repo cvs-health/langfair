@@ -28,8 +28,8 @@ langfair.metrics.stereotype.metrics
    :template: module.rst
    :recursive:
 
-   associations
-   baseclass
-   classifier
-   cooccurrence
+   langfair.metrics.stereotype.metrics.associations
+   langfair.metrics.stereotype.metrics.baseclass
+   langfair.metrics.stereotype.metrics.classifier
+   langfair.metrics.stereotype.metrics.cooccurrence
 

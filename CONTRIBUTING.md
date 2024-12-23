@@ -68,6 +68,20 @@ To build documentation:
 2. Navigate to the source dir: `cd docs_src`
 3. Build documentation for a GitHub Pages deployment: `make github`
 
+To update docs site with new langfair release:
+__(here we'll use an example scenario where langfair was at v0.2.0 and we are now rebuilding for a recent v0.3.0)__
+1. Merge the release pr/branch/tag for v0.3.0 into the gh-pages branch
+2. Make a duplicate copy of the `docs_src/latest` dir and rename it to the previous latest's release number (in this case "0.2")
+3. Repeat step 2 for `docs/latest` dir
+4. In `docs_src/versions.json` 
+    - make a new entry for the new release (`name: "v0.3 (latest)"`)
+    - remove "latest" from the name of v0.2
+    - change the url for v0.2 to point at /0.2/index.html instead of /latest/index.thml
+    - make sure `"preferred": true` is an attribute of the new v0.3 version only
+5. Build latest (v0.3) docs by navigating to `docs_src/latest` and running `make github`
+6. Push changes to your feature branch and verify successful update on your forked repo's deployed doc site before submitting a PR
+
+
 ## Style Guides
 
 ### Code Style

@@ -51,6 +51,13 @@ ruff = "^0.4.8"
 pytest = "^8.3.3"
 pytest-asyncio = "^0.24.0"
 
+[tool.poetry.group.docs.dependencies]
+sphinx = "7.3.7"
+pydata_sphinx_theme = "0.16.1"
+sphinxcontrib-bibtext = "2.6.3"
+sphinx-autodoc-typehints = "2.2.0"
+sphinx-gallery = "0.18.0"
+
 [tool.poetry.group.extra_llms.dependencies]
 langchain-mistralai = "^0.2.2"
 

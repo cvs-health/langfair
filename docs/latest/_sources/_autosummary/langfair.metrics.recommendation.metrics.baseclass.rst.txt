@@ -28,5 +28,5 @@ langfair.metrics.recommendation.metrics.baseclass
    :template: module.rst
    :recursive:
 
-   metrics
+   langfair.metrics.recommendation.metrics.baseclass.metrics
 

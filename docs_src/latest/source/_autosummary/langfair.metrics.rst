@@ -28,9 +28,9 @@
    :template: module.rst
    :recursive:
 
-   classification
-   counterfactual
-   recommendation
-   stereotype
-   toxicity
+   langfair.metrics.classification
+   langfair.metrics.counterfactual
+   langfair.metrics.recommendation
+   langfair.metrics.stereotype
+   langfair.metrics.toxicity
 

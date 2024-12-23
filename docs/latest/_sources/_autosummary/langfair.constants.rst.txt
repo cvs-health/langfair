@@ -28,6 +28,6 @@
    :template: module.rst
    :recursive:
 
-   cost_data
-   word_lists
+   langfair.constants.cost_data
+   langfair.constants.word_lists
 

@@ -1,4 +1,4 @@
-﻿langfair.metrics.classification.metrics.baseclass.metrics.Metric
+langfair.metrics.classification.metrics.baseclass.metrics.Metric
 ================================================================
 
 .. currentmodule:: langfair.metrics.classification.metrics.baseclass.metrics
