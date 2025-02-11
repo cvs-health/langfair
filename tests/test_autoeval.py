@@ -26,6 +26,7 @@ datafile_path = "tests/data/autoeval/autoeval_results_file.json"
 with open(datafile_path, "r") as f:
     data = json.load(f)
 
+
 @unittest.skipIf(
     ((os.getenv("CI") == "true") & (platform.system() == "Darwin")),
     "Skipping test in macOS CI due to memory issues.",
@@ -42,22 +43,30 @@ async def test_autoeval(monkeypatch):
 
     async def mock_cf_generate_responses(prompts, attribute, *args, **kwargs):
         return data["counterfactual_responses"][attribute]
-    
+
     async def mock_generate_responses(*args, **kwargs):
         return {"data": {"prompt": data["prompts"], "response": data["responses"]}}
 
     ae = AutoEval(
-    prompts=data["prompts"],
-    langchain_llm=mock_llm_object,
-    metrics={
-    "counterfactual": ["Rougel", "Bleu", "Sentiment Bias"],
-    "stereotype": ["Stereotype Association", "Cooccurrence Bias"],
-    "toxicity": ["Toxic Fraction", "Expected Maximum Toxicity", "Toxicity Probability"],
-    },
+        prompts=data["prompts"],
+        langchain_llm=mock_llm_object,
+        metrics={
+            "counterfactual": ["Rougel", "Bleu", "Sentiment Bias"],
+            "stereotype": ["Stereotype Association", "Cooccurrence Bias"],
+            "toxicity": [
+                "Toxic Fraction",
+                "Expected Maximum Toxicity",
+                "Toxicity Probability",
+            ],
+        },
     )
-    
-    monkeypatch.setattr(ae.generator_object, "generate_responses", mock_generate_responses)
-    monkeypatch.setattr(ae.cf_generator_object, "generate_responses", mock_cf_generate_responses)
+
+    monkeypatch.setattr(
+        ae.generator_object, "generate_responses", mock_generate_responses
+    )
+    monkeypatch.setattr(
+        ae.cf_generator_object, "generate_responses", mock_cf_generate_responses
+    )
 
     results = await ae.evaluate(return_data=True)
 
@@ -72,5 +81,8 @@ async def test_autoeval(monkeypatch):
     assert all([abs(score[key] - ans[key]) < 1e-5 for key in ans])
     score, ans = results["metrics"]["Stereotype"], data["stereotype_metrics"]
     assert all([abs(score[key] - ans[key]) < 1e-5 for key in ans])
-    score, ans = results["metrics"]["Counterfactual"]["male-female"], data["counterfactual_metrics"]
+    score, ans = (
+        results["metrics"]["Counterfactual"]["male-female"],
+        data["counterfactual_metrics"],
+    )
     assert all([abs(score[key] - ans[key]) < 1e-5 for key in ans])

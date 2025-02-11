@@ -80,7 +80,9 @@ class CosineSimilarity(Metric):
         ), """langfair: Lists 'texts1' and 'texts2' must be of equal length."""
 
         embeddings1, embeddings2 = self._get_embeddings(
-            transformer=self.transformer_instance, texts1=list(texts1), texts2=list(texts2)
+            transformer=self.transformer_instance,
+            texts1=list(texts1),
+            texts2=list(texts2),
         )
         cosine = self._calc_cosine_sim(embeddings1, embeddings2)
         return np.mean(cosine) if self.how == "mean" else cosine

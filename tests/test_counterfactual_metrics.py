@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
- 
+
 import json
 import os
 import platform
@@ -74,7 +74,8 @@ def test_senitement2():
 
 
 def test_CounterfactualMetrics():
-    metrics = ["Rougel",
+    metrics = [
+        "Rougel",
         "Bleu",
         "Sentiment Bias",
     ]
@@ -82,8 +83,6 @@ def test_CounterfactualMetrics():
     result = counterfactualmetrics.evaluate(
         data["text1"], data["text2"], attribute="race"
     )
-    score = result['metrics']
+    score = result["metrics"]
     ans = actual_results["test6"]["metrics"]
-    assert all(
-        [abs(score[key] - ans[key]) < 1e-5 for key in ans]
-    )
+    assert all([abs(score[key] - ans[key]) < 1e-5 for key in ans])

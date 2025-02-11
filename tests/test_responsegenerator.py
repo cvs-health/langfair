@@ -37,8 +37,8 @@ async def test_generator(monkeypatch):
     ]
     MOCKED_RESPONSE_DICT = dict(zip(MOCKED_PROMPTS, MOCKED_RESPONSES))
 
-    async def mock_async_api_call(prompt, *args, **kwargs):
-        return MOCKED_RESPONSE_DICT[prompt]
+    async def mock_async_api_call(prompt, count, *args, **kwargs):
+        return [MOCKED_RESPONSE_DICT[prompt]] * count
 
     mock_object = AzureChatOpenAI(
         deployment_name="YOUR-DEPLOYMENT",

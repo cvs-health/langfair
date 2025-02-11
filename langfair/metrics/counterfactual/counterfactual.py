@@ -22,10 +22,10 @@ from langfair.metrics.counterfactual.metrics.baseclass.metrics import Metric
 
 MetricType = Union[list[str], list[Metric]]
 DefaultMetricObjects = {
-    "Cosine": metrics.CosineSimilarity(transformer="all-MiniLM-L6-v2", how='pairwise'),
-    "Rougel": metrics.RougelSimilarity(how='pairwise'),
-    "Bleu": metrics.BleuSimilarity(how='pairwise'),
-    "Sentiment Bias": metrics.SentimentBias(how='pairwise'),
+    "Cosine": metrics.CosineSimilarity(transformer="all-MiniLM-L6-v2", how="pairwise"),
+    "Rougel": metrics.RougelSimilarity(how="pairwise"),
+    "Bleu": metrics.BleuSimilarity(how="pairwise"),
+    "Sentiment Bias": metrics.SentimentBias(how="pairwise"),
 }
 DefaultMetricNames = list(DefaultMetricObjects.keys())
 
@@ -60,11 +60,11 @@ class CounterfactualMetrics:
             self.cf_generator = CounterfactualGenerator()
 
     def evaluate(
-        self, 
-        texts1: list, 
-        texts2: list, 
-        attribute: str = None, 
-        return_data: bool = False
+        self,
+        texts1: list,
+        texts2: list,
+        attribute: str = None,
+        return_data: bool = False,
     ) -> Dict[str, Any]:
         """
         This method evaluate the counterfactual metrics values for the provided pair of texts.
@@ -114,20 +114,16 @@ class CounterfactualMetrics:
                 metric.name in ["Bleu Similarity", "RougeL Similarity"]
                 and self.neutralize_tokens
             ):
-                scores = metric.evaluate(
-                    texts1=masked_texts1, texts2=masked_texts2
-                )
+                scores = metric.evaluate(texts1=masked_texts1, texts2=masked_texts2)
             else:
-                scores = metric.evaluate(
-                    texts1=texts1, texts2=texts2
-                )
+                scores = metric.evaluate(texts1=texts1, texts2=texts2)
             response_scores[metric.name] = scores
-            
+
             if metric.name == "Sentiment Bias":
                 metric_values[metric.name] = metric.parity_value
             else:
                 metric_values[metric.name] = np.mean(scores)
-            
+
         result = {"metrics": metric_values}
         if return_data:
             result["data"] = response_scores

@@ -50,6 +50,9 @@ pre-commit = "3.7.1"
 ruff = "^0.4.8"
 pytest = "^8.3.3"
 pytest-asyncio = "^0.24.0"
+ipykernel = "^6.29.5"
+ipywidgets = "^8.1.5"
+python-dotenv = "^1.0.1"
 
 [tool.poetry.group.docs.dependencies]
 sphinx = "7.3.7"
@@ -60,6 +63,7 @@ sphinx-gallery = "0.18.0"
 
 [tool.poetry.group.extra_llms.dependencies]
 langchain-mistralai = "^0.2.2"
+langchain-google-vertexai = "^2.0.13"
 
 [tool.ruff.lint]
 extend-select = ["I"] # lets Ruff catch and fix unsorted imports

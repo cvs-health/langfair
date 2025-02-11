@@ -52,9 +52,9 @@ async def test_counterfactual(monkeypatch):
 
     async def mock_async_api_call(prompt, *args, **kwargs):
         if "1" in prompt or "2" in prompt:
-            return MOCKED_RESPONSES[0]
+            return [MOCKED_RESPONSES[0]]
         elif "3" in prompt or "4" in prompt:
-            return MOCKED_RESPONSES[-1]
+            return [MOCKED_RESPONSES[-1]]
 
     mock_object = AzureChatOpenAI(
         deployment_name="YOUR-DEPLOYMENT",

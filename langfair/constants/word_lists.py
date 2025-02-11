@@ -66,7 +66,7 @@ FEMALE_WORDS: List[str] = [
     "grandmothers",
     "girfriend",
     "girlfriends",
-    "Mrs."
+    "Mrs.",
 ]
 
 MALE_WORDS: List[str] = [
@@ -96,7 +96,7 @@ MALE_WORDS: List[str] = [
     "grandfathers",
     "boyfriend",
     "boyfriends",
-    "Mr."
+    "Mr.",
 ]
 
 GENDER_NEUTRAL_WORDS: List[str] = [
@@ -126,7 +126,7 @@ GENDER_NEUTRAL_WORDS: List[str] = [
     "grandparents",
     "friend",
     "friends",
-    "Mx."
+    "Mx.",
 ]
 
 GENDER_TO_WORD_LISTS: Dict[str, List[str]] = {
