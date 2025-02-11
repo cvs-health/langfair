@@ -12,7 +12,7 @@ import asyncio
 import itertools
 import random
 import warnings
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, TypedDict
 
 import langchain_core
 import numpy as np
@@ -21,6 +21,23 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
 from langfair.constants.cost_data import COST_MAPPING, FAILURE_MESSAGE, TOKEN_COST_DATE
+
+
+class ResponseData(TypedDict):
+    prompt: list[str]
+    response: list[str]
+
+
+class ResponseMetadata(TypedDict):
+    non_completion_rate: float
+    system_prompt: str
+    temperature: float | int
+    count: int
+
+
+class GeneratedResponses(TypedDict):
+    data: ResponseData
+    metadata: ResponseMetadata
 
 
 class ResponseGenerator:
@@ -172,10 +189,10 @@ class ResponseGenerator:
 
     async def generate_responses(
         self,
-        prompts: List[str],
+        prompts: list[str],
         system_prompt: str = "You are a helpful assistant.",
         count: int = 25,
-    ) -> Dict[str, Any]:
+    ) -> GeneratedResponses:
         """
         Generates evaluation dataset from a provided set of prompts. For each prompt,
         `self.count` responses are generated.
@@ -208,7 +225,7 @@ class ResponseGenerator:
 
             'metadata' : dict
                 A dictionary containing metadata about the generation process.
-                
+
                 'non_completion_rate' : float
                     The rate at which the generation process did not complete.
                 'temperature' : float
@@ -232,7 +249,10 @@ class ResponseGenerator:
         # set up langchain and generate asynchronously
         chain = self._setup_langchain(system_prompt=system_prompt)
         tasks, duplicated_prompts = self._create_tasks(chain=chain, prompts=prompts)
+
+        # TODO(RAE): wrap this with disk caching
         responses = await asyncio.gather(*tasks)
+
         non_completion_rate = len(
             [r for r in responses if r == self.failure_message]
         ) / len(responses)
@@ -314,7 +334,7 @@ class ResponseGenerator:
     def _enforce_strings(texts: List[Any]) -> List[str]:
         """Enforce that all outputs are strings"""
         return [str(r) for r in texts]
-            
+
     @staticmethod
     def _num_tokens_from_messages(
         messages: List[Dict[str, str]], model: str, prompt: bool = True
