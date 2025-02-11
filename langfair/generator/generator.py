@@ -12,9 +12,10 @@ import asyncio
 import itertools
 import random
 import warnings
-from typing import Any, Dict, List, Optional, Tuple, Union, TypedDict
+from typing import Any, TypedDict, final
 
 import langchain_core
+from langchain_core.language_models.chat_models import BaseChatModel
 import numpy as np
 import tiktoken
 from langchain_core.messages.human import HumanMessage
@@ -43,15 +44,16 @@ class GeneratedResponses(TypedDict):
 N_PARAM_WARNING = """Use of `n` parameter is not compatible with all BaseChatModels. Ensure your BaseChatModel is compatible."""
 
 
+@final
 class ResponseGenerator:
     def __init__(
         self,
-        langchain_llm: Any = None,
-        suppressed_exceptions: Optional[
-            Union[Tuple[BaseException], BaseException, Dict[BaseException, str]]
-        ] = None,
+        langchain_llm: BaseChatModel,
+        suppressed_exceptions: (
+            tuple[BaseException] | BaseException | dict[BaseException, str] | None
+        ) = None,
         use_n_param: bool = False,
-        max_calls_per_min: Optional[int] = None,
+        max_calls_per_min: int | None = None,
     ) -> None:
         """
         Class for generating data from a provided set of prompts
@@ -59,7 +61,7 @@ class ResponseGenerator:
         Parameters
         ----------
         langchain_llm : langchain `BaseChatModel`, default=None
-            A langchain llm `BaseChatModel`. User is responsible for specifying temperature and other 
+            A langchain llm `BaseChatModel`. User is responsible for specifying temperature and other
             relevant parameters to the constructor of their `langchain_llm` object.
 
         suppressed_exceptions : tuple or dict, default=None
@@ -68,7 +70,7 @@ class ResponseGenerator:
             of BaseException
 
         use_n_param : bool, default=False
-            Specifies whether to use `n` parameter for `BaseChatModel`. Not compatible with all 
+            Specifies whether to use `n` parameter for `BaseChatModel`. Not compatible with all
             `BaseChatModel` classes. If used, it speeds up the generation process substantially when count > 1.
 
         max_calls_per_min : int, default=None
@@ -78,14 +80,14 @@ class ResponseGenerator:
         self.token_cost_date = TOKEN_COST_DATE
         self.llm = langchain_llm
         self.use_n_param = use_n_param
-        if isinstance(suppressed_exceptions, Dict):
+        if isinstance(suppressed_exceptions, dict):
             if self._valid_exceptions(tuple(suppressed_exceptions.keys())):
                 self.suppressed_exceptions = suppressed_exceptions
         elif self._valid_exceptions(suppressed_exceptions):
             self.suppressed_exceptions = suppressed_exceptions
         else:
             raise TypeError(
-                """suppressed_exceptions must be a subclass of BaseException or a tuple of subclasses of BaseException 
+                """suppressed_exceptions must be a subclass of BaseException or a tuple of subclasses of BaseException
                 or a Dict with keys being subclasses of BaseException"""
             )
 
@@ -98,12 +100,12 @@ class ResponseGenerator:
     async def estimate_token_cost(
         self,
         tiktoken_model_name: str,
-        prompts: List[str],
-        example_responses: List[str] = None,
+        prompts: list[str],
+        example_responses: list[str] = None,
         response_sample_size: int = 30,
         system_prompt: str = "You are a helpful assistant",
         count: int = 25,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """
         Estimates the token cost for a given list of prompts and (optionally) example responses.
         Note: This method is only compatible with GPT models. Cost-per-token values are as of
@@ -248,18 +250,20 @@ class ResponseGenerator:
                 'system_prompt' : str
                     The system prompt used for generating responses
         """
-        assert isinstance(self.llm, langchain_core.language_models.chat_models.BaseChatModel), """
+        assert isinstance(
+            self.llm, langchain_core.language_models.chat_models.BaseChatModel
+        ), """
             langchain_llm must be an instance of langchain_core.language_models.chat_models.BaseChatModel
         """
         assert all(
             isinstance(prompt, str) for prompt in prompts
         ), "If using custom prompts, please ensure `prompts` is of type list[str]"
-        
+
         if self.use_n_param:
             warnings.warn(N_PARAM_WARNING)
             if not ((count > 1) and (hasattr(self.llm, "n"))):
                 self.use_n_param = False
-                
+
         print(f"Generating {count} responses per prompt...")
         if self.llm.temperature == 0:
             assert count == 1, "temperature must be greater than 0 if count > 1"
@@ -267,8 +271,6 @@ class ResponseGenerator:
         self.system_message = SystemMessage(system_prompt)
 
         tasks, duplicated_prompts = self._create_tasks(prompts=prompts)
-  
-        # TODO(RAE): wrap this with disk caching
         response_lists = await asyncio.gather(*tasks)
 
         responses = []
@@ -276,18 +278,18 @@ class ResponseGenerator:
             responses.extend(response)
 
         print("Responses successfully generated!")
-        return {
-            "data": {
-                "prompt": self._enforce_strings(duplicated_prompts),
-                "response": self._enforce_strings(responses),
-            },
-            "metadata": {
-                "non_completion_rate": self._calc_noncompletion_rate(responses),
-                "system_prompt": system_prompt,
-                "temperature": self.llm.temperature,
-                "count": self.count,
-            },
-        }
+        return GeneratedResponses(
+            data=ResponseData(
+                prompt=self._enforce_strings(duplicated_prompts),
+                response=self._enforce_strings(responses),
+            ),
+            metadata=ResponseMetadata(
+                non_completion_rate=self._calc_noncompletion_rate(responses),
+                system_prompt=system_prompt,
+                temperature=self.llm.temperature,
+                count=self.count,
+            ),
+        )
 
     def _update_count(self, count: int) -> None:
         """Updates self.count parameter and self.llm as necessary"""
@@ -299,8 +301,8 @@ class ResponseGenerator:
 
     def _create_tasks(
         self,
-        prompts: List[str],
-    ) -> Tuple[List[Any], List[str]]:
+        prompts: list[str],
+    ) -> tuple[list[Any], list[str]]:
         """
         Creates a list of async tasks and returns duplicated prompt list
         with each prompt duplicated `count` times
@@ -311,10 +313,7 @@ class ResponseGenerator:
         if self.use_n_param:
             try:
                 tasks = [
-                    self._async_api_call(
-                        prompt=prompt,
-                        count=self.count
-                    )
+                    self._async_api_call(prompt=prompt, count=self.count)
                     for prompt in prompts
                 ]
             except ValueError:
@@ -322,16 +321,12 @@ class ResponseGenerator:
                 self.llm.n = 1
         if not self.use_n_param:
             tasks = [
-                self._async_api_call(
-                    prompt=prompt, count=1
-                )
+                self._async_api_call(prompt=prompt, count=1)
                 for prompt in duplicated_prompts
             ]
         return tasks, duplicated_prompts
 
-    async def _async_api_call(
-        self, prompt: str, count: int = 1
-    ) -> List[Any]:
+    async def _async_api_call(self, prompt: str, count: int = 1) -> list[Any]:
         """Generates responses asynchronously using a BaseLanguageModel object"""
         messages = [self.system_message, HumanMessage(prompt)]
         try:
@@ -339,19 +334,21 @@ class ResponseGenerator:
             generations = [result.generations[0][i].text for i in range(count)]
             if len(generations) != count:
                 raise ValueError("Incorrect number of generations")
-            return generations
         except Exception as err:
             if self.suppressed_exceptions is not None:
-                if isinstance(self.suppressed_exceptions, Dict):
+                if isinstance(self.suppressed_exceptions, dict):
                     if isinstance(err, tuple(self.suppressed_exceptions.keys())):
                         return [self.suppressed_exceptions.get(type(err))] * count
                 elif isinstance(err, self.suppressed_exceptions):
                     return [FAILURE_MESSAGE] * count
+            # TODO(RAE): log/cache failure per result
             raise err
+        # TODO(RAE): log/cache generated result
+        return generations
 
-    def _calc_noncompletion_rate(self, responses: List[str]) -> float:
+    def _calc_noncompletion_rate(self, responses: list[str]) -> float:
         """Compute noncompletion rate"""
-        if isinstance(self.suppressed_exceptions, Dict):
+        if isinstance(self.suppressed_exceptions, dict):
             non_completion_rate = len(
                 [
                     r
@@ -368,7 +365,7 @@ class ResponseGenerator:
 
     @staticmethod
     def _valid_exceptions(
-        exceptions: Union[Tuple[BaseException], BaseException],
+        exceptions: tuple[BaseException] | BaseException,
     ) -> bool:
         """Returns true if exceptions is a subclass of BaseException or a tuple of  subclasses of BaseException"""
         if exceptions is None:
@@ -387,13 +384,13 @@ class ResponseGenerator:
                 return False
 
     @staticmethod
-    def _enforce_strings(texts: List[Any]) -> List[str]:
+    def _enforce_strings(texts: list[Any]) -> list[str]:
         """Enforce that all outputs are strings"""
         return [str(r) for r in texts]
 
     @staticmethod
     def _num_tokens_from_messages(
-        messages: List[Dict[str, str]], model: str, prompt: bool = True
+        messages: list[dict[str, str]], model: str, prompt: bool = True
     ) -> int:
         """
         Returns the number of tokens used by a list of messages.
