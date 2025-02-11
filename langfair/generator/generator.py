@@ -15,9 +15,10 @@ import warnings
 from typing import Any, Optional, TypedDict, Union, final
 
 import langchain_core
-from langchain_core.language_models.chat_models import BaseChatModel
 import numpy as np
 import tiktoken
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import BaseMessage
 from langchain_core.messages.human import HumanMessage
 from langchain_core.messages.system import SystemMessage
 
@@ -328,7 +329,7 @@ class ResponseGenerator:
 
     async def _async_api_call(self, prompt: str, count: int = 1) -> list[Any]:
         """Generates responses asynchronously using a BaseLanguageModel object"""
-        messages = [self.system_message, HumanMessage(prompt)]
+        messages: list[BaseMessage] = [self.system_message, HumanMessage(prompt)]
         try:
             result = await self.llm.agenerate([messages])
             generations = [result.generations[0][i].text for i in range(count)]
