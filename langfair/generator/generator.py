@@ -12,7 +12,7 @@ import asyncio
 import itertools
 import random
 import warnings
-from typing import Any, TypedDict, final
+from typing import Any, Optional, TypedDict, Union, final
 
 import langchain_core
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -32,7 +32,7 @@ class ResponseData(TypedDict):
 class ResponseMetadata(TypedDict):
     non_completion_rate: float
     system_prompt: str
-    temperature: float | int
+    temperature: Union[float, int]
     count: int
 
 
@@ -49,11 +49,11 @@ class ResponseGenerator:
     def __init__(
         self,
         langchain_llm: BaseChatModel,
-        suppressed_exceptions: (
-            tuple[BaseException] | BaseException | dict[BaseException, str] | None
-        ) = None,
+        suppressed_exceptions: Union[
+            tuple[BaseException], BaseException, dict[BaseException, str], None
+        ] = None,
         use_n_param: bool = False,
-        max_calls_per_min: int | None = None,
+        max_calls_per_min: Optional[int] = None,
     ) -> None:
         """
         Class for generating data from a provided set of prompts
@@ -365,7 +365,7 @@ class ResponseGenerator:
 
     @staticmethod
     def _valid_exceptions(
-        exceptions: tuple[BaseException] | BaseException,
+        exceptions: Union[tuple[BaseException], BaseException],
     ) -> bool:
         """Returns true if exceptions is a subclass of BaseException or a tuple of  subclasses of BaseException"""
         if exceptions is None:
