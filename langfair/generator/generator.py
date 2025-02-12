@@ -311,6 +311,14 @@ class ResponseGenerator:
         duplicated_prompts = [
             prompt for prompt, i in itertools.product(prompts, range(self.count))
         ]
+
+        # TODO(RAE): Here we need to check if cache exists.  If so, match it
+        # against `n` to see how many more tasks we actually have to create.
+        # Gather existing results from cache and subtract this number from `n`.
+        # These become coroutines that just retuurn the string literal from
+        # SQLite, and the remaining coroutines should do the normal round trip
+        # to the LLM
+
         if self.use_n_param:
             try:
                 tasks = [

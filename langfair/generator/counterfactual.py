@@ -72,7 +72,7 @@ class CounterfactualGenerator(ResponseGenerator):
         Parameters
         ----------
         langchain_llm : langchain `BaseChatModel`, default=None
-            A langchain llm `BaseChatModel`. User is responsible for specifying temperature and other 
+            A langchain llm `BaseChatModel`. User is responsible for specifying temperature and other
             relevant parameters to the constructor of their `langchain_llm` object.
 
         suppressed_exceptions : tuple or dict, default=None
@@ -81,7 +81,7 @@ class CounterfactualGenerator(ResponseGenerator):
             of BaseException
 
         use_n_param : bool, default=False
-            Specifies whether to use `n` parameter for `BaseChatModel`. Not compatible with all 
+            Specifies whether to use `n` parameter for `BaseChatModel`. Not compatible with all
             `BaseChatModel` classes. If used, it speeds up the generation process substantially when count > 1.
 
         max_calls_per_min : int, default=None
@@ -383,15 +383,16 @@ class CounterfactualGenerator(ResponseGenerator):
 
         # generate responses with async
         responses_dict, duplicated_prompts_dict = {}, {}
+
+        # TODO(RAE): Initialize cache here
         for group in groups:
             prompt_key = group + "_prompt"
-            # start = time.time()
-            # generate with async
-            (
-                tasks,
-                duplicated_prompts_dict[prompt_key],
-            ) = self._create_tasks(prompts=prompts_dict[prompt_key])
+            tasks, duplicated_prompts_dict[prompt_key] = self._create_tasks(
+                prompts=prompts_dict[prompt_key]
+            )
+
             tmp_response_list = await asyncio.gather(*tasks)
+            # TODO(RAE): Clear cache on success
 
             tmp_responses = []
             for response in tmp_response_list:
