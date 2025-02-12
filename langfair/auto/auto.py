@@ -68,8 +68,8 @@ class AutoEval:
             relevant parameters to the constructor of their `langchain_llm` object.
 
         suppressed_exceptions : tuple or dict, default=None
-            If a tuple,Specifies which exceptions to handle as 'Unable to get response' rather than raising the
-            exception. If a dict,enables users to specify exception-specific failure messages with keys being subclasses
+            If a tuple, specifies which exceptions to handle as 'Unable to get response' rather than raising the
+            exception. If a dict, enables users to specify exception-specific failure messages with keys being subclasses
             of BaseException
 
         use_n_param : bool, default=False

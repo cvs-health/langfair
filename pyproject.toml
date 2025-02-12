@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langfair"
-version = "0.3.2"
+version = "0.4.0"
 description = "LangFair is a Python library for conducting use-case level LLM bias and fairness assessments"
 readme = "README.md"
 authors = ["Dylan Bouchard <dylan.bouchard@cvshealth.com>",
@@ -43,6 +43,7 @@ asyncio = "^3.4.3"
 sentence-transformers = "^2.7.0"
 typing = "<3.10"
 tiktoken = "^0.7.0"
+transformers = ">=4.48.0"
 
 [tool.poetry.group.dev.dependencies]
 langchain-openai = "^0.2.9"

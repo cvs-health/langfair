@@ -10,14 +10,25 @@
 [![](https://img.shields.io/badge/arXiv-2407.10853-B31B1B.svg)](https://arxiv.org/abs/2407.10853)
 
 
-LangFair is a comprehensive Python library designed for conducting bias and fairness assessments of large language model (LLM) use cases. This repository includes a comprehensive framework for [choosing bias and fairness metrics](https://github.com/cvs-health/langfair/tree/main#-choosing-bias-and-fairness-metrics-for-an-llm-use-case), along with [demo notebooks](https://github.com/cvs-health/langfair/tree/main/examples) and a [technical playbook](https://arxiv.org/abs/2407.10853) that discusses LLM bias and fairness risks, evaluation metrics, and best practices. 
+LangFair is a comprehensive Python library designed for conducting bias and fairness assessments of large language model (LLM) use cases. This repository includes various supporting resources, including
 
-Explore our [documentation site](https://cvs-health.github.io/langfair/) for detailed instructions on using LangFair.
+- [Documentation site](https://cvs-health.github.io/langfair/) with complete API reference
+- [Comprehensive framework](https://github.com/cvs-health/langfair/tree/main#-choosing-bias-and-fairness-metrics-for-an-llm-use-case) for choosing bias and fairness metrics
+- [Demo notebooks](https://github.com/cvs-health/langfair/tree/main#-example-notebooks) providing illustrative examples
+- [LangFair tutorial](https://medium.com/cvs-health-tech-blog/how-to-assess-your-llm-use-case-for-bias-and-fairness-with-langfair-7be89c0c4fab) on Medium
+- [Software paper](https://arxiv.org/abs/2501.03112v1) on how LangFair compares to other toolkits
+- [Research paper](https://arxiv.org/abs/2407.10853) on our evaluation approach
 
 ## 🚀 Why Choose LangFair?
 Static benchmark assessments, which are typically assumed to be sufficiently representative, often fall short in capturing the risks associated with all possible use cases of LLMs. These models are increasingly used in various applications, including recommendation systems, classification, text generation, and summarization. However, evaluating these models without considering use-case-specific prompts can lead to misleading assessments of their performance, especially regarding bias and fairness risks.
  
 LangFair addresses this gap by adopting a Bring Your Own Prompts (BYOP) approach, allowing users to tailor bias and fairness evaluations to their specific use cases. This ensures that the metrics computed reflect the true performance of the LLMs in real-world scenarios, where prompt-specific risks are critical. Additionally, LangFair's focus is on output-based metrics that are practical for governance audits and real-world testing, without needing access to internal model states.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/cvs-health/langfair/release-branch/v0.4.0/assets/images/langfair_graphic.png" />
+</p>
+
+**Note:** This diagram illustrates the workflow for assessing bias and fairness in text generation and summarization use cases.
 
 ## ⚡ Quickstart Guide
 ### (Optional) Create a virtual environment for using LangFair
@@ -157,7 +168,7 @@ Explore the following demo notebooks to see how to use LangFair for various bias
 ## 🛠 Choosing Bias and Fairness Metrics for an LLM Use Case
 Selecting the appropriate bias and fairness metrics is essential for accurately assessing the performance of large language models (LLMs) in specific use cases. Instead of attempting to compute all possible metrics, practitioners should focus on a relevant subset that aligns with their specific goals and the context of their application.
 
-Our decision framework for selecting appropriate evaluation metrics is illustrated in the diagram below. For more details, refer to our [technical playbook](https://arxiv.org/abs/2407.10853).
+Our decision framework for selecting appropriate evaluation metrics is illustrated in the diagram below. For more details, refer to our [research paper](https://arxiv.org/abs/2407.10853) detailing the evaluation approach.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/cvs-health/langfair/main/assets/images/use_case_framework.PNG" />
