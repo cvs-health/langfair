@@ -14,26 +14,45 @@
 
 import os
 import platformdirs
+import shutil
 import sqlite3
+
+
+CACHE_DIR = platformdirs.user_cache_dir(
+    appname="langfair",
+    appauthor="cvs-health",
+)
+
+
+_DDL = """
+CREATE TABLE IF NOT EXISTS generations (
+    generation_id INT PRIMARY KEY AUTOINCREMENT,
+    run_id TEXT NOT NULL,
+    prompt TEXT NOT NULL,
+    generated_text TEXT,
+    error TEXT
+) STRICT;
+"""
 
 
 def con(db_name: str = "cache.sqlite3") -> sqlite3.Connection:
     """Initialize a standardized SQLite3 connection to user's cache directory."""
-    cache_dir = platformdirs.user_cache_dir(
-        appname="langfair",
-        appauthor="cvs-health",
-    )
-
-    os.makedirs(cache_dir, exist_ok=True)
+    os.makedirs(CACHE_DIR, exist_ok=True)
 
     _con = sqlite3.connect(
-        database=f"file:{cache_dir}/{db_name}",
+        database=f"file:{CACHE_DIR}/{db_name}",
         detect_types=sqlite3.PARSE_DECLTYPES,
         check_same_thread=False,
         uri=True,
     )
 
-    _ = _con.execute("PRAGMA journal_mode=WAL")
-    _con.commit()
+    with _con as c:
+        _ = c.execute("PRAGMA journal_mode=WAL")
+        _ = c.execute(_DDL)
 
     return _con
+
+
+def clear() -> None:
+    """Completely remove the cache directory."""
+    shutil.rmtree(CACHE_DIR, ignore_errors=True)
