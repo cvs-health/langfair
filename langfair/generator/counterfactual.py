@@ -31,7 +31,7 @@ from langfair.constants.word_lists import (
 
 #Import religion words 
 
-from word_lists import (
+from langfair.constants.word_lists import (
     RELIGION_WORDS_NOT_REQUIRING_CONTEXT,
     RELIGION_WORDS_REQUIRING_CONTEXT,
     RELIGION_NOUN_MAPPING,
@@ -64,14 +64,8 @@ ALL_RACE_WORDS = RACE_WORDS_REQUIRING_CONTEXT + RACE_WORDS_NOT_REQUIRING_CONTEXT
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # RELIGION
-STRICT_RELIGION_WORDS = []
-for rw in RELIGION_WORDS_REQUIRING_CONTEXT:
-    for pw in PERSON_WORDS:
-        STRICT_RELIGION_WORDS.append(rw + " " + pw)
-
-STRICT_RELIGION_WORDS.extend(RELIGION_WORDS_NOT_REQUIRING_CONTEXT)
-ALL_RELIGION_WORDS = RELIGION_WORDS_REQUIRING_CONTEXT + RELIGION_WORDS_NOT_REQUIRING_CONTEXT
-
+STRICT_RELIGION_WORDS = RELIGION_WORDS_REQUIRING_CONTEXT + RELIGION_WORDS_NOT_REQUIRING_CONTEXT
+ALL_RELIGION_WORDS = STRICT_RELIGION_WORDS
 
 class CounterfactualGenerator(ResponseGenerator):
     def __init__(
@@ -115,6 +109,7 @@ class CounterfactualGenerator(ResponseGenerator):
         self.attribute_to_word_lists = {
             "race": ALL_RACE_WORDS,
             "gender": ALL_GENDER_WORDS,
+            "religion": ALL_RELIGION_WORDS,
         }
         self.attribute_to_ref_dicts = {"gender": GENDER_TO_WORD_LISTS}
         self.gender_to_word_lists = GENDER_TO_WORD_LISTS
@@ -285,7 +280,6 @@ class CounterfactualGenerator(ResponseGenerator):
             }
 
         elif attribute == "religion":
-            from manali_word_lists import RELIGION_NOUN_MAPPING, RELIGION_ADJECTIVE_MAPPING
 
             prompts_dict = {}
             attribute_words = []
@@ -297,7 +291,7 @@ class CounterfactualGenerator(ResponseGenerator):
 
                 # Detect adjective-based religious reference
                 for adj in RELIGION_ADJECTIVE_MAPPING:
-                    if any(f"{adj} {pw}" in lowered for pw in PERSON_WORDS):
+                    if adj in lowered:
                         matched_type = "adj"
                         detected_word = adj
                         break
@@ -680,6 +674,9 @@ class CounterfactualGenerator(ResponseGenerator):
             return self._get_race_subsequences(text)
         elif attribute == "gender":
             return list(set(tokens) & set(self.attribute_to_word_lists[attribute]))
+
+        elif attribute == "religion":
+            return self._get_religion_subsequences(text)
         elif custom_list:
             return list(set(tokens) & set(custom_list))
 
@@ -764,17 +761,13 @@ class CounterfactualGenerator(ResponseGenerator):
         seq = text.lower()
         religion_replacement_mapping = {}
 
-        for rw in RELIGION_WORDS_REQUIRING_CONTEXT:
-            for pw in PERSON_WORDS:
-                key = rw + " " + pw
-                religion_replacement_mapping[key] = target_religion + " " + pw
-
-        for rw in RELIGION_WORDS_NOT_REQUIRING_CONTEXT:
+        for rw in RELIGION_WORDS_REQUIRING_CONTEXT + RELIGION_WORDS_NOT_REQUIRING_CONTEXT:
             religion_replacement_mapping[rw] = target_religion
 
-        for subseq in STRICT_RELIGION_WORDS:
-            if subseq in seq and subseq in religion_replacement_mapping:
-                seq = seq.replace(subseq, religion_replacement_mapping[subseq])
+        
+        for rw in religion_replacement_mapping:
+            if rw in seq:
+                seq = seq.replace(rw, religion_replacement_mapping[rw])
         return seq
 
 
@@ -788,14 +781,14 @@ class CounterfactualGenerator(ResponseGenerator):
         if for_parsing:
             if custom_list and attribute:
                 raise ValueError("Either custom_list or attribute must be None.")
-            if not (custom_list or attribute in ["race", "gender"]):
+            if not (custom_list or attribute in ["race", "gender","religion"]):
                 raise ValueError(
-                    "If custom_list is None, attribute must be 'race' or 'gender'."
+                    "If custom_list is None, attribute must be 'race' or 'gender' or 'religion'."
                 )
         else:
             if custom_dict and attribute:
                 raise ValueError("Either custom_dict or attribute must be None.")
-            if not (custom_dict or attribute in ["race", "gender"]):
+            if not (custom_dict or attribute in ["race", "gender","religion"]):
                 raise ValueError(
-                    "If custom_dict is None, attribute must be 'race' or 'gender'."
+                    "If custom_dict is None, attribute must be 'race' or 'gender' or 'religion'."
                 )
