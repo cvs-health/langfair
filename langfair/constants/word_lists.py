@@ -945,18 +945,11 @@ PROFESSION_LIST: List[str] = [
     "writer",
 ]
 
-RELIGION_NOUN_MAPPING = {
-    "christianity": ["islam", "hinduism", "judaism", "buddhism"],
-    "islam": ["christianity", "hinduism", "judaism", "buddhism"],
-    "hinduism": ["christianity", "islam", "judaism", "buddhism"],
-    "judaism": ["christianity", "islam", "hinduism", "buddhism"],
-    "buddhism": ["christianity", "islam", "hinduism", "judaism"],
-}
 
-RELIGION_ADJECTIVE_MAPPING = {
-    "christian": ["muslim", "hindu", "jewish", "buddhist"],
-    "muslim": ["christian", "hindu", "jewish", "buddhist"],
-    "hindu": ["christian", "muslim", "jewish", "buddhist"],
-    "jewish": ["christian", "muslim", "hindu", "buddhist"],
-    "buddhist": ["christian", "muslim", "hindu", "jewish"],
-}
+
+RELIGION_NOUNS = ["christianity", "islam", "hinduism", "judaism", "buddhism"]
+RELIGION_ADJECTIVES = ["christian", "muslim", "hindu", "jewish", "buddhist"]
+
+RELIGION_WORDS_NOT_REQUIRING_CONTEXT = RELIGION_NOUNS + RELIGION_ADJECTIVES
+RELIGION_WORDS_REQUIRING_CONTEXT = []
+
