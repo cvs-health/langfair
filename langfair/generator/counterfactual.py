@@ -9,6 +9,7 @@
 # prompt and response token counts for OpenAI models.
 
 import asyncio
+import re  # make sure it's imported at the top
 import itertools
 import warnings
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -34,9 +35,16 @@ from langfair.constants.word_lists import (
 from langfair.constants.word_lists import (
     RELIGION_WORDS_NOT_REQUIRING_CONTEXT,
     RELIGION_WORDS_REQUIRING_CONTEXT,
-    RELIGION_NOUN_MAPPING,
-    RELIGION_ADJECTIVE_MAPPING,
+    RELIGION_NOUNS,
+    RELIGION_ADJECTIVES,
 )
+
+def build_mapping(values: List[str]) -> Dict[str, List[str]]:
+    return {
+        val: [other for other in values if other != val]
+        for val in values
+    }
+
 
 from langfair.generator.generator import ResponseGenerator
 
@@ -127,8 +135,10 @@ class CounterfactualGenerator(ResponseGenerator):
              ],
         }
 
-        self.religion_noun_mapping = RELIGION_NOUN_MAPPING
-        self.religion_adj_mapping = RELIGION_ADJECTIVE_MAPPING
+
+        self.religion_noun_mapping = build_mapping(RELIGION_NOUNS)
+        self.religion_adj_mapping = build_mapping(RELIGION_ADJECTIVES)
+
 
         try:
             word_tokenize("Check if this function can access the required corpus")
@@ -290,16 +300,17 @@ class CounterfactualGenerator(ResponseGenerator):
                 detected_word = None
 
                 # Detect adjective-based religious reference
-                for adj in RELIGION_ADJECTIVE_MAPPING:
-                    if adj in lowered:
+                for adj in self.religion_adj_mapping:
+                    if re.search(rf"\b{re.escape(adj)}\b", lowered):
                         matched_type = "adj"
                         detected_word = adj
                         break
 
+
                 # If not adjective, check for noun
                 if not matched_type:
-                    for noun in RELIGION_NOUN_MAPPING:
-                        if noun in lowered:
+                    for noun in self.religion_noun_mapping:
+                        if re.search(rf"\b{re.escape(noun)}\b", lowered):
                             matched_type = "noun"
                             detected_word = noun
                             break
@@ -314,10 +325,11 @@ class CounterfactualGenerator(ResponseGenerator):
 
                 # Get proper targets based on type
                 targets = (
-                    RELIGION_ADJECTIVE_MAPPING.get(detected_word, [])
+                    self.religion_adj_mapping.get(detected_word, [])
                     if matched_type == "adj"
-                    else RELIGION_NOUN_MAPPING.get(detected_word, [])
+                    else self.religion_noun_mapping.get(detected_word, [])
                 )
+
 
                 for target in targets:
                     key = target + "_prompt"
@@ -329,27 +341,19 @@ class CounterfactualGenerator(ResponseGenerator):
                         prompts_dict[key][i] = p  # keep as-is
                         continue
 
-                    # Skip mismatched type substitutions
-                    if matched_type == "adj" and target not in RELIGION_ADJECTIVE_MAPPING.get(detected_word, []):
-                        continue
-                    if matched_type == "noun" and target not in RELIGION_NOUN_MAPPING.get(detected_word, []):
-                        continue
-
                     # Proceed to substitution
                     if key not in prompts_dict:
                         prompts_dict[key] = [""] * len(prompts)
 
-                    replaced = self._replace_religion(p, target)
+                    replaced = self._replace_religion(p, target,matched_type)
                     if replaced.strip().lower() == p.strip().lower():
                         continue  # don't add if it didn't actually change
 
                     prompts_dict[key][i] = replaced
-                    print(f"Replacing '{detected_word}' with '{target}' in: {p}")
-                    print(f"→ Result: {prompts_dict[key][i]}")
+                    
 
             prompts_dict["original_prompt"] = prompts
             prompts_dict["attribute_words"] = attribute_words
-            print("\u2705 Final prompts_dict keys:", list(prompts_dict.keys()))
             return prompts_dict   
 
 
@@ -756,19 +760,23 @@ class CounterfactualGenerator(ResponseGenerator):
             seq = seq.replace(subseq, race_replacement_mapping[subseq])
         return 
 
+
+
     @staticmethod
-    def _replace_religion(text: str, target_religion: str) -> str:
+    def _replace_religion(text: str, target_religion: str, matched_type: str) -> str:
+        import re
         seq = text.lower()
-        religion_replacement_mapping = {}
 
-        for rw in RELIGION_WORDS_REQUIRING_CONTEXT + RELIGION_WORDS_NOT_REQUIRING_CONTEXT:
-            religion_replacement_mapping[rw] = target_religion
+        mapping = RELIGION_NOUNS if matched_type == "noun" else RELIGION_ADJECTIVES
 
-        
-        for rw in religion_replacement_mapping:
-            if rw in seq:
-                seq = seq.replace(rw, religion_replacement_mapping[rw])
-        return seq
+        for rw in mapping:
+            if re.search(rf"\b{re.escape(rw)}\b", seq):
+                return re.sub(rf"\b{re.escape(rw)}\b", target_religion, seq)
+
+        return text
+
+
+
 
 
     @staticmethod
