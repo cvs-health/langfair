@@ -944,3 +944,12 @@ PROFESSION_LIST: List[str] = [
     "wrestler",
     "writer",
 ]
+
+
+
+RELIGION_NOUNS = ["christianity", "islam", "hinduism", "judaism", "buddhism"]
+RELIGION_ADJECTIVES = ["christian", "muslim", "hindu", "jewish", "buddhist"]
+
+RELIGION_WORDS_NOT_REQUIRING_CONTEXT = RELIGION_NOUNS + RELIGION_ADJECTIVES
+RELIGION_WORDS_REQUIRING_CONTEXT = []
+
