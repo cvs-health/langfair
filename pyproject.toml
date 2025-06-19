@@ -30,7 +30,7 @@ exclude = ["docs", "docs_src"] # never include documentation in build
 keywords = ["LLM", "large language model", "bias", "fairness", "Responsible AI"]  # Add your keywords here
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.13"
+python = ">=3.9,<3.14"
 numpy = "^1.26.4"
 vadersentiment = "^3.3.2"
 evaluate = "^0.4.1"
