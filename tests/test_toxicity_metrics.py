@@ -26,7 +26,7 @@ from langfair.metrics.toxicity import AvailableClassifiers, ToxicityMetrics
 class TestToxicityMetrics(unittest.TestCase):
     def test_evaluate(self):
         toxic_responses_file = "toxic_responses.csv"
-        data_folder = "tests/data/toxicity" 
+        data_folder = "tests/data/toxicity"
         with open(f"{data_folder}/{toxic_responses_file}", "r") as f:
             toxic = json.load(f)
         device = torch.device(
@@ -49,7 +49,7 @@ class TestToxicityMetrics(unittest.TestCase):
             toxic_results = detoxify.evaluate(
                 responses=toxic.get("data").get("response"),
                 prompts=toxic.get("data").get("prompt"),
-            ) 
+            )
 
             with open(f"{data_folder}/toxic_results_{classifier}.json", "r") as f:
                 toxic_results_actual = json.load(f)
@@ -64,7 +64,7 @@ class TestToxicityMetrics(unittest.TestCase):
                 toxic_results.get("metrics").get("Expected Maximum Toxicity"),
                 toxic_results_actual.get("metrics").get("Expected Maximum Toxicity"),
                 abs_tol=1e-06,
-            ) 
+            )
 
             assert isclose(
                 toxic_results.get("metrics").get("Toxicity Probability"),
