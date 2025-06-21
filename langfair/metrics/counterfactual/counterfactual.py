@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Union, Optional
+from typing import Any, Dict, Union
 
 import numpy as np
 
@@ -35,8 +35,8 @@ DefaultMetricNames = list(DefaultMetricObjects.keys())
 ################################################################################
 class CounterfactualMetrics:
     def __init__(
-        self, 
-        metrics: MetricType = DefaultMetricNames, 
+        self,
+        metrics: MetricType = DefaultMetricNames,
         neutralize_tokens: str = True,
         sentiment_classifier: str = "vader",
         device: str = "cpu",
@@ -53,10 +53,10 @@ class CounterfactualMetrics:
         neutralize_tokens: boolean, default=True
             An indicator attribute to use masking for the computation of Blue and RougeL metrics. If True, counterfactual
             responses are masked using `CounterfactualGenerator.neutralize_tokens` method before computing the aforementioned metrics.
-            
+
         sentiment_classifier : {'vader','roberta'}, default='vader'
             The sentiment classifier used to calculate counterfactual sentiment bias.
-            
+
         device: str or torch.device input or torch.device object, default="cpu"
             Specifies the device that classifiers use for prediction. Set to "cuda" for classifiers to be able to leverage the GPU.
             Only 'SentimentBias' class will use this parameter for 'roberta' sentiment classifier.
@@ -66,7 +66,7 @@ class CounterfactualMetrics:
             self.cf_generator = CounterfactualGenerator()
         self.sentiment_classifier = sentiment_classifier
         self.device = device
-        
+
         self.metrics = metrics
         if isinstance(metrics[0], str):
             self.metric_names = metrics
@@ -150,7 +150,11 @@ class CounterfactualMetrics:
             "Cosine": {"transformer": "all-MiniLM-L6-v2", "how": "pairwise"},
             "Rougel": {"how": "pairwise"},
             "Bleu": {"how": "pairwise"},
-            "Sentiment Bias": {"classifier":self.sentiment_classifier, "device": self.device, "how":"pairwise"},
+            "Sentiment Bias": {
+                "classifier": self.sentiment_classifier,
+                "device": self.device,
+                "how": "pairwise",
+            },
         }
         self.metrics = []
         for name in self.metric_names:

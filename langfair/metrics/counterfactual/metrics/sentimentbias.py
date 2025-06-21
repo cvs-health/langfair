@@ -15,10 +15,9 @@
 from typing import Any, List, Optional
 
 import numpy as np
+from transformers import pipeline
 
 from langfair.metrics.counterfactual.metrics.baseclass.metrics import Metric
-from transformers import pipeline  
-
 
 
 class SentimentBias(Metric):
@@ -70,7 +69,8 @@ class SentimentBias(Metric):
             over `classifier`.
         """
         assert classifier in [
-            "vader", "roberta"
+            "vader",
+            "roberta",
         ], "langfair: Currently, only 'vader' and 'roberta' classifiers are supported."
         assert sentiment in [
             "pos",
@@ -95,12 +95,15 @@ class SentimentBias(Metric):
 
         elif classifier == "vader":
             from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+
             self.classifier_instance = SentimentIntensityAnalyzer()
 
         elif classifier == "roberta":
-            self.classifier_instance = pipeline("sentiment-analysis", 
-                                                model="siebert/sentiment-roberta-large-english",
-                                                device=self.device)
+            self.classifier_instance = pipeline(
+                "sentiment-analysis",
+                model="siebert/sentiment-roberta-large-english",
+                device=self.device,
+            )
 
     def evaluate(self, texts1: List[str], texts2: List[str]) -> float:
         """
@@ -161,7 +164,7 @@ class SentimentBias(Metric):
             scores = [self.classifier_instance.polarity_scores(text) for text in texts]
             return [score[self.sentiment] for score in scores]
 
-        elif self.classifier == "roberta": 
+        elif self.classifier == "roberta":
             results = self.classifier_instance(texts, return_all_scores=True)
             if self.sentiment == "pos":
                 return [r[1]["score"] for r in results]
@@ -173,5 +176,3 @@ class SentimentBias(Metric):
         a1_sorted = np.sort(np.array(array1))
         a2_sorted = np.sort(np.array(array2))
         return np.mean(np.abs(a1_sorted - a2_sorted))
-
-

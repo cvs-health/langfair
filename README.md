@@ -4,8 +4,9 @@
 
 # LangFair: Use-Case Level LLM Bias and Fairness Assessments
 [![Build Status](https://github.com/cvs-health/langfair/actions/workflows/ci.yaml/badge.svg)](https://github.com/cvs-health/langfair/actions)
-[![Documentation Status](https://img.shields.io/badge/docs-latest-blue.svg)](https://cvs-health.github.io/langfair/latest/index.html)
 [![PyPI version](https://badge.fury.io/py/langfair.svg)](https://pypi.org/project/langfair/)
+[![Downloads](https://img.shields.io/pepy/dt/langfair)](https://pepy.tech/projects/langfair?timeRange=threeMonths&category=version&includeCIDownloads=true&granularity=daily&viewType=line&versions=0.6.3%2C0.6.2%2C0.6.1)
+[![Documentation Status](https://img.shields.io/badge/docs-latest-blue.svg)](https://cvs-health.github.io/langfair/latest/index.html)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![](https://img.shields.io/badge/arXiv-2407.10853-B31B1B.svg)](https://arxiv.org/abs/2407.10853)
 
