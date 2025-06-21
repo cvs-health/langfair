@@ -31,7 +31,10 @@ keywords = ["LLM", "large language model", "bias", "fairness", "Responsible AI"]
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.14"
-numpy = "^1.26.4"
+numpy = [
+    { version = "^1.26.4", python = ">=3.9,<3.13" },
+    { version = ">=2.1.0", python = ">=3.13", platform = "win32" }
+]
 vadersentiment = "^3.3.2"
 evaluate = "^0.4.1"
 nltk = ">=3.8.2"
