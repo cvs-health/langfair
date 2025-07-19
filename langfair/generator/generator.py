@@ -137,7 +137,7 @@ class ResponseGenerator:
             prompts = list(prompts)
             sampled_prompts = random.sample(
                 prompts, min(response_sample_size, len(prompts))
-            )
+            )  # nosec - bandit thinks this insecure use of random.sample could be used in a crypto context
             generation = await self.generate_responses(sampled_prompts, count=1)
             example_responses = generation["data"]["response"]
 
