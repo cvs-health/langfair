@@ -6,6 +6,8 @@ on:
 
 jobs:
   run-tests:
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -22,6 +24,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v5.6

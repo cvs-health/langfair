@@ -27,3 +27,8 @@ repos:
           - --snyk-args=--file=poetry.lock
           - --snyk-args=--package-manager=pip
           - --snyk-args=--fail-on=upgradable
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.11.0
+    hooks:
+      # Run the linter.
+      - id: zizmor
