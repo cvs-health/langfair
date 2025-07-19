@@ -9,6 +9,7 @@
 # prompt and response token counts for OpenAI models.
 
 import asyncio
+import re  # make sure it's imported at the top
 import itertools
 import warnings
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -28,6 +29,23 @@ from langfair.constants.word_lists import (
     RACE_WORDS_NOT_REQUIRING_CONTEXT,
     RACE_WORDS_REQUIRING_CONTEXT,
 )
+
+#Import religion words 
+
+from langfair.constants.word_lists import (
+    RELIGION_WORDS_NOT_REQUIRING_CONTEXT,
+    RELIGION_WORDS_REQUIRING_CONTEXT,
+    RELIGION_NOUNS,
+    RELIGION_ADJECTIVES,
+)
+
+def build_mapping(values: List[str]) -> Dict[str, List[str]]:
+    return {
+        val: [other for other in values if other != val]
+        for val in values
+    }
+
+
 from langfair.generator.generator import ResponseGenerator
 
 # Constants for CounterfactualDatasetGenerator class
@@ -53,6 +71,9 @@ STRICT_RACE_WORDS.extend(
 ALL_RACE_WORDS = RACE_WORDS_REQUIRING_CONTEXT + RACE_WORDS_NOT_REQUIRING_CONTEXT
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
+# RELIGION
+STRICT_RELIGION_WORDS = RELIGION_WORDS_REQUIRING_CONTEXT + RELIGION_WORDS_NOT_REQUIRING_CONTEXT
+ALL_RELIGION_WORDS = STRICT_RELIGION_WORDS
 
 class CounterfactualGenerator(ResponseGenerator):
     def __init__(
@@ -96,6 +117,7 @@ class CounterfactualGenerator(ResponseGenerator):
         self.attribute_to_word_lists = {
             "race": ALL_RACE_WORDS,
             "gender": ALL_GENDER_WORDS,
+            "religion": ALL_RELIGION_WORDS,
         }
         self.attribute_to_ref_dicts = {"gender": GENDER_TO_WORD_LISTS}
         self.gender_to_word_lists = GENDER_TO_WORD_LISTS
@@ -107,7 +129,16 @@ class CounterfactualGenerator(ResponseGenerator):
         self.group_mapping = {
             "gender": ["male", "female"],
             "race": ["white", "black", "hispanic", "asian"],
+            "religion": ["christian", "muslim", "hindu", "jewish", "buddhist",
+                         "christianity", "islam", "hinduism", "judaism", "buddhism"
+
+             ],
         }
+
+
+        self.religion_noun_mapping = build_mapping(RELIGION_NOUNS)
+        self.religion_adj_mapping = build_mapping(RELIGION_ADJECTIVES)
+
 
         try:
             word_tokenize("Check if this function can access the required corpus")
@@ -257,6 +288,75 @@ class CounterfactualGenerator(ResponseGenerator):
                 )
                 for race in self.group_mapping[attribute]
             }
+
+        elif attribute == "religion":
+
+            prompts_dict = {}
+            attribute_words = []
+
+            for i, p in enumerate(prompts):
+                lowered = p.lower()
+                matched_type = None
+                detected_word = None
+
+                # Detect adjective-based religious reference
+                for adj in self.religion_adj_mapping:
+                    if re.search(rf"\b{re.escape(adj)}\b", lowered):
+                        matched_type = "adj"
+                        detected_word = adj
+                        break
+
+
+                # If not adjective, check for noun
+                if not matched_type:
+                    for noun in self.religion_noun_mapping:
+                        if re.search(rf"\b{re.escape(noun)}\b", lowered):
+                            matched_type = "noun"
+                            detected_word = noun
+                            break
+
+                # If nothing matched, skip
+                if not matched_type:
+                    attribute_words.append([])
+                    continue
+
+                # Record detected word
+                attribute_words.append([detected_word])
+
+                # Get proper targets based on type
+                targets = (
+                    self.religion_adj_mapping.get(detected_word, [])
+                    if matched_type == "adj"
+                    else self.religion_noun_mapping.get(detected_word, [])
+                )
+
+
+                for target in targets:
+                    key = target + "_prompt"
+
+                    # Step 6: If it's the same as the detected word, keep original prompt
+                    if target == detected_word:
+                        if key not in prompts_dict:
+                            prompts_dict[key] = [""] * len(prompts)
+                        prompts_dict[key][i] = p  # keep as-is
+                        continue
+
+                    # Proceed to substitution
+                    if key not in prompts_dict:
+                        prompts_dict[key] = [""] * len(prompts)
+
+                    replaced = self._replace_religion(p, target,matched_type)
+                    if replaced.strip().lower() == p.strip().lower():
+                        continue  # don't add if it didn't actually change
+
+                    prompts_dict[key][i] = replaced
+                    
+
+            prompts_dict["original_prompt"] = prompts
+            prompts_dict["attribute_words"] = attribute_words
+            return prompts_dict   
+
+
 
         else:
             if custom_dict:
@@ -544,6 +644,16 @@ class CounterfactualGenerator(ResponseGenerator):
             new_texts.append(new_text)
         return new_texts
 
+
+    def _counterfactual_sub_religion(
+        self,
+        texts: List[str],
+        target_religion: str,
+    ) -> List[str]:
+        """Implements counterfactual substitution for religion."""
+        return [self._replace_religion(text, target_religion) for text in texts]
+
+
     def _neutralize_gender(self, text: str) -> str:
         """Replaces gender words with target gender words"""
         raw_tokens = word_tokenize(text)
@@ -568,6 +678,9 @@ class CounterfactualGenerator(ResponseGenerator):
             return self._get_race_subsequences(text)
         elif attribute == "gender":
             return list(set(tokens) & set(self.attribute_to_word_lists[attribute]))
+
+        elif attribute == "religion":
+            return self._get_religion_subsequences(text)
         elif custom_list:
             return list(set(tokens) & set(custom_list))
 
@@ -624,6 +737,13 @@ class CounterfactualGenerator(ResponseGenerator):
         seq = text.lower()
         return [subseq for subseq in STRICT_RACE_WORDS if subseq in seq]
 
+
+    @staticmethod
+    def _get_religion_subsequences(text: str) -> List[str]:
+        """Check for religion keyword subsequences"""
+        seq = text.lower()
+        return [subseq for subseq in STRICT_RELIGION_WORDS if subseq in seq]
+
     @staticmethod
     def _replace_race(text: str, target_race: str) -> str:
         """Replaces text with a target word"""
@@ -638,7 +758,26 @@ class CounterfactualGenerator(ResponseGenerator):
 
         for subseq in STRICT_RACE_WORDS:
             seq = seq.replace(subseq, race_replacement_mapping[subseq])
-        return seq
+        return 
+
+
+
+    @staticmethod
+    def _replace_religion(text: str, target_religion: str, matched_type: str) -> str:
+        import re
+        seq = text.lower()
+
+        mapping = RELIGION_NOUNS if matched_type == "noun" else RELIGION_ADJECTIVES
+
+        for rw in mapping:
+            if re.search(rf"\b{re.escape(rw)}\b", seq):
+                return re.sub(rf"\b{re.escape(rw)}\b", target_religion, seq)
+
+        return text
+
+
+
+
 
     @staticmethod
     def _validate_attributes(
@@ -650,14 +789,14 @@ class CounterfactualGenerator(ResponseGenerator):
         if for_parsing:
             if custom_list and attribute:
                 raise ValueError("Either custom_list or attribute must be None.")
-            if not (custom_list or attribute in ["race", "gender"]):
+            if not (custom_list or attribute in ["race", "gender","religion"]):
                 raise ValueError(
-                    "If custom_list is None, attribute must be 'race' or 'gender'."
+                    "If custom_list is None, attribute must be 'race' or 'gender' or 'religion'."
                 )
         else:
             if custom_dict and attribute:
                 raise ValueError("Either custom_dict or attribute must be None.")
-            if not (custom_dict or attribute in ["race", "gender"]):
+            if not (custom_dict or attribute in ["race", "gender","religion"]):
                 raise ValueError(
-                    "If custom_dict is None, attribute must be 'race' or 'gender'."
+                    "If custom_dict is None, attribute must be 'race' or 'gender' or 'religion'."
                 )
