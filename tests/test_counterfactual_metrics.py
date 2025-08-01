@@ -108,7 +108,9 @@ def test_CounterfactualMetrics_VaderClassifier():
         "Bleu",
         "Sentiment Bias",
     ]
-    counterfactualmetrics = CounterfactualMetrics(metrics=metrics, sentiment_classifier="vader")
+    counterfactualmetrics = CounterfactualMetrics(
+        metrics=metrics, sentiment_classifier="vader"
+    )
     result = counterfactualmetrics.evaluate(
         data["text1"], data["text2"], attribute="race"
     )

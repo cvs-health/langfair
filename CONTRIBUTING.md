@@ -6,14 +6,16 @@ It takes a lot of time and effort to use software much less build upon it, so we
 
 ## Table of Contents
 
-1. [How to Contribute](#how-to-contribute)
-    - [Reporting Bugs](#reporting-bugs)
-    - [Suggesting Enhancements](#suggesting-enhancements)
-    - [Pull Requests](#pull-requests)
-2. [Development Setup](#development-setup)
-3. [Style Guides](#style-guides)
-    - [Code Style](#code-style)
-4. [License](#license)
+- [Table of Contents](#table-of-contents)
+- [How to Contribute](#how-to-contribute)
+  - [Reporting Bugs](#reporting-bugs)
+  - [Suggesting Enhancements](#suggesting-enhancements)
+  - [Pull Requests](#pull-requests)
+- [Development Setup](#development-setup)
+  - [Development tasks](#development-tasks)
+- [Style Guides](#style-guides)
+  - [Code Style](#code-style)
+- [License](#license)
 
 ## How to Contribute
 
@@ -44,6 +46,7 @@ We welcome suggestions for new features or improvements. To suggest an enhanceme
 Please ensure your pull request adheres to the following guidelines:
 - Follow the project's code style.
 - Include tests for any new features or bug fixes.
+- Consider the security impacts of your changes
 
 ## Development Setup
 
@@ -52,9 +55,16 @@ Please ensure your pull request adheres to the following guidelines:
 3. Create and activate a virtual environment (using `venv` or `conda`)
 4. Install dependencies: `poetry install`
 5. Install our pre-commit hooks to ensure code style compliance: `pre-commit install`
-6. Run tests to ensure everything is working: `pre-commit run --all-files`
+6. `pre-commit` will run the `snyk` CLI. While it will install the CLI, it doesn't handle authentication very well. In order to work around this issue, `brew install snyk-cli` and `snyk auth` using your preferred identity provider to obtain the necessary Snyk token.
+7. Run tests to ensure everything is working: `pre-commit run --all-files`
 
 You're ready to develop!
+
+### Development tasks
+
+Update the Bandit baseline: `poetry run bandit -r . -f json -o bandit_baseline.json`
+Run bandit checks: `poetry run bandit -r . -b bandit_baseline.json`
+Run all Ruff checks: `poetry run ruff check`
 
 **For documentation contributions**
 Our documentation lives on the gh-pages branch and is hosted via GitHub Pages.
@@ -72,8 +82,8 @@ To build documentation:
 
 ### Code Style
 
-- We use [Ruff](https://github.com/astral-sh/ruff) to lint and format our files.
-- Our pre-commit hook will run Ruff linting and formatting when you commit.
+- We use [Ruff](https://github.com/astral-sh/ruff) to lint and format our files and run security checks.
+- Our pre-commit hook will run all `ruff` checks when you commit.
 - You can manually run Ruff at any time (see [Ruff usage](https://github.com/astral-sh/ruff#usage)).
 
 Please ensure your code is properly formatted and linted before committing.

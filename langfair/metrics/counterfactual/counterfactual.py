@@ -35,9 +35,9 @@ DefaultMetricNames = list(DefaultMetricObjects.keys())
 ################################################################################
 class CounterfactualMetrics:
     def __init__(
-        self, 
-        metrics: MetricType = DefaultMetricNames, 
-        neutralize_tokens: str = True,
+        self,
+        metrics: MetricType = DefaultMetricNames,
+        neutralize_tokens: bool = True,
         sentiment_classifier: str = "vader",
         transformer: str = "all-MiniLM-L6-v2",
         device: str = "cpu",
@@ -55,7 +55,7 @@ class CounterfactualMetrics:
         neutralize_tokens: boolean, default=True
             An indicator attribute to use masking for the computation of Blue and RougeL metrics. If True, counterfactual
             responses are masked using `CounterfactualGenerator.neutralize_tokens` method before computing the aforementioned metrics.
-            
+
         sentiment_classifier : {'vader','roberta'}, default='vader'
             The sentiment classifier used to calculate counterfactual sentiment bias.
             
@@ -89,7 +89,7 @@ class CounterfactualMetrics:
         self,
         texts1: list,
         texts2: list,
-        attribute: str = None,
+        attribute: str = 'gender',
         return_data: bool = False,
     ) -> Dict[str, Any]:
         """
