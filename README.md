@@ -41,24 +41,6 @@ The latest version can be installed from PyPI:
 ```bash
 pip install langfair
 ```
- 
-### Environment variables (.env)
-Some example notebooks use environment variables for LLM credentials. To set them up:
-
-```bash
-touch .env
-```
-
-Use the following template to set up your `.env` file:
-
-```env
-AZURE_OPENAI_API_KEY="<your_api_key>"
-AZURE_OPENAI_ENDPOINT="<your_api_base_url>"
-
-Notes:
-- The notebooks load this file via `python-dotenv` (e.g., `load_dotenv(find_dotenv())`).
-- Do not commit your `.env` file.
-- If you run the optional Mistral example cells, you can set `M_KEY` in `.env` and the cell will propagate it to `MISTRAL_API_KEY`.
 
 ### Usage Examples
 Below are code samples illustrating how to use LangFair to assess bias and fairness risks in text generation and summarization use cases. The below examples assume the user has already defined a list of prompts from their use case, `prompts`. 
