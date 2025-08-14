@@ -46,20 +46,14 @@ pip install langfair
 Some example notebooks use environment variables for LLM credentials. To set them up:
 
 ```bash
-cp .env.example .env
+touch .env
 ```
 
-Open `.env` and fill in values. For Azure OpenAI with LangChain's `AzureChatOpenAI`, set at minimum:
+Use the following template to set up your `.env` file:
 
 ```env
-API_BASE="<your_api_base_url>"
-API_TYPE="<your_api_type>"
-API_VERSION="<your_api_version>"
-DEPLOYMENT_NAME="<your_deployment_name>"
-API_KEY="<your_api_key>"
-# Optional
-MODEL_VERSION="<your_model_version>"
-```
+AZURE_OPENAI_API_KEY="<your_api_key>"
+AZURE_OPENAI_ENDPOINT="<your_api_base_url>"
 
 Notes:
 - The notebooks load this file via `python-dotenv` (e.g., `load_dotenv(find_dotenv())`).

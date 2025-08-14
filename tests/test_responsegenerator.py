@@ -56,7 +56,7 @@ async def test_generator(monkeypatch):
     )
 
     cost = await generator_object.estimate_token_cost(
-        tiktoken_model_name="gpt-3.5-turbo-16k-0613", #gitleaks:allow
+        tiktoken_model_name="gpt-3.5-turbo-16k-0613",  # gitleaks:allow
         prompts=MOCKED_DUPLICATE_PROMPTS,
         example_responses=MOCKED_RESPONSES[:3],
         count=count,

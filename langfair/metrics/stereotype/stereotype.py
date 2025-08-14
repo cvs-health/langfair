@@ -34,7 +34,11 @@ DefaultMetricNames = list(DefaultMetricClasses.keys())
 # Calculate Counterfactual Metrics
 ################################################################################
 class StereotypeMetrics:
-    def __init__(self, metrics: MetricType = DefaultMetricNames, _classifier_model: str = "wu981526092/Sentence-Level-Stereotype-Detector") -> None:
+    def __init__(
+        self,
+        metrics: MetricType = DefaultMetricNames,
+        _classifier_model: str = "wu981526092/Sentence-Level-Stereotype-Detector",
+    ) -> None:
         """
         This class computes few or all Stereotype metrics supported langfair. For more information on these metrics, see Liang et al. (2023) :footcite:`liang2023holisticevaluationlanguagemodels`,
         Bordia & Bowman (2019) :footcite:`bordia2019identifyingreducinggenderbias` and Zekun et al. (2023) :footcite:`zekun2023auditinglargelanguagemodels`.
@@ -107,7 +111,9 @@ class StereotypeMetrics:
         self.metrics = []
         for name in self.metric_names:
             if name == "Stereotype Classifier":
-                self.metrics.append(DefaultMetricClasses[name](_classifier_model=self._classifier_model))
+                self.metrics.append(
+                    DefaultMetricClasses[name](_classifier_model=self._classifier_model)
+                )
             else:
                 self.metrics.append(DefaultMetricClasses[name]())
 

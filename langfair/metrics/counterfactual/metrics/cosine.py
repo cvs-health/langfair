@@ -51,7 +51,9 @@ class CosineSimilarity(Metric):
         self.how = how
         self.transformer = transformer
         self.transformer_instance = SentenceTransformer(
-            f"sentence-transformers/{transformer}" if not os.path.exists(transformer) else transformer
+            f"sentence-transformers/{transformer}"
+            if not os.path.exists(transformer)
+            else transformer
         )
 
     def evaluate(
