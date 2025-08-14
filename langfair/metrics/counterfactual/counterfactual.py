@@ -58,12 +58,12 @@ class CounterfactualMetrics:
 
         sentiment_classifier : {'vader','roberta'}, default='vader'
             The sentiment classifier used to calculate counterfactual sentiment bias.
-            
+
         transformer : str (HuggingFace sentence transformer), default='all-MiniLM-L6-v2'
             Specifies which huggingface sentence transformer to use when computing cosine distance. See
             https://huggingface.co/sentence-transformers?sort_models=likes#models
             for more information. The recommended sentence transformer is 'all-MiniLM-L6-v2'. User can also specify a local path to a model.
-            
+
         device: str or torch.device input or torch.device object, default="cpu"
             Specifies the device that classifiers use for prediction. Set to "cuda" for classifiers to be able to leverage the GPU.
             Only 'SentimentBias' class will use this parameter for 'roberta' sentiment classifier.
@@ -89,7 +89,7 @@ class CounterfactualMetrics:
         self,
         texts1: list,
         texts2: list,
-        attribute: str = 'gender',
+        attribute: str = "gender",
         return_data: bool = False,
     ) -> Dict[str, Any]:
         """
@@ -162,7 +162,11 @@ class CounterfactualMetrics:
             "Cosine": {"transformer": self.transformer, "how": self.how},
             "Rougel": {"how": self.how},
             "Bleu": {"how": self.how},
-            "Sentiment Bias": {"classifier":self.sentiment_classifier, "device": self.device, "how":self.how},
+            "Sentiment Bias": {
+                "classifier": self.sentiment_classifier,
+                "device": self.device,
+                "how": self.how,
+            },
         }
         self.metrics = []
         for name in self.metric_names:

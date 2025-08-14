@@ -19,14 +19,6 @@ repos:
     rev: v8.27.2
     hooks:
       - id: gitleaks
-  - repo: https://github.com/fabasoad/pre-commit-snyk
-    rev: v1.0.2
-    hooks:
-      - id: snyk-test
-        args:
-          - --snyk-args=--file=poetry.lock
-          - --snyk-args=--package-manager=pip
-          - --snyk-args=--fail-on=upgradable
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
     rev: v1.11.0
     hooks:

@@ -234,7 +234,9 @@ class AutoEval:
             for attribute in protected_words.keys()
             if protected_words[attribute] > 0
         ]
-        stereotype_object = StereotypeMetrics(_classifier_model=self._stereotype_classifier_model)
+        stereotype_object = StereotypeMetrics(
+            _classifier_model=self._stereotype_classifier_model
+        )
         stereotype_results = stereotype_object.evaluate(
             prompts=list(self.prompts),
             responses=list(self.responses),
