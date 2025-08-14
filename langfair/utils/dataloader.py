@@ -160,7 +160,7 @@ def _get_dataset_file(dataset_url: str, output_file_path: str):
         The local path to write the downloaded file to.
     """
     try:
-        response = requests.get(dataset_url, stream=True)
+        response = requests.get(dataset_url, stream=True, timeout=(5, 300))
         response.raise_for_status()
 
         # Get the total file size from the headers
@@ -177,7 +177,7 @@ def _get_dataset_file(dataset_url: str, output_file_path: str):
                     file.write(chunk)
                     progress_bar.update(len(chunk))
 
-            response = requests.get(dataset_url)
+            response = requests.get(dataset_url, timeout=(5, 300))
     except requests.exceptions.RequestException as e:
         print(f"langfair was unable to download the dataset: {e}")
 

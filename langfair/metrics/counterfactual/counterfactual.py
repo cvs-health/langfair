@@ -37,7 +37,7 @@ class CounterfactualMetrics:
     def __init__(
         self,
         metrics: MetricType = DefaultMetricNames,
-        neutralize_tokens: str = True,
+        neutralize_tokens: bool = True,
         sentiment_classifier: str = "vader",
         transformer: str = "all-MiniLM-L6-v2",
         device: str = "cpu",
@@ -89,7 +89,7 @@ class CounterfactualMetrics:
         self,
         texts1: list,
         texts2: list,
-        attribute: str = None,
+        attribute: str = 'gender',
         return_data: bool = False,
     ) -> Dict[str, Any]:
         """

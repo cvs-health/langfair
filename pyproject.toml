@@ -40,10 +40,11 @@ rouge-score = "^0.1.2"
 detoxify = "^0.5.2"
 langchain = "^0.3.7"
 asyncio = "^3.4.3"
-sentence-transformers = "^2.7.0"
+sentence-transformers = ">=3.10"
 typing = {version = "^3.7.4", python = "<3.10"}
 tiktoken = "^0.7.0"
 transformers = ">=4.52.1"
+torch = "2.7.1"
 
 [tool.poetry.group.dev.dependencies]
 langchain-openai = "^0.2.9"
@@ -54,6 +55,7 @@ pytest-asyncio = "^0.24.0"
 ipykernel = "^6.29.5"
 ipywidgets = "^8.1.5"
 python-dotenv = "^1.0.1"
+bandit = "^1.8.6"
 
 [tool.poetry.group.docs.dependencies]
 sphinx = "7.3.7"
@@ -67,8 +69,8 @@ langchain-mistralai = "^0.2.2"
 langchain-google-vertexai = "^2.0.13"
 
 [tool.ruff.lint]
-extend-select = ["I"] # lets Ruff catch and fix unsorted imports
-ignore = ["E712"]
+extend-select = ["I","S"] # lets Ruff catch and fix unsorted imports and run bandit
+ignore = ["E712","S101"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
