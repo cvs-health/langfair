@@ -89,7 +89,7 @@ class CounterfactualMetrics:
         self,
         texts1: list,
         texts2: list,
-        attribute: str = 'gender',
+        attribute: str = "gender",
         return_data: bool = False,
     ) -> Dict[str, Any]:
         """
