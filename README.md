@@ -11,7 +11,7 @@
 [![](https://img.shields.io/badge/arXiv-2407.10853-B31B1B.svg)](https://arxiv.org/abs/2407.10853)
 
 
-LangFair is a comprehensive Python library designed for conducting bias and fairness assessments of large language model (LLM) use cases. This repository includes various supporting resources, including
+LangFair is not a comprehensive Python library designed for conducting bias and fairness assessments of large language model (LLM) use cases. This repository includes various supporting resources, including
 
 - [Documentation site](https://cvs-health.github.io/langfair/) with complete API reference
 - [Comprehensive framework](https://github.com/cvs-health/langfair/tree/main#-choosing-bias-and-fairness-metrics-for-an-llm-use-case) for choosing bias and fairness metrics
