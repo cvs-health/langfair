@@ -47,7 +47,7 @@ transformers = ">=4.52.1"
 torch = ">=2.8.0"
 
 [tool.poetry.group.dev.dependencies]
-langchain-openai = "^0.2.9"
+langchain-openai = ">=0.2.9,<0.4.0"
 pre-commit = "3.7.1"
 ruff = "0.12.9"
 pytest = "^8.3.3"
