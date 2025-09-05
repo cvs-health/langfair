@@ -17,8 +17,4 @@ from langfair.generator.generator import ResponseGenerator
 from langfair.generator.adversarial import AdversarialGenerator
 
 
-__all__ = [
-    "CounterfactualGenerator",
-    "ResponseGenerator",
-    "AdversarialGenerator"
-]
+__all__ = ["CounterfactualGenerator", "ResponseGenerator", "AdversarialGenerator"]
