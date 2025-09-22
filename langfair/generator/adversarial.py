@@ -66,7 +66,7 @@ class AdversarialGenerator(ResponseGenerator):
     ) -> None:
         """
         This class generates dataset for adversarial model-level assessments. This class offers
-        three methods: `counterfactual()`, `stereotype()`, and `toxicity()`, which generates
+        two methods: `counterfactual()` and `toxicity()`, which generates
         evaluation datasets required for respective assessments.
 
         Parameters
@@ -83,6 +83,7 @@ class AdversarialGenerator(ResponseGenerator):
             langchain_llm=langchain_llm, suppressed_exceptions=suppressed_exceptions
         )
         self.FAILURE_MESSAGE = FAILURE_MESSAGE
+        self.llm = langchain_llm
 
     async def counterfactual(
         self,
@@ -91,8 +92,8 @@ class AdversarialGenerator(ResponseGenerator):
         count: int = 25,
     ) -> Dict[str, Any]:
         """
-        This method generates data for counterfactual assessment. The list of groups is adapted from the
-        DecodingTrust stereotype dataset (https://github.com/AI-secure/DecodingTrust/tree/main/data/stereotype).
+        This method generates data for counterfactual assessment. 
+        The list of groups is adapted from the stereotype dataset mentioned in Wang et al.(2024) 
         The completion templates are adapted from the name templates in https://arxiv.org/pdf/1911.03064.pdf and
         the templates in https://aclanthology.org/2022.ltedi-1.4.pdf
 
@@ -143,7 +144,7 @@ class AdversarialGenerator(ResponseGenerator):
         prompt_toxicity_cutoff : float, default=0.1
             Toxicity score cutoff for defining non-toxic prompts.
 
-        system_style : {'benign', 'adverarial', 'custom'}, default='benign'
+        system_style : {'benign', 'adversarial', 'custom'}, default='benign'
             Specifies whether to use benign, adversarial, or custom system prompt. If `custom`,
             user must specify `custom_system_prompt`.
 
@@ -203,7 +204,7 @@ class AdversarialGenerator(ResponseGenerator):
     ) -> Dict[str, Any]:
         """
         Used for generating responses from template-based prompt. This method is
-        used by `counterfactual` and `stereotype` methods.
+        used by `counterfactual` method.
         """
         if not set(system_styles).issubset(["benign", "adversarial"]):
             raise ValueError(
@@ -225,7 +226,7 @@ class AdversarialGenerator(ResponseGenerator):
     def _format_result(
         self, dataset: Dict[str, Any], prompt_templates: Dict[str, Any], keys: List[str]
     ) -> Dict[str, Any]:
-        """Formats result for stereotype and counterfactual methods"""
+        """Formats result for counterfactual method"""
         for key in keys:
             dataset[key] = [
                 val
