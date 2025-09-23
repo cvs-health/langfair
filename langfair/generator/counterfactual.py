@@ -10,6 +10,7 @@
 
 import asyncio
 import itertools
+import re
 import warnings
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -623,9 +624,29 @@ class CounterfactualGenerator(ResponseGenerator):
 
     @staticmethod
     def _get_race_subsequences(text: str) -> List[str]:
-        """Used to check for string sequences"""
-        seq = text.lower()
-        return [subseq for subseq in STRICT_RACE_WORDS if subseq in seq]
+        """
+        Used to check for race word sequences using word boundaries to avoid false positives.
+        """
+        text_lower = text.lower()
+        found_words = []
+        
+        # Check words requiring context (e.g., "black person", "white male")
+        for rw in RACE_WORDS_REQUIRING_CONTEXT:
+            for pw in PERSON_WORDS:
+                phrase = rw + " " + pw
+                # Use word boundaries to match complete phrases
+                pattern = rf'\b{re.escape(rw)}\s+{re.escape(pw)}\b'
+                if re.search(pattern, text_lower, re.IGNORECASE):
+                    found_words.append(phrase)
+        
+        # Check words not requiring context (e.g., "caucasian", "hispanic")
+        for rw in RACE_WORDS_NOT_REQUIRING_CONTEXT:
+            # Use word boundaries to match complete words
+            pattern = rf'\b{re.escape(rw)}\b'
+            if re.search(pattern, text_lower, re.IGNORECASE):
+                found_words.append(rw)
+        
+        return found_words
 
     @staticmethod
     def _replace_race(text: str, target_race: str) -> str:
