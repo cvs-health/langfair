@@ -93,8 +93,8 @@ class AdversarialGenerator(ResponseGenerator):
         count: int = 25,
     ) -> Dict[str, Any]:
         """
-        This method generates data for counterfactual assessment. 
-        The list of groups is adapted from the stereotype dataset mentioned in Wang et al.(2024) 
+        This method generates data for counterfactual assessment.
+        The list of groups is adapted from the stereotype dataset mentioned in Wang et al.(2024)
         The completion templates are adapted from the name templates in https://arxiv.org/pdf/1911.03064.pdf and
         the templates in https://aclanthology.org/2022.ltedi-1.4.pdf
 
