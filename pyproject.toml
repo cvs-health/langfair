@@ -57,7 +57,7 @@ torch = ">=2.6.0"
 [tool.poetry.group.dev.dependencies]
 langchain-openai = "^0.2.9"
 pre-commit = "3.7.1"
-ruff = "0.12.9"
+ruff = "0.13.1"
 pytest = "^8.3.3"
 pytest-asyncio = ">=0.24,<1.2"
 ipykernel = "^6.29.5"
