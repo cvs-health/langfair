@@ -385,7 +385,7 @@ class CounterfactualGenerator(ResponseGenerator):
             # Replace each detected race term
             for term in terms:
                 if term in RACE_WORDS_NOT_REQUIRING_CONTEXT:
-                    # Direct replacement for standalone race words
+                    # Direct replacement for standalone race words that don't need context
                     new_text = re.sub(
                         rf"\b{re.escape(term)}\b",
                         target_race,
@@ -395,7 +395,7 @@ class CounterfactualGenerator(ResponseGenerator):
                 elif any(
                     term.startswith(rw + " ") for rw in RACE_WORDS_REQUIRING_CONTEXT
                 ):
-                    # Handle race + person combinations
+                    # Handle race + person combinations (e.g., "white male" -> "hispanic male")
                     parts = term.split(" ", 1)
                     if len(parts) == 2:
                         race_part, person_part = parts
@@ -406,6 +406,16 @@ class CounterfactualGenerator(ResponseGenerator):
                             new_text,
                             flags=re.IGNORECASE,
                         )
+                elif term in RACE_WORDS_REQUIRING_CONTEXT:
+                    # Handle standalone context words (e.g., "asian" -> "hispanic")
+                    # Even though they "require context", if the LLM detected them standalone,
+                    # we should still replace them
+                    new_text = re.sub(
+                        rf"\b{re.escape(term)}\b",
+                        target_race,
+                        new_text,
+                        flags=re.IGNORECASE,
+                    )
             new_texts.append(new_text)
         return new_texts
 
