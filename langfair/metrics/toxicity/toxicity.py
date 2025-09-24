@@ -12,12 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import math
+import time
 from typing import Any, Dict, List, Optional, Union
+
+from rich.progress import Progress
 
 from langfair.metrics.utils.classifier_metrics import (
     ExpectedMaximum,
     Fraction,
     Probability,
+)
+from langfair.utils.display import (
+    ConditionalBarColumn,
+    ConditionalSpinnerColumn,
+    ConditionalTextColumn,
+    ConditionalTextPercentageColumn,
+    ConditionalTimeElapsedColumn,
 )
 
 MetricType = Union[None, list[str]]
@@ -87,6 +98,8 @@ class ToxicityMetrics:
         self.metrics = metrics
         self.device = device
         self.custom_classifier = custom_classifier
+        self.progress_bar = None
+        self.progress_bar_task = None
 
         if isinstance(metrics[0], str):
             self.metric_names = metrics
@@ -122,7 +135,12 @@ class ToxicityMetrics:
                             truncation=True,
                         )
 
-    def get_toxicity_scores(self, responses: List[str]) -> List[float]:
+    def get_toxicity_scores(
+        self,
+        responses: List[str],
+        show_progress_bars: bool = True,
+        existing_progress_bar: Optional[Progress] = None,
+    ) -> List[float]:
         """
         Calculate ensemble toxicity scores for a list of outputs.
 
@@ -131,6 +149,12 @@ class ToxicityMetrics:
         responses : list of strings
             A list of generated outputs from a language model on which toxicity
             metrics will be calculated.
+
+        show_progress_bars : bool, default=True
+            If True, displays progress bars while evaluating metrics.
+
+        existing_progress_bar : rich.progress.Progress, default=None
+            If provided, the progress bar will be updated with the existing progress bar.
 
         Returns
         -------
@@ -146,7 +170,9 @@ class ToxicityMetrics:
 
         else:
             results_dict = {
-                classifier: self._get_classifier_scores(responses, classifier)
+                classifier: self._get_classifier_scores(
+                    responses, classifier, show_progress_bars, existing_progress_bar
+                )
                 for classifier in self.classifiers
             }
             return [max(values) for values in zip(*results_dict.values())]
@@ -157,6 +183,8 @@ class ToxicityMetrics:
         scores: Optional[List[float]] = None,
         prompts: Optional[List[str]] = None,
         return_data: bool = False,
+        show_progress_bars: bool = True,
+        existing_progress_bar: Optional[Progress] = None,
     ) -> Dict[str, Any]:
         """
         Generate toxicity scores and calculate toxic fraction, expected maximum
@@ -178,24 +206,56 @@ class ToxicityMetrics:
         return_data : bool, default=False
             Indicates whether to include response-level toxicity scores in results dictionary returned by this method.
 
+        show_progress_bars : bool, default=True
+            If True, displays progress bars while evaluating metrics.
+
+        existing_progress_bar : rich.progress.Progress, default=None
+            If provided, the progress bar will be updated with the existing progress bar.
+
         Returns
         -------
         dict
             Dictionary containing evaluated metric values and data used to compute metrics, including toxicity scores, corresponding
             responses, and prompts (if applicable).
         """
+        if show_progress_bars:
+            if existing_progress_bar:
+                self.progress_bar = existing_progress_bar
+            else:
+                completion_text = "[progress.percentage]{task.completed}/{task.total}"
+                self.progress_bar = Progress(
+                    ConditionalSpinnerColumn(),
+                    ConditionalTextColumn("[progress.description]{task.description}"),
+                    ConditionalBarColumn(),
+                    ConditionalTextPercentageColumn(completion_text),
+                    ConditionalTimeElapsedColumn(),
+                )
+                self.progress_bar.start()
         if scores is None:
-            print("Computing toxicity scores...")
-            scores = self.get_toxicity_scores(responses)
+            if show_progress_bars:
+                self.progress_bar.add_task(
+                    "[No Progress Bar] -  Computing toxicity scores..."
+                )
+            else:
+                print("Computing toxicity scores...")
+            scores = self.get_toxicity_scores(
+                responses, show_progress_bars, self.progress_bar
+            )
 
-        print("Evaluating metrics...")
+        if show_progress_bars:
+            self.progress_bar.add_task("[No Progress Bar] -  Evaluating metrics...")
+        else:
+            print("Evaluating metrics...")
         evaluate_dict = {"response": responses, "score": scores}
         if prompts is not None:
             evaluate_dict["prompt"] = prompts
             result = {
                 "metrics": {
                     metric.name: metric.evaluate(
-                        data=evaluate_dict, threshold=self.toxic_threshold
+                        data=evaluate_dict,
+                        threshold=self.toxic_threshold,
+                        show_progress_bars=show_progress_bars,
+                        existing_progress_bar=self.progress_bar,
                     )
                     for metric in self.metrics
                 }
@@ -208,6 +268,15 @@ class ToxicityMetrics:
                     ),
                 }
             }
+        time.sleep(0.1)
+        if self.progress_bar and not existing_progress_bar:
+            self.progress_bar.add_task(
+                "[No Progress Bar] -  Evaluated metrics successfully!"
+            )
+            self.progress_bar.stop()
+            self.progress_bar = None
+        elif not existing_progress_bar:
+            print("Evaluated metrics successfully!")
         if return_data:
             result["data"] = evaluate_dict
 
@@ -236,7 +305,11 @@ class ToxicityMetrics:
             )
 
     def _get_classifier_scores(
-        self, responses: List[str], classifier: str
+        self,
+        responses: List[str],
+        classifier: str,
+        show_progress_bars: bool = True,
+        existing_progress_bar: Optional[Progress] = None,
     ) -> List[float]:
         """
         Calculate toxicity scores for a list of outputs for single toxicity classifier.
@@ -250,9 +323,24 @@ class ToxicityMetrics:
         classifier : one of ['detoxify_unbiased', detoxify_original,
         'roberta-hate-speech-dynabench-r4-target','toxigen']
             Specifies classifier with which toxicity scores will be generated
+
+        show_progress_bars : bool, default=True
+            If True, displays progress bars while evaluating metrics.
+
+        existing_progress_bar : rich.progress.Progress, default=None
+            If provided, the progress bar will be updated with the existing progress bar.
         """
         texts_partition = self._split(responses, self.batch_size)
         scores = []
+        if show_progress_bars and existing_progress_bar:
+            self.progress_bar_task = existing_progress_bar.add_task(
+                f"    -  Computing toxicity scores with {classifier} for {len(responses)} responses...",
+                total=math.ceil(len(responses) / self.batch_size),
+            )
+        else:
+            print(
+                f"Computing toxicity scores with {classifier} for {len(responses)} responses..."
+            )
         if classifier == "roberta-hate-speech-dynabench-r4-target":
             for t in texts_partition:
                 scores.extend(
@@ -260,12 +348,16 @@ class ToxicityMetrics:
                         "toxicity"
                     ]
                 )
+                if show_progress_bars and existing_progress_bar:
+                    existing_progress_bar.update(self.progress_bar_task, advance=1)
             return scores
 
         elif classifier in AvailableClassifiers[:3]:
             for t in texts_partition:
                 results_t = self.classifier_objects[classifier].predict(t)
                 scores.extend([max(values) for values in zip(*results_t.values())])
+                if show_progress_bars and existing_progress_bar:
+                    existing_progress_bar.update(self.progress_bar_task, advance=1)
             return scores
 
         elif classifier == "toxigen":
@@ -276,6 +368,8 @@ class ToxicityMetrics:
                     for r in results_t
                 ]
                 scores.extend(scores_t)
+                if show_progress_bars and existing_progress_bar:
+                    existing_progress_bar.update(self.progress_bar_task, advance=1)
             return scores
 
     @staticmethod

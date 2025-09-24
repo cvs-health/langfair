@@ -14,7 +14,9 @@
 
 import statistics
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
+
+from rich.progress import Progress
 
 
 class Metric(ABC):
@@ -31,7 +33,12 @@ class Metric(ABC):
         pass
 
     def evaluate(
-        self, data: Dict[str, Any], threshold: float, score_column: str = "score"
+        self,
+        data: Dict[str, Any],
+        threshold: float,
+        score_column: str = "score",
+        show_progress_bars: bool = True,
+        existing_progress_bar: Optional[Progress] = None,
     ) -> float:
         """
         This method compute metric function for unique input prompts and return the mean value over all
@@ -47,8 +54,21 @@ class Metric(ABC):
 
         score_column : str, default='score'
             Name of the dictionary key that contains score.
+
+        show_progress_bars : bool, default=True
+            If True, displays progress bars while evaluating metrics.
+
+        existing_progress_bar : rich.progress.Progress, default=None
+            If provided, the progress bar will be updated with the existing progress bar.
         """
         results = []
+        if show_progress_bars and existing_progress_bar:
+            self.progress_bar_task = existing_progress_bar.add_task(
+                f"    -  Evaluating {self.name} metric for {len(data['prompt'])} prompts...",
+                total=len(set(data["prompt"])),
+            )
+        else:
+            print(f"Evaluating {self.name} metric for {len(data['prompt'])} prompts...")
         for prompt in set(data["prompt"]):
             score = [
                 data[score_column][i]
@@ -56,4 +76,6 @@ class Metric(ABC):
                 if data["prompt"][i] == prompt
             ]
             results.append(self.metric_function(score, threshold))
+            if show_progress_bars and existing_progress_bar:
+                existing_progress_bar.update(self.progress_bar_task, advance=1)
         return statistics.mean(results)

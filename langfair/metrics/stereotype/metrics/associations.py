@@ -19,17 +19,26 @@
 # with LangFair.
 
 import itertools
+import time
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
 import nltk
 import numpy as np
 from nltk.tokenize import word_tokenize
+from rich.progress import Progress
 
 from langfair.constants.word_lists import (
     ADJECTIVE_LIST,
     GENDER_TO_WORD_LISTS,
     PROFESSION_LIST,
+)
+from langfair.utils.display import (
+    ConditionalBarColumn,
+    ConditionalSpinnerColumn,
+    ConditionalTextColumn,
+    ConditionalTextPercentageColumn,
+    ConditionalTimeElapsedColumn,
 )
 
 # Target categories
@@ -116,7 +125,12 @@ class StereotypicalAssociations:
         except LookupError:
             nltk.download("punkt_tab")
 
-    def evaluate(self, responses: List[str]) -> Optional[float]:
+    def evaluate(
+        self,
+        responses: List[str],
+        show_progress_bars: bool = True,
+        existing_progress_bar: Progress = None,
+    ) -> Optional[float]:
         """
         Compute the mean stereotypical association bias of the target words and demographic groups.
 
@@ -135,6 +149,12 @@ class StereotypicalAssociations:
             A list of generated outputs from a language model on which Stereotypical Associations
             metric will be calculated.
 
+        show_progress_bars : bool, default=True
+            If True, displays progress bars while evaluating metrics.
+
+        existing_progress_bar : rich.progress.Progress, default=None
+            If provided, the progress bar will be updated with the existing progress bar.
+
         Returns
         -------
         float
@@ -142,6 +162,25 @@ class StereotypicalAssociations:
         """
         # Count the number of times each target_word and group co-occur
         pair_to_count: Dict[Tuple[str, str], int] = defaultdict(int)
+        if show_progress_bars:
+            if existing_progress_bar:
+                self.progress_bar = existing_progress_bar
+            else:
+                completion_text = "[progress.percentage]{task.completed}/{task.total}"
+                self.progress_bar = Progress(
+                    ConditionalSpinnerColumn(),
+                    ConditionalTextColumn("[progress.description]{task.description}"),
+                    ConditionalBarColumn(),
+                    ConditionalTextPercentageColumn(completion_text),
+                    ConditionalTimeElapsedColumn(),
+                )
+                self.progress_bar.start()
+            progress_bar_task = self.progress_bar.add_task(
+                "    -  Counting the number of times each target_word and group co-occur...",
+                total=len(responses),
+            )
+        else:
+            print("Counting the number of times each target_word and group co-occur...")
         for response in responses:
             tokens = word_tokenize(response.lower())
             for target_word, group in itertools.product(
@@ -158,6 +197,15 @@ class StereotypicalAssociations:
                     num_group_tokens * num_target_tokens
                 )  # e.g. number of times an asian word co-occur with an adj
                 pair_to_count[(target_word, group)] += count
+            if show_progress_bars and self.progress_bar:
+                self.progress_bar.update(progress_bar_task, advance=1)
+
+        if show_progress_bars and self.progress_bar:
+            self.progress_bar.add_task(
+                "[No Progress Bar] -  Computing a bias score for each target word..."
+            )
+        else:
+            print("Computing a bias score for each target word...")
 
         # Compute a bias score for each target word
         bias_scores = [
@@ -169,11 +217,26 @@ class StereotypicalAssociations:
 
         # Filter out None scores
         bias_scores = [score for score in bias_scores if score is not None]
-
+        time.sleep(0.1)
+        if self.progress_bar and not existing_progress_bar:
+            self.progress_bar.add_task(
+                "[No Progress Bar] -  Computing the mean bias score..."
+            )
+        elif not existing_progress_bar:
+            print("Computing the mean bias score...")
         # Compute the mean bias score
         if not bias_scores:
             return None
-        return np.array(bias_scores).mean()
+        mean_bias_score = np.array(bias_scores).mean()
+        if self.progress_bar and not existing_progress_bar:
+            self.progress_bar.add_task(
+                "[No Progress Bar] -  Computed the mean bias score..."
+            )
+            self.progress_bar.stop()
+            self.progress_bar = None
+        elif not existing_progress_bar:
+            print("Computed the mean bias score...")
+        return mean_bias_score
 
     def _group_counts_to_bias(self, group_counts: List[int]) -> Optional[float]:
         """

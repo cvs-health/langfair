@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
 from typing import Dict, List, Union
+
+from rich.progress import Progress
 
 from langfair.metrics.stereotype.metrics import (
     CooccurrenceBiasMetric,
@@ -20,6 +23,13 @@ from langfair.metrics.stereotype.metrics import (
     StereotypicalAssociations,
 )
 from langfair.metrics.stereotype.metrics.baseclass.metrics import Metric
+from langfair.utils.display import (
+    ConditionalBarColumn,
+    ConditionalSpinnerColumn,
+    ConditionalTextColumn,
+    ConditionalTextPercentageColumn,
+    ConditionalTimeElapsedColumn,
+)
 
 MetricType = Union[list[str], list[Metric]]
 DefaultMetricClasses = {
@@ -55,6 +65,8 @@ class StereotypeMetrics:
             self.metric_names = metrics
             self._validate_metrics(metrics)
             self._default_instances()
+        self.progress_bar = None
+        self.progress_bar_task = None
 
     def evaluate(
         self,
@@ -62,6 +74,8 @@ class StereotypeMetrics:
         prompts: List[str] = None,
         return_data: bool = False,
         categories: List[str] = ["gender", "race"],
+        show_progress_bars: bool = True,
+        existing_progress_bar: Progress = None,
     ) -> Dict[str, float]:
         """
         This method evaluate the stereotype metrics values for the provided pair of texts.
@@ -82,6 +96,12 @@ class StereotypeMetrics:
         categories: list, subset of ['gender', 'race']
             Specifies attributes for stereotype classifier metrics. Includes both race and gender by default.
 
+        show_progress_bars : bool, default=True
+            If True, displays progress bars while evaluating metrics.
+
+        existing_progress_bar : rich.progress.Progress, default=None
+            If provided, the progress bar will be updated with the existing progress bar.
+
         Returns
         -------
         dict
@@ -91,6 +111,24 @@ class StereotypeMetrics:
         ----------
         .. footbibliography::
         """
+        if show_progress_bars:
+            if existing_progress_bar:
+                self.progress_bar = existing_progress_bar
+            else:
+                completion_text = "[progress.percentage]{task.completed}/{task.total}"
+                self.progress_bar = Progress(
+                    ConditionalSpinnerColumn(),
+                    ConditionalTextColumn("[progress.description]{task.description}"),
+                    ConditionalBarColumn(),
+                    ConditionalTextPercentageColumn(completion_text),
+                    ConditionalTimeElapsedColumn(),
+                )
+                self.progress_bar.start()
+            self.progress_bar.add_task(
+                "[No Progress Bar] -  Computing stereotype scores and evaluating metrics..."
+            )
+        else:
+            print("Computing stereotype scores and evaluating metrics...")
         metric_values = {}
         for metric in self.metrics:
             if metric.name in ["Stereotype Classifier"]:
@@ -99,10 +137,25 @@ class StereotypeMetrics:
                     prompts=prompts,
                     return_data=return_data,
                     categories=categories,
+                    show_progress_bars=show_progress_bars,
+                    existing_progress_bar=self.progress_bar,
                 )
                 metric_values.update(tmp_value["metrics"])
             else:
-                metric_values[metric.name] = metric.evaluate(responses=responses)
+                metric_values[metric.name] = metric.evaluate(
+                    responses=responses,
+                    show_progress_bars=show_progress_bars,
+                    existing_progress_bar=self.progress_bar,
+                )
+        time.sleep(0.1)
+        if self.progress_bar and not existing_progress_bar:
+            self.progress_bar.add_task(
+                "[No Progress Bar] -  Evaluated metrics successfully!"
+            )
+            self.progress_bar.stop()
+            self.progress_bar = None
+        elif not existing_progress_bar:
+            print("Evaluated metrics successfully!")
         if return_data:
             return {"metrics": metric_values, "data": tmp_value["data"]}
         return {"metrics": metric_values}
