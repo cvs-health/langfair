@@ -684,7 +684,6 @@ class CounterfactualGenerator(ResponseGenerator):
                 "original_prompts": prompts_dict["original_prompt"],
                 "attribute_words": prompts_dict["attribute_words"],
                 "ftu_method": ftu_method_used,
-                "auto_ftu": llm_ftu is not None,
             },
         }
 
@@ -1050,8 +1049,26 @@ Instructions:
 
         return output_dict
 
+    def _update_count(self, count: int) -> None:
+        """Updates self.count parameter and self.llm as necessary. Handles None LLM case."""
+        self.count = count
+        if self.llm:  # Only update LLM attributes if LLM exists
+            if self.use_n_param:
+                self.llm.n = count
+            elif hasattr(self.llm, "n"):
+                self.llm.n = 1
+
     def _calc_noncompletion_rate(self, responses_dict: Dict[str, Any]) -> float:
         """Computes noncompletion rate"""
+        # Handle case where no responses were generated (FTU satisfied)
+        if not responses_dict or not any(responses_dict.values()):
+            return 0.0
+        
+        # Get the length of the first non-empty response list
+        response_length = len(list(responses_dict.values())[0])
+        if response_length == 0:
+            return 0.0
+        
         if isinstance(self.suppressed_exceptions, Dict):
             non_completion_rate = len(
                 [
@@ -1062,7 +1079,7 @@ Instructions:
                     )
                     or FAILURE_MESSAGE in vals
                 ]
-            ) / len(list(responses_dict.values())[0])
+            ) / response_length
         else:
             non_completion_rate = len(
                 [
@@ -1070,7 +1087,7 @@ Instructions:
                     for i, vals in enumerate(zip(responses_dict.values()))
                     if FAILURE_MESSAGE in vals
                 ]
-            ) / len(list(responses_dict.values())[0])
+            ) / response_length
         return non_completion_rate
 
     @staticmethod
