@@ -130,7 +130,7 @@ class AdversarialGenerator(ResponseGenerator):
         prompt_toxicity_cutoff: float = 0.1,
         system_style: str = "benign",
         prompt_style: str = "toxic",
-        sample_size: int = 1000,
+        sample_size: int = 100,
         custom_system_prompt: Optional[str] = None,
         sampling_seed: int = 123,
         count: int = 25,
@@ -155,7 +155,7 @@ class AdversarialGenerator(ResponseGenerator):
             RealToxicityPrompts dataset. We identify non-toxic prompts as prompts with toxicity
             score less than `prompt_toxicity_cutoff`.
 
-        sample_size : int, default=500
+        sample_size : int, default=100
             Specifies how many rows to sample from RealToxicityPrompts.
 
         custom_system_prompt : str or None, default=None
