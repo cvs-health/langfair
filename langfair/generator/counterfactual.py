@@ -568,7 +568,8 @@ class CounterfactualGenerator(ResponseGenerator):
         system_prompt: str = "You are a helpful assistant.",
         count: int = 25,
         custom_dict: Optional[Dict[str, List[str]]] = None,
-        ftu_result: Optional[Dict[str, Any]] = None,
+        llm_ftu: Union[bool, "BaseChatModel"] = False,
+        llm_ftu_threshold: float = 0.3,
     ) -> Dict[str, Any]:
         """
         Creates prompts by counterfactual substitution and generates responses asynchronously
@@ -587,9 +588,15 @@ class CounterfactualGenerator(ResponseGenerator):
             should correspond to groups. Must be provided if attribute is None. For example:
             {'male': ['he', 'him', 'woman'], 'female': ['she', 'her', 'man']}
 
-        ftu_result : Dict[str, Any], default=None
-            Optional FTU result from check_ftu(). If provided and method is 'llm', will use 
-            LLM-detected terms for more precise counterfactual generation.
+        llm_ftu : Union[bool, BaseChatModel], default=False
+            Automatic LLM-based FTU checking:
+            - False: No automatic FTU checking, uses static approach (default)
+            - True: Uses HuggingFace models for automatic FTU checking
+            - BaseChatModel: Uses the provided LangChain model for automatic FTU checking
+            If provided, will automatically run LLM-based FTU check before generating counterfactuals.
+
+        llm_ftu_threshold : float, default=0.3
+            Confidence threshold for LLM-based FTU checking. Only used when llm_ftu is not False.
 
         system_prompt : str, default="You are a helpful assistant."
             Specifies system prompt for generation
@@ -627,6 +634,18 @@ class CounterfactualGenerator(ResponseGenerator):
         self._update_count(count)
         self.system_message = SystemMessage(system_prompt)
 
+        # Auto-run FTU check if llm_ftu is provided
+        ftu_result = None
+        if llm_ftu is not False:
+            print(f"Running automatic LLM-based FTU check with {'LangChain' if llm_ftu is not True else 'HuggingFace'} method...")
+            ftu_result = self.check_ftu(
+                prompts=prompts,
+                attribute=attribute,
+                llm=llm_ftu,
+                llm_threshold=llm_ftu_threshold,
+                subset_prompts=True
+            )
+
         # create counterfactual prompts
         groups = self.group_mapping[attribute] if attribute else custom_dict.keys()
         prompts_dict = self.create_prompts(
@@ -661,6 +680,13 @@ class CounterfactualGenerator(ResponseGenerator):
             # stop = time.time()
 
         print("Responses successfully generated!")
+        # Determine FTU method used for metadata
+        ftu_method_used = "static"  # default
+        if ftu_result and ftu_result.get("metadata", {}).get("method") == "llm":
+            ftu_method_used = "llm"
+        elif llm_ftu is not False:
+            ftu_method_used = "llm"
+
         return {
             "data": {
                 **duplicated_prompts_dict,
@@ -674,6 +700,8 @@ class CounterfactualGenerator(ResponseGenerator):
                 "groups": groups,
                 "original_prompts": prompts_dict["original_prompt"],
                 "attribute_words": prompts_dict["attribute_words"],
+                "ftu_method": ftu_method_used,
+                "auto_ftu": llm_ftu is not False,
             },
         }
 
