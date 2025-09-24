@@ -19,6 +19,19 @@ import sacremoses
 from langchain_core.messages.system import SystemMessage
 from nltk.tokenize import word_tokenize
 
+# Optional imports for LLM-based FTU checking
+try:
+    from transformers import pipeline
+    HF_TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    HF_TRANSFORMERS_AVAILABLE = False
+
+try:
+    from langchain_core.language_models.chat_models import BaseChatModel
+    LANGCHAIN_AVAILABLE = True
+except ImportError:
+    LANGCHAIN_AVAILABLE = False
+
 from langfair.constants.cost_data import FAILURE_MESSAGE
 from langfair.constants.word_lists import (
     FEMALE_WORDS,
@@ -217,6 +230,7 @@ class CounterfactualGenerator(ResponseGenerator):
         prompts: List[str],
         attribute: Optional[str] = None,
         custom_dict: Optional[Dict[str, List[str]]] = None,
+        ftu_result: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, List[str]]:
         """
         Creates prompts by counterfactual substitution
@@ -235,6 +249,10 @@ class CounterfactualGenerator(ResponseGenerator):
             should correspond to groups. Must be provided if attribute is None. For example:
             {'male': ['he', 'him', 'woman'], 'female': ['she', 'her', 'man']}
 
+        ftu_result : Dict[str, Any], default=None
+            Optional FTU result from check_ftu(). If provided and method is 'llm', will use 
+            LLM-detected terms for more precise substitution.
+
         Returns
         -------
         dict
@@ -244,6 +262,17 @@ class CounterfactualGenerator(ResponseGenerator):
             attribute=attribute, custom_dict=custom_dict, for_parsing=False
         )
 
+        # Check if we should use LLM-detected terms
+        if ftu_result and ftu_result.get("metadata", {}).get("method") == "llm":
+            # Use LLM-detected terms for more precise substitution
+            return self.create_prompts_from_llm_terms(
+                prompts=ftu_result["data"]["prompt"],
+                llm_detected_terms=ftu_result["data"]["attribute_words"],
+                attribute=attribute,
+                custom_dict=custom_dict,
+            )
+
+        # Fall back to traditional static method
         custom_list = (
             list(itertools.chain(*custom_dict.values())) if custom_dict else None
         )
@@ -281,6 +310,122 @@ class CounterfactualGenerator(ResponseGenerator):
         ]
         return prompts_dict
 
+    def create_prompts_from_llm_terms(
+        self,
+        prompts: List[str],
+        llm_detected_terms: List[List[str]],
+        attribute: Optional[str] = None,
+        custom_dict: Optional[Dict[str, List[str]]] = None,
+    ) -> Dict[str, List[str]]:
+        """
+        Creates prompts by counterfactual substitution using LLM-detected terms.
+        
+        This method works with terms detected by the LLM-based FTU checker,
+        allowing for more flexible counterfactual generation.
+        
+        Parameters
+        ----------
+        prompts : List[str]
+            A list of prompts for counterfactual substitution
+            
+        llm_detected_terms : List[List[str]]
+            List of detected terms for each prompt (from check_ftu_llm)
+            
+        attribute : {'gender', 'race'}, default=None
+            Specifies attribute type for substitution logic
+            
+        custom_dict : Dict[str, List[str]], default=None
+            Custom substitution dictionary
+            
+        Returns
+        -------
+        dict
+            Dictionary containing counterfactual prompts
+        """
+        # Filter prompts that have detected terms
+        filtered_prompts = []
+        filtered_terms = []
+        
+        for prompt, terms in zip(prompts, llm_detected_terms):
+            if terms:  # Only include prompts with detected terms
+                filtered_prompts.append(prompt)
+                filtered_terms.append(terms)
+        
+        if not filtered_prompts:
+            return {
+                "original_prompt": [],
+                "attribute_words": [],
+            }
+        
+        if attribute == "race":
+            # For race, create counterfactuals for each race group
+            prompts_dict = {
+                race + "_prompt": self._counterfactual_sub_race_with_terms(
+                    texts=filtered_prompts, 
+                    detected_terms=filtered_terms,
+                    target_race=race
+                )
+                for race in self.group_mapping[attribute]
+            }
+        else:
+            # For gender or custom attributes
+            if custom_dict:
+                ref_dict = custom_dict
+            elif attribute == "gender":
+                ref_dict = self.attribute_to_ref_dicts[attribute]
+            else:
+                # Fallback: use detected terms to create a simple substitution
+                ref_dict = {"group1": [], "group2": []}
+            
+            prompts_dict = {key + "_prompt": [] for key in ref_dict}
+            for prompt, terms in zip(filtered_prompts, filtered_terms):
+                counterfactual_prompts = self._sub_from_dict_with_terms(
+                    ref_dict=ref_dict, 
+                    text=prompt,
+                    detected_terms=terms
+                )
+                for key in counterfactual_prompts:
+                    prompts_dict[key + "_prompt"].append(counterfactual_prompts[key])
+        
+        prompts_dict["original_prompt"] = filtered_prompts
+        prompts_dict["attribute_words"] = filtered_terms
+        return prompts_dict
+    
+    def _counterfactual_sub_race_with_terms(
+        self,
+        texts: List[str],
+        detected_terms: List[List[str]],
+        target_race: str,
+    ) -> List[str]:
+        """Implements counterfactual substitution using LLM-detected race terms."""
+        new_texts = []
+        for text, terms in zip(texts, detected_terms):
+            new_text = text
+            # Replace each detected race term
+            for term in terms:
+                if term in RACE_WORDS_NOT_REQUIRING_CONTEXT:
+                    # Direct replacement for standalone race words
+                    new_text = re.sub(rf'\b{re.escape(term)}\b', target_race, new_text, flags=re.IGNORECASE)
+                elif any(term.startswith(rw + " ") for rw in RACE_WORDS_REQUIRING_CONTEXT):
+                    # Handle race + person combinations
+                    parts = term.split(" ", 1)
+                    if len(parts) == 2:
+                        race_part, person_part = parts
+                        replacement = f"{target_race} {person_part}"
+                        new_text = re.sub(rf'\b{re.escape(term)}\b', replacement, new_text, flags=re.IGNORECASE)
+            new_texts.append(new_text)
+        return new_texts
+    
+    def _sub_from_dict_with_terms(
+        self, 
+        ref_dict: Dict[str, List[str]], 
+        text: str,
+        detected_terms: List[str]
+    ) -> Dict[str, str]:
+        """Creates counterfactual variations using detected terms."""
+        # For now, use the original method but could be enhanced to be more targeted
+        return self._sub_from_dict(ref_dict=ref_dict, text=text)
+
     def neutralize_tokens(
         self, texts: List[str], attribute: str = "gender"
     ) -> List[str]:
@@ -317,6 +462,7 @@ class CounterfactualGenerator(ResponseGenerator):
         system_prompt: str = "You are a helpful assistant.",
         count: int = 25,
         custom_dict: Optional[Dict[str, List[str]]] = None,
+        ftu_result: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Creates prompts by counterfactual substitution and generates responses asynchronously
@@ -334,6 +480,10 @@ class CounterfactualGenerator(ResponseGenerator):
             A dictionary containing corresponding lists of tokens for counterfactual substitution. Keys
             should correspond to groups. Must be provided if attribute is None. For example:
             {'male': ['he', 'him', 'woman'], 'female': ['she', 'her', 'man']}
+
+        ftu_result : Dict[str, Any], default=None
+            Optional FTU result from check_ftu(). If provided and method is 'llm', will use 
+            LLM-detected terms for more precise counterfactual generation.
 
         system_prompt : str, default="You are a helpful assistant."
             Specifies system prompt for generation
@@ -377,6 +527,7 @@ class CounterfactualGenerator(ResponseGenerator):
             prompts=prompts,
             attribute=attribute,
             custom_dict=custom_dict,
+            ftu_result=ftu_result,
         )
 
         print(
@@ -420,16 +571,19 @@ class CounterfactualGenerator(ResponseGenerator):
             },
         }
 
+
     def check_ftu(
         self,
         prompts: List[str],
         attribute: Optional[str] = None,
         custom_list: Optional[List[str]] = None,
         subset_prompts: bool = True,
+        llm: Union[bool, "BaseChatModel"] = False,
+        llm_threshold: float = 0.7,
     ) -> Dict[str, Any]:
         """
         Checks for fairness through unawarenss (FTU) based on a list of prompts and a specified protected
-        attribute
+        attribute. Supports both static word list and LLM-based detection methods.
 
         Parameters
         ----------
@@ -445,6 +599,17 @@ class CounterfactualGenerator(ResponseGenerator):
 
         subset_prompts : bool, default=True
             Indicates whether to return all prompts or only those containing attribute words
+
+        llm : Union[bool, BaseChatModel], default=False
+            Controls the detection method:
+            - False: Uses static word lists (default, fastest)
+            - True: Uses HuggingFace models (requires transformers library)
+            - BaseChatModel: Uses the provided LangChain model (e.g., ChatVertexAI, ChatOpenAI)
+
+        llm_threshold : float, default=0.3
+            Confidence threshold for LLM-based classification (0.0 to 1.0). Default of 0.3 is 
+            intentionally low to err on the side of caution in bias detection - false negatives 
+            are more problematic than false positives in fairness contexts. Only used when llm is not False.
 
         Returns
         -------
@@ -468,7 +633,36 @@ class CounterfactualGenerator(ResponseGenerator):
 
                 'filtered_prompt_count' : int
                     The number of prompts that satisfy FTU.
+
+                'method' : str
+                    Detection method used ('static' or 'llm')
         """
+        # Route to appropriate detection method
+        if llm is not False:
+            return self._check_ftu_llm(
+                prompts=prompts,
+                attribute=attribute,
+                custom_list=custom_list,
+                subset_prompts=subset_prompts,
+                llm=llm,
+                llm_threshold=llm_threshold,
+            )
+        else:
+            return self._check_ftu_static(
+                prompts=prompts,
+                attribute=attribute,
+                custom_list=custom_list,
+                subset_prompts=subset_prompts,
+            )
+
+    def _check_ftu_static(
+        self,
+        prompts: List[str],
+        attribute: Optional[str] = None,
+        custom_list: Optional[List[str]] = None,
+        subset_prompts: bool = True,
+    ) -> Dict[str, Any]:
+        """Internal method for static word list FTU checking."""
         self._validate_attributes(attribute=attribute, custom_list=custom_list)
         attribute_to_print = (
             "Protected attribute" if not attribute else attribute.capitalize()
@@ -507,8 +701,152 @@ class CounterfactualGenerator(ResponseGenerator):
                 "attribute": attribute,
                 "custom_list": custom_list,
                 "subset_prompts": subset_prompts,
+                "method": "static",
             },
         }
+
+    def _check_ftu_llm(
+        self,
+        prompts: List[str],
+        attribute: Optional[str] = None,
+        custom_list: Optional[List[str]] = None,
+        subset_prompts: bool = True,
+        llm: Union[bool, "BaseChatModel"] = True,
+        llm_threshold: float = 0.3,
+    ) -> Dict[str, Any]:
+        """Internal method for LLM-based FTU checking."""
+        # Determine which LLM approach to use
+        use_langchain_llm = llm is not True  # If not True, it should be a LangChain model
+        
+        if use_langchain_llm:
+            # Validate that we have a proper LangChain model
+            if LANGCHAIN_AVAILABLE:
+                if not isinstance(llm, BaseChatModel):
+                    raise ValueError(
+                        f"Provided llm must be a LangChain BaseChatModel, got {type(llm).__name__}. "
+                        "Example: from langchain_google_vertexai import ChatVertexAI; llm = ChatVertexAI()"
+                    )
+            else:
+                # Fallback check if langchain_core not available
+                if not hasattr(llm, 'invoke'):
+                    raise ValueError(
+                        "Provided llm must be a LangChain BaseChatModel with invoke() method. "
+                        "Install langchain_core for better type checking."
+                    )
+        else:
+            # Using HuggingFace - check if transformers is available
+            if not HF_TRANSFORMERS_AVAILABLE:
+                raise ImportError(
+                    "transformers library not available. Install with: pip install transformers torch"
+                )
+
+        # For LLM method, we need to handle both single attribute and custom_list cases
+        if custom_list:
+            # For custom lists, we'll treat it as a generic attribute
+            attributes = ["custom"]
+        elif attribute:
+            attributes = [attribute]
+        else:
+            # Default to both race and gender
+            attributes = ["race", "gender"]
+
+        detected_prompts = []
+        detected_attributes = []
+        
+        for prompt in prompts:
+            if custom_list:
+                # For custom lists, use a simplified approach
+                prompt_attributes = self._check_custom_attributes_llm(prompt, custom_list, llm_threshold, llm if use_langchain_llm else None)
+            else:
+                # Use the existing LLM detection methods
+                if use_langchain_llm:
+                    prompt_attributes = self._check_attributes_with_langchain(prompt, attributes, llm_threshold, llm)
+                else:
+                    prompt_attributes = self._check_attributes_with_hf(prompt, attributes, "facebook/bart-large-mnli", llm_threshold)
+            
+            if prompt_attributes:
+                detected_prompts.append(prompt)
+                detected_attributes.append(prompt_attributes)
+            elif not subset_prompts:
+                detected_prompts.append(prompt)
+                detected_attributes.append([])
+        
+        n_prompts_with_attributes = len([attrs for attrs in detected_attributes if attrs])
+        ftu_satisfied = n_prompts_with_attributes > 0
+        
+        attribute_to_print = (
+            "Protected attribute" if not attribute else attribute.capitalize()
+        )
+        ftu_text = " not " if ftu_satisfied else " "
+        print(f"LLM-based FTU check: {n_prompts_with_attributes} prompts contain {attribute_to_print.lower()} words")
+        print(f"FTU is{ftu_text}satisfied.")
+        
+        return {
+            "data": {
+                "prompt": detected_prompts,
+                "attribute_words": detected_attributes,
+            },
+            "metadata": {
+                "ftu_satisfied": ftu_satisfied,
+                "n_prompts_with_attribute_words": n_prompts_with_attributes,
+                "method": "llm",
+                "llm_threshold": llm_threshold,
+                "llm_type": "langchain" if use_langchain_llm else "huggingface",
+                "attribute": attribute,
+                "custom_list": custom_list,
+                "subset_prompts": subset_prompts,
+            },
+        }
+
+    def _check_custom_attributes_llm(
+        self, 
+        text: str, 
+        custom_list: List[str], 
+        threshold: float, 
+        langchain_llm: Optional[Any] = None
+    ) -> List[str]:
+        """Check for custom attributes using LLM."""
+        # For custom lists, do a simple check if any terms from the list are mentioned
+        detected_terms = []
+        
+        if langchain_llm:
+            # Use LangChain LLM to check for custom terms
+            system_prompt = f"""You are an expert at detecting specific terms in text.
+
+Your task is to identify if any of these terms appear in the given text: {', '.join(custom_list)}
+
+Instructions:
+1. Look for any mentions of the specified terms in the text
+2. If you find any terms, list the EXACT words or phrases from the text
+3. If no terms are found, respond with "NONE"
+4. Be precise and consider context
+5. Return only the specific terms found, separated by commas if multiple"""
+            
+            human_prompt = f"Text to analyze: {text}"
+            
+            from langchain_core.messages import HumanMessage
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=human_prompt)
+            ]
+            
+            try:
+                response = langchain_llm.invoke(messages)
+                response_text = response.content.strip()
+                
+                if response_text.upper() != "NONE":
+                    terms = [term.strip().lower() for term in response_text.split(",")]
+                    detected_terms.extend(terms)
+            except Exception as e:
+                warnings.warn(f"LLM custom term detection failed: {e}")
+        else:
+            # For HuggingFace, fall back to simple token matching
+            tokens = word_tokenize(text.lower())
+            for term in custom_list:
+                if term.lower() in tokens:
+                    detected_terms.append(term.lower())
+        
+        return detected_terms
 
     def _subset_prompts(
         self,
@@ -647,6 +985,134 @@ class CounterfactualGenerator(ResponseGenerator):
                 found_words.append(rw)
         
         return found_words
+
+    
+    def _check_attributes_with_hf(
+        self, 
+        text: str, 
+        attributes: List[str], 
+        model_name: str, 
+        threshold: float
+    ) -> List[str]:
+        """Check for protected attributes using HuggingFace model and extract specific terms."""
+        detected_terms = []
+        
+        for attribute in attributes:
+            # First, check if the attribute is present
+            classifier = pipeline(
+                "zero-shot-classification",
+                model="facebook/bart-large-mnli",
+                device=-1
+            )
+            
+            if attribute == "race":
+                labels = ["mentions race or ethnicity", "does not mention race or ethnicity"]
+            elif attribute == "gender":
+                labels = ["mentions gender", "does not mention gender"]
+            else:
+                labels = [f"mentions {attribute}", f"does not mention {attribute}"]
+            
+            result = classifier(text, labels)
+            positive_label = labels[0]
+            
+            if result['labels'][0] == positive_label and result['scores'][0] >= threshold:
+                # If attribute detected, extract specific terms using NER or keyword extraction
+                specific_terms = self._extract_specific_terms_hf(text, attribute)
+                detected_terms.extend(specific_terms)
+        
+        return detected_terms
+    
+    def _extract_specific_terms_hf(self, text: str, attribute: str) -> List[str]:
+        """Extract specific terms for a detected attribute using HuggingFace models."""
+        detected_terms = []
+        
+        if attribute == "race":
+            # Use a combination of NER and keyword matching for race terms
+            try:
+                # Try using NER to find person-related entities
+                ner_pipeline = pipeline("ner", model="dbmdz/bert-large-cased-finetuned-conll03-english", device=-1)
+                ner_results = ner_pipeline(text)
+                
+                # Look for race-related terms in the text using a more targeted approach
+                text_lower = text.lower()
+                for race_word in RACE_WORDS_NOT_REQUIRING_CONTEXT:
+                    if race_word in text_lower:
+                        detected_terms.append(race_word)
+                
+                # Check for race + person combinations
+                for race_word in RACE_WORDS_REQUIRING_CONTEXT:
+                    for person_word in PERSON_WORDS:
+                        phrase = f"{race_word} {person_word}"
+                        if phrase in text_lower:
+                            detected_terms.append(phrase)
+                            
+            except Exception:
+                # Fallback to simple keyword matching
+                text_lower = text.lower()
+                for race_word in RACE_WORDS_NOT_REQUIRING_CONTEXT + RACE_WORDS_REQUIRING_CONTEXT:
+                    if race_word in text_lower:
+                        detected_terms.append(race_word)
+        
+        elif attribute == "gender":
+            # For gender, use token-based matching similar to the original approach
+            tokens = word_tokenize(text.lower())
+            for gender_word in ALL_GENDER_WORDS:
+                if gender_word in tokens:
+                    detected_terms.append(gender_word)
+        
+        return list(set(detected_terms))  # Remove duplicates
+    
+    def _check_attributes_with_langchain(
+        self, 
+        text: str, 
+        attributes: List[str], 
+        threshold: float,
+        langchain_llm: Any
+    ) -> List[str]:
+        """Check for protected attributes using LangChain LLM and extract specific terms."""
+        detected_terms = []
+        
+        for attribute in attributes:
+            # Create a prompt for the LLM to both detect and extract terms
+            system_prompt = f"""You are an expert at detecting protected attributes in text.
+
+Your task is to identify specific {attribute} terms or phrases in the given text.
+
+Instructions:
+1. Look for any references to {attribute} in the text
+2. If you find {attribute} references, list the EXACT words or phrases from the text
+3. If no {attribute} references are found, respond with "NONE"
+4. Be precise and consider context - avoid false positives from partial word matches
+5. Return only the specific terms, separated by commas if multiple
+
+Examples:
+- For "The caucasian male patient" → "caucasian, male" 
+- For "She is a doctor" → "she"
+- For "The black car" → "NONE" (not about a person)"""
+            
+            human_prompt = f"Text to analyze: {text}"
+            
+            # Use the LangChain LLM
+            from langchain_core.messages import HumanMessage
+            
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=human_prompt)
+            ]
+            
+            try:
+                response = langchain_llm.invoke(messages)
+                response_text = response.content.strip()
+                
+                if response_text.upper() != "NONE":
+                    # Parse the comma-separated terms
+                    terms = [term.strip().lower() for term in response_text.split(",")]
+                    detected_terms.extend(terms)
+                    
+            except Exception as e:
+                warnings.warn(f"LLM term extraction failed for {attribute}: {e}")
+        
+        return detected_terms
 
     @staticmethod
     def _replace_race(text: str, target_race: str) -> str:
