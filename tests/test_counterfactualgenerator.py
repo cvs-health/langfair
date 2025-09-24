@@ -109,3 +109,42 @@ async def test_counterfactual(monkeypatch):
             if "response" in key
         ]
     )
+
+
+def test_race_parsing_false_positives():
+    """Test that _get_race_subsequences avoids false positives like 'asian' in 'caucasian'."""
+    from langfair.generator import CounterfactualGenerator
+
+    cf_gen = CounterfactualGenerator()
+
+    # Original issue: should not find "asian" in "caucasian male"
+    result = cf_gen._get_race_subsequences(
+        "The patient is a caucasian male diagnosed with ABC."
+    )
+    result_lower = [word.lower() for word in result]
+
+    # Should not contain false positive "asian"
+    assert "asian" not in result_lower, (
+        f"False positive 'asian' found in result: {result}"
+    )
+
+    # Should contain the actual race term (either standalone or with person descriptor)
+    assert any("caucasian" in word.lower() for word in result), (
+        f"Expected 'caucasian' not found in result: {result}"
+    )
+
+    # Additional edge cases to prevent regressions
+
+    # Should not find "american" in "American" (not a race term in our lists)
+    result2 = cf_gen._get_race_subsequences("The American patient was treated.")
+    assert len(result2) == 0, (
+        f"Should not find race terms in non-racial context: {result2}"
+    )
+
+    # Should correctly identify actual race terms
+    result3 = cf_gen._get_race_subsequences(
+        "The hispanic woman was seen by the doctor."
+    )
+    assert any("hispanic" in word.lower() for word in result3), (
+        f"Expected 'hispanic' not found: {result3}"
+    )

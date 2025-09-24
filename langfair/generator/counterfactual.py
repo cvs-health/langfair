@@ -16,21 +16,11 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import nltk
 import sacremoses
+
+# Import for LLM-based FTU checking
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages.system import SystemMessage
 from nltk.tokenize import word_tokenize
-
-# Optional imports for LLM-based FTU checking
-try:
-    from transformers import pipeline
-    HF_TRANSFORMERS_AVAILABLE = True
-except ImportError:
-    HF_TRANSFORMERS_AVAILABLE = False
-
-try:
-    from langchain_core.language_models.chat_models import BaseChatModel
-    LANGCHAIN_AVAILABLE = True
-except ImportError:
-    LANGCHAIN_AVAILABLE = False
 
 from langfair.constants.cost_data import FAILURE_MESSAGE
 from langfair.constants.word_lists import (
@@ -230,7 +220,6 @@ class CounterfactualGenerator(ResponseGenerator):
         prompts: List[str],
         attribute: Optional[str] = None,
         custom_dict: Optional[Dict[str, List[str]]] = None,
-        ftu_result: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, List[str]]:
         """
         Creates prompts by counterfactual substitution
@@ -249,10 +238,6 @@ class CounterfactualGenerator(ResponseGenerator):
             should correspond to groups. Must be provided if attribute is None. For example:
             {'male': ['he', 'him', 'woman'], 'female': ['she', 'her', 'man']}
 
-        ftu_result : Dict[str, Any], default=None
-            Optional FTU result from check_ftu(). If provided and method is 'llm', will use 
-            LLM-detected terms for more precise substitution.
-
         Returns
         -------
         dict
@@ -262,17 +247,7 @@ class CounterfactualGenerator(ResponseGenerator):
             attribute=attribute, custom_dict=custom_dict, for_parsing=False
         )
 
-        # Check if we should use LLM-detected terms
-        if ftu_result and ftu_result.get("metadata", {}).get("method") == "llm":
-            # Use LLM-detected terms for more precise substitution
-            return self.create_prompts_from_llm_terms(
-                prompts=ftu_result["data"]["prompt"],
-                llm_detected_terms=ftu_result["data"]["attribute_words"],
-                attribute=attribute,
-                custom_dict=custom_dict,
-            )
-
-        # Fall back to traditional static method
+        # Use traditional static method
         custom_list = (
             list(itertools.chain(*custom_dict.values())) if custom_dict else None
         )
@@ -319,24 +294,24 @@ class CounterfactualGenerator(ResponseGenerator):
     ) -> Dict[str, List[str]]:
         """
         Creates prompts by counterfactual substitution using LLM-detected terms.
-        
+
         This method works with terms detected by the LLM-based FTU checker,
         allowing for more flexible counterfactual generation.
-        
+
         Parameters
         ----------
         prompts : List[str]
             A list of prompts for counterfactual substitution
-            
+
         llm_detected_terms : List[List[str]]
             List of detected terms for each prompt (from check_ftu_llm)
-            
+
         attribute : {'gender', 'race'}, default=None
             Specifies attribute type for substitution logic
-            
+
         custom_dict : Dict[str, List[str]], default=None
             Custom substitution dictionary
-            
+
         Returns
         -------
         dict
@@ -345,15 +320,17 @@ class CounterfactualGenerator(ResponseGenerator):
         # Filter prompts that have detected terms
         filtered_prompts = []
         filtered_terms = []
-        
+
         for prompt, terms in zip(prompts, llm_detected_terms):
             if terms:  # Only include prompts with detected terms
                 filtered_prompts.append(prompt)
                 filtered_terms.append(terms)
-        
+
         if not filtered_prompts:
             # No prompts with detected terms - return empty structure matching expected groups
-            groups = self.group_mapping[attribute] if attribute else list(custom_dict.keys())
+            groups = (
+                self.group_mapping[attribute] if attribute else list(custom_dict.keys())
+            )
             result = {
                 "original_prompt": [],
                 "attribute_words": [],
@@ -362,14 +339,14 @@ class CounterfactualGenerator(ResponseGenerator):
             for group in groups:
                 result[f"{group}_prompt"] = []
             return result
-        
+
         if attribute == "race":
             # For race, create counterfactuals for each race group
             prompts_dict = {
                 race + "_prompt": self._counterfactual_sub_race_with_terms(
-                    texts=filtered_prompts, 
+                    texts=filtered_prompts,
                     detected_terms=filtered_terms,
-                    target_race=race
+                    target_race=race,
                 )
                 for race in self.group_mapping[attribute]
             }
@@ -382,21 +359,19 @@ class CounterfactualGenerator(ResponseGenerator):
             else:
                 # Fallback: use detected terms to create a simple substitution
                 ref_dict = {"group1": [], "group2": []}
-            
+
             prompts_dict = {key + "_prompt": [] for key in ref_dict}
             for prompt, terms in zip(filtered_prompts, filtered_terms):
                 counterfactual_prompts = self._sub_from_dict_with_terms(
-                    ref_dict=ref_dict, 
-                    text=prompt,
-                    detected_terms=terms
+                    ref_dict=ref_dict, text=prompt, detected_terms=terms
                 )
                 for key in counterfactual_prompts:
                     prompts_dict[key + "_prompt"].append(counterfactual_prompts[key])
-        
+
         prompts_dict["original_prompt"] = filtered_prompts
         prompts_dict["attribute_words"] = filtered_terms
         return prompts_dict
-    
+
     def _counterfactual_sub_race_with_terms(
         self,
         texts: List[str],
@@ -411,61 +386,69 @@ class CounterfactualGenerator(ResponseGenerator):
             for term in terms:
                 if term in RACE_WORDS_NOT_REQUIRING_CONTEXT:
                     # Direct replacement for standalone race words
-                    new_text = re.sub(rf'\b{re.escape(term)}\b', target_race, new_text, flags=re.IGNORECASE)
-                elif any(term.startswith(rw + " ") for rw in RACE_WORDS_REQUIRING_CONTEXT):
+                    new_text = re.sub(
+                        rf"\b{re.escape(term)}\b",
+                        target_race,
+                        new_text,
+                        flags=re.IGNORECASE,
+                    )
+                elif any(
+                    term.startswith(rw + " ") for rw in RACE_WORDS_REQUIRING_CONTEXT
+                ):
                     # Handle race + person combinations
                     parts = term.split(" ", 1)
                     if len(parts) == 2:
                         race_part, person_part = parts
                         replacement = f"{target_race} {person_part}"
-                        new_text = re.sub(rf'\b{re.escape(term)}\b', replacement, new_text, flags=re.IGNORECASE)
+                        new_text = re.sub(
+                            rf"\b{re.escape(term)}\b",
+                            replacement,
+                            new_text,
+                            flags=re.IGNORECASE,
+                        )
             new_texts.append(new_text)
         return new_texts
-    
+
     def _sub_from_dict_with_terms(
-        self, 
-        ref_dict: Dict[str, List[str]], 
-        text: str,
-        detected_terms: List[str]
+        self, ref_dict: Dict[str, List[str]], text: str, detected_terms: List[str]
     ) -> Dict[str, str]:
         """Creates counterfactual variations using detected explicit gender/race terms only.
-        
+
         This method focuses on explicit terms (he/she, male/female, caucasian/black, etc.)
         like the static method, but uses LLM-detected terms for better robustness.
         """
         # Filter out names - we only want explicit gender/race terms like the static method
         explicit_terms = [term for term in detected_terms if ":name:" not in term]
-        
+
         if not explicit_terms:
             # No explicit terms found, return original text for all groups
             return {group: text for group in ref_dict.keys()}
-        
+
         # Use traditional word replacement with the detected explicit terms
-        return self._sub_from_dict_with_detected_terms(ref_dict=ref_dict, text=text, detected_terms=explicit_terms)
-    
+        return self._sub_from_dict_with_detected_terms(
+            ref_dict=ref_dict, text=text, detected_terms=explicit_terms
+        )
+
     def _sub_from_dict_with_detected_terms(
-        self, 
-        ref_dict: Dict[str, List[str]], 
-        text: str, 
-        detected_terms: List[str]
+        self, ref_dict: Dict[str, List[str]], text: str, detected_terms: List[str]
     ) -> Dict[str, str]:
         """Substitute detected explicit terms using the reference dictionary.
-        
+
         This mimics the static method behavior but uses LLM-detected terms.
         """
         variations = {}
-        
+
         for group_key, word_list in ref_dict.items():
             new_text = text
-            
+
             # For each detected term, try to replace it with words from the current group
             for term in detected_terms:
                 term_lower = term.lower()
-                
+
                 # Find the best replacement from the word list
                 # This mimics how the static method maps words
                 replacement = None
-                
+
                 # For gender, try to find direct mappings
                 if group_key in ["male", "female"]:
                     if term_lower in GENDER_MAPPING:
@@ -477,25 +460,23 @@ class CounterfactualGenerator(ResponseGenerator):
                         elif group_key == "male" and term_lower in MALE_WORDS:
                             replacement = term_lower  # keep male terms in male group
                         elif group_key == "female" and term_lower in FEMALE_WORDS:
-                            replacement = term_lower  # keep female terms in female group
-                
+                            replacement = (
+                                term_lower  # keep female terms in female group
+                            )
+
                 # If we found a replacement, apply it
                 if replacement:
                     # Use word boundaries for precise replacement
                     new_text = re.sub(
-                        rf'\b{re.escape(term)}\b', 
-                        replacement, 
-                        new_text, 
-                        flags=re.IGNORECASE
+                        rf"\b{re.escape(term)}\b",
+                        replacement,
+                        new_text,
+                        flags=re.IGNORECASE,
                     )
-            
+
             variations[group_key] = new_text
-        
+
         return variations
-    
-    
-    
-    
 
     def neutralize_tokens(
         self, texts: List[str], attribute: str = "gender"
@@ -533,8 +514,8 @@ class CounterfactualGenerator(ResponseGenerator):
         system_prompt: str = "You are a helpful assistant.",
         count: int = 25,
         custom_dict: Optional[Dict[str, List[str]]] = None,
-        llm_ftu: Union[bool, "BaseChatModel"] = False,
-        llm_ftu_threshold: float = 0.3,
+        llm_ftu: Optional["BaseChatModel"] = None,
+        llm_ftu_threshold: float = 0.5,
     ) -> Dict[str, Any]:
         """
         Creates prompts by counterfactual substitution and generates responses asynchronously
@@ -553,15 +534,14 @@ class CounterfactualGenerator(ResponseGenerator):
             should correspond to groups. Must be provided if attribute is None. For example:
             {'male': ['he', 'him', 'woman'], 'female': ['she', 'her', 'man']}
 
-        llm_ftu : Union[bool, BaseChatModel], default=False
-            Automatic LLM-based FTU checking:
-            - False: No automatic FTU checking, uses static approach (default)
-            - True: Uses HuggingFace models for automatic FTU checking
+        llm_ftu : Optional[BaseChatModel], default=None
+            LLM-based FTU checking:
+            - None: No automatic FTU checking, uses static approach (default)
             - BaseChatModel: Uses the provided LangChain model for automatic FTU checking
             If provided, will automatically run LLM-based FTU check before generating counterfactuals.
 
         llm_ftu_threshold : float, default=0.3
-            Confidence threshold for LLM-based FTU checking. Only used when llm_ftu is not False.
+            Confidence threshold for LLM-based FTU checking. Only used when llm_ftu is not None.
 
         system_prompt : str, default="You are a helpful assistant."
             Specifies system prompt for generation
@@ -599,58 +579,86 @@ class CounterfactualGenerator(ResponseGenerator):
         self._update_count(count)
         self.system_message = SystemMessage(system_prompt)
 
-        # Auto-run FTU check if llm_ftu is provided
-        ftu_result = None
-        if llm_ftu is not False:
-            print(f"Running automatic LLM-based FTU check with {'LangChain' if llm_ftu is not True else 'HuggingFace'} method...")
-            ftu_result = self.check_ftu(
+        # create counterfactual prompts
+        groups = self.group_mapping[attribute] if attribute else custom_dict.keys()
+
+        if llm_ftu is not None:
+            # Validate LLM type early in the flow
+            if not isinstance(llm_ftu, BaseChatModel):
+                raise ValueError(
+                    f"llm_ftu must be a LangChain BaseChatModel, got {type(llm_ftu).__name__}. "
+                    "Example: from langchain_google_vertexai import ChatVertexAI; llm_ftu = ChatVertexAI()"
+                )
+
+            print("Running LLM-based FTU check...")
+
+            # Run LLM-based FTU check and get detected terms directly
+            detected_prompts, detected_terms = self._run_llm_ftu_check(
                 prompts=prompts,
                 attribute=attribute,
                 llm=llm_ftu,
                 llm_threshold=llm_ftu_threshold,
-                subset_prompts=True
             )
 
-        # create counterfactual prompts
-        groups = self.group_mapping[attribute] if attribute else custom_dict.keys()
-        prompts_dict = self.create_prompts(
-            prompts=prompts,
-            attribute=attribute,
-            custom_dict=custom_dict,
-            ftu_result=ftu_result,
+            # Use LLM-detected terms for counterfactual generation
+            prompts_dict = self.create_prompts_from_llm_terms(
+                prompts=detected_prompts,
+                llm_detected_terms=detected_terms,
+                attribute=attribute,
+                custom_dict=custom_dict,
+            )
+        else:
+            # Use traditional static method
+            prompts_dict = self.create_prompts(
+                prompts=prompts,
+                attribute=attribute,
+                custom_dict=custom_dict,
+            )
+
+        # Check if there are any prompts to generate responses for
+        has_prompts_to_generate = any(
+            len(prompts_dict.get(f"{group}_prompt", [])) > 0 for group in groups
         )
 
-        print(
-            f"""Generating {count} responses for each {
-                attribute if attribute else "group-specific"
-            } prompt..."""
-        )
+        if has_prompts_to_generate:
+            print(
+                f"""Generating {count} responses for each {
+                    attribute if attribute else "group-specific"
+                } prompt..."""
+            )
 
-        # generate responses with async
-        responses_dict, duplicated_prompts_dict = {}, {}
-        for group in groups:
-            prompt_key = group + "_prompt"
-            # start = time.time()
-            # generate with async
-            (
-                tasks,
-                duplicated_prompts_dict[prompt_key],
-            ) = self._create_tasks(prompts=prompts_dict[prompt_key])
-            tmp_response_list = await asyncio.gather(*tasks)
+            # generate responses with async
+            responses_dict, duplicated_prompts_dict = {}, {}
+            for group in groups:
+                prompt_key = group + "_prompt"
+                # start = time.time()
+                # generate with async
+                (
+                    tasks,
+                    duplicated_prompts_dict[prompt_key],
+                ) = self._create_tasks(prompts=prompts_dict[prompt_key])
+                tmp_response_list = await asyncio.gather(*tasks)
 
-            tmp_responses = []
-            for response in tmp_response_list:
-                tmp_responses.extend(response)
-            responses_dict[group + "_response"] = self._enforce_strings(tmp_responses)
-            # stop = time.time()
+                tmp_responses = []
+                for response in tmp_response_list:
+                    tmp_responses.extend(response)
+                responses_dict[group + "_response"] = self._enforce_strings(
+                    tmp_responses
+                )
+                # stop = time.time()
 
-        print("Responses successfully generated!")
+            print("Responses successfully generated!")
+        else:
+            print(
+                "No counterfactual prompts to generate responses for - FTU satisfied with no explicit terms detected."
+            )
+            # Initialize empty response structures
+            responses_dict, duplicated_prompts_dict = {}, {}
+            for group in groups:
+                responses_dict[group + "_response"] = []
+                duplicated_prompts_dict[group + "_prompt"] = []
         # Determine FTU method used for metadata
-        ftu_method_used = "static"  # default
-        if ftu_result and ftu_result.get("metadata", {}).get("method") == "llm":
-            ftu_method_used = "llm"
-        elif llm_ftu is not False:
-            ftu_method_used = "llm"
+        ftu_method_used = "llm" if llm_ftu is not None else "static"
 
         return {
             "data": {
@@ -666,10 +674,9 @@ class CounterfactualGenerator(ResponseGenerator):
                 "original_prompts": prompts_dict["original_prompt"],
                 "attribute_words": prompts_dict["attribute_words"],
                 "ftu_method": ftu_method_used,
-                "auto_ftu": llm_ftu is not False,
+                "auto_ftu": llm_ftu is not None,
             },
         }
-
 
     def check_ftu(
         self,
@@ -677,7 +684,7 @@ class CounterfactualGenerator(ResponseGenerator):
         attribute: Optional[str] = None,
         custom_list: Optional[List[str]] = None,
         subset_prompts: bool = True,
-        llm: Union[bool, "BaseChatModel"] = False,
+        llm: Optional["BaseChatModel"] = None,
         llm_threshold: float = 0.7,
     ) -> Dict[str, Any]:
         """
@@ -699,16 +706,15 @@ class CounterfactualGenerator(ResponseGenerator):
         subset_prompts : bool, default=True
             Indicates whether to return all prompts or only those containing attribute words
 
-        llm : Union[bool, BaseChatModel], default=False
+        llm : Optional[BaseChatModel], default=None
             Controls the detection method:
-            - False: Uses static word lists (default, fastest)
-            - True: Uses HuggingFace models (requires transformers library)
+            - None: Uses static word lists (default, fastest)
             - BaseChatModel: Uses the provided LangChain model (e.g., ChatVertexAI, ChatOpenAI)
 
         llm_threshold : float, default=0.3
-            Confidence threshold for LLM-based classification (0.0 to 1.0). Default of 0.3 is 
-            intentionally low to err on the side of caution in bias detection - false negatives 
-            are more problematic than false positives in fairness contexts. Only used when llm is not False.
+            Confidence threshold for LLM-based classification (0.0 to 1.0). Default of 0.3 is
+            intentionally low to err on the side of caution in bias detection - false negatives
+            are more problematic than false positives in fairness contexts. Only used when llm is not None.
 
         Returns
         -------
@@ -737,7 +743,22 @@ class CounterfactualGenerator(ResponseGenerator):
                     Detection method used ('static' or 'llm')
         """
         # Route to appropriate detection method
-        if llm is not False:
+        if llm is None:
+            return self._check_ftu_static(
+                prompts=prompts,
+                attribute=attribute,
+                custom_list=custom_list,
+                subset_prompts=subset_prompts,
+            )
+        else:
+            # Validate LLM type early
+            if not isinstance(llm, BaseChatModel):
+                raise ValueError(
+                    f"llm parameter must be either None (for static method) or a LangChain BaseChatModel instance, "
+                    f"got {type(llm).__name__}. "
+                    "Example: from langchain_google_vertexai import ChatVertexAI; llm = ChatVertexAI()"
+                )
+
             return self._check_ftu_llm(
                 prompts=prompts,
                 attribute=attribute,
@@ -745,13 +766,6 @@ class CounterfactualGenerator(ResponseGenerator):
                 subset_prompts=subset_prompts,
                 llm=llm,
                 llm_threshold=llm_threshold,
-            )
-        else:
-            return self._check_ftu_static(
-                prompts=prompts,
-                attribute=attribute,
-                custom_list=custom_list,
-                subset_prompts=subset_prompts,
             )
 
     def _check_ftu_static(
@@ -810,34 +824,11 @@ class CounterfactualGenerator(ResponseGenerator):
         attribute: Optional[str] = None,
         custom_list: Optional[List[str]] = None,
         subset_prompts: bool = True,
-        llm: Union[bool, "BaseChatModel"] = True,
+        llm: "BaseChatModel" = None,
         llm_threshold: float = 0.3,
     ) -> Dict[str, Any]:
-        """Internal method for LLM-based FTU checking."""
-        # Determine which LLM approach to use
-        use_langchain_llm = llm is not True  # If not True, it should be a LangChain model
-        
-        if use_langchain_llm:
-            # Validate that we have a proper LangChain model
-            if LANGCHAIN_AVAILABLE:
-                if not isinstance(llm, BaseChatModel):
-                    raise ValueError(
-                        f"Provided llm must be a LangChain BaseChatModel, got {type(llm).__name__}. "
-                        "Example: from langchain_google_vertexai import ChatVertexAI; llm = ChatVertexAI()"
-                    )
-            else:
-                # Fallback check if langchain_core not available
-                if not hasattr(llm, 'invoke'):
-                    raise ValueError(
-                        "Provided llm must be a LangChain BaseChatModel with invoke() method. "
-                        "Install langchain_core for better type checking."
-                    )
-        else:
-            # Using HuggingFace - check if transformers is available
-            if not HF_TRANSFORMERS_AVAILABLE:
-                raise ImportError(
-                    "transformers library not available. Install with: pip install transformers torch"
-                )
+        """Internal method for LLM-based FTU checking using LangChain BaseChatModel."""
+        # Note: Type validation is handled earlier in generate_responses()
 
         # For LLM method, we need to handle both single attribute and custom_list cases
         if custom_list:
@@ -851,35 +842,43 @@ class CounterfactualGenerator(ResponseGenerator):
 
         detected_prompts = []
         detected_attributes = []
-        
+
         for prompt in prompts:
             if custom_list:
                 # For custom lists, use a simplified approach
-                prompt_attributes = self._check_custom_attributes_llm(prompt, custom_list, llm_threshold, llm if use_langchain_llm else None)
+                prompt_attributes = self._check_custom_attributes_llm(
+                    prompt,
+                    custom_list,
+                    llm_threshold,
+                    llm,
+                )
             else:
-                # Use the existing LLM detection methods
-                if use_langchain_llm:
-                    prompt_attributes = self._check_attributes_with_langchain(prompt, attributes, llm_threshold, llm)
-                else:
-                    prompt_attributes = self._check_attributes_with_hf(prompt, attributes, "facebook/bart-large-mnli", llm_threshold)
-            
+                # Use LangChain model for detection
+                prompt_attributes = self._check_attributes_with_langchain(
+                    prompt, attributes, llm_threshold, llm
+                )
+
             if prompt_attributes:
                 detected_prompts.append(prompt)
                 detected_attributes.append(prompt_attributes)
             elif not subset_prompts:
                 detected_prompts.append(prompt)
                 detected_attributes.append([])
-        
-        n_prompts_with_attributes = len([attrs for attrs in detected_attributes if attrs])
+
+        n_prompts_with_attributes = len(
+            [attrs for attrs in detected_attributes if attrs]
+        )
         ftu_satisfied = n_prompts_with_attributes > 0
-        
+
         attribute_to_print = (
             "Protected attribute" if not attribute else attribute.capitalize()
         )
         ftu_text = " not " if ftu_satisfied else " "
-        print(f"LLM-based FTU check: {n_prompts_with_attributes} prompts contain {attribute_to_print.lower()} words")
+        print(
+            f"LLM-based FTU check: {n_prompts_with_attributes} prompts contain {attribute_to_print.lower()} words"
+        )
         print(f"FTU is{ftu_text}satisfied.")
-        
+
         return {
             "data": {
                 "prompt": detected_prompts,
@@ -890,7 +889,6 @@ class CounterfactualGenerator(ResponseGenerator):
                 "n_prompts_with_attribute_words": n_prompts_with_attributes,
                 "method": "llm",
                 "llm_threshold": llm_threshold,
-                "llm_type": "langchain" if use_langchain_llm else "huggingface",
                 "attribute": attribute,
                 "custom_list": custom_list,
                 "subset_prompts": subset_prompts,
@@ -898,21 +896,21 @@ class CounterfactualGenerator(ResponseGenerator):
         }
 
     def _check_custom_attributes_llm(
-        self, 
-        text: str, 
-        custom_list: List[str], 
-        threshold: float, 
-        langchain_llm: Optional[Any] = None
+        self,
+        text: str,
+        custom_list: List[str],
+        threshold: float,
+        langchain_llm: Optional[Any] = None,
     ) -> List[str]:
         """Check for custom attributes using LLM."""
         # For custom lists, do a simple check if any terms from the list are mentioned
         detected_terms = []
-        
+
         if langchain_llm:
             # Use LangChain LLM to check for custom terms
             system_prompt = f"""You are an expert at detecting specific terms in text.
 
-Your task is to identify if any of these terms appear in the given text: {', '.join(custom_list)}
+Your task is to identify if any of these terms appear in the given text: {", ".join(custom_list)}
 
 Instructions:
 1. Look for any mentions of the specified terms in the text
@@ -920,19 +918,20 @@ Instructions:
 3. If no terms are found, respond with "NONE"
 4. Be precise and consider context
 5. Return only the specific terms found, separated by commas if multiple"""
-            
+
             human_prompt = f"Text to analyze: {text}"
-            
+
             from langchain_core.messages import HumanMessage
+
             messages = [
                 SystemMessage(content=system_prompt),
-                HumanMessage(content=human_prompt)
+                HumanMessage(content=human_prompt),
             ]
-            
+
             try:
                 response = langchain_llm.invoke(messages)
                 response_text = response.content.strip()
-                
+
                 if response_text.upper() != "NONE":
                     terms = [term.strip().lower() for term in response_text.split(",")]
                     detected_terms.extend(terms)
@@ -944,7 +943,7 @@ Instructions:
             for term in custom_list:
                 if term.lower() in tokens:
                     detected_terms.append(term.lower())
-        
+
         return detected_terms
 
     def _subset_prompts(
@@ -966,9 +965,14 @@ Instructions:
         prompts_subset = [
             prompt for i, prompt in enumerate(prompts) if attribute_words[i]
         ]
-        assert len(prompts_subset) > 0, f"""
-        Provided prompts do not contain any {attribute_to_print} words.
-        """
+
+        if len(prompts_subset) == 0:
+            # Handle the case where no attribute words are found
+            print(
+                f"No {attribute_to_print.lower()} words found in prompts - FTU satisfied."
+            )
+            return [], attribute_words
+
         print(f"{attribute_to_print} words found in {len(prompts_subset)} prompts.")
         return prompts_subset, attribute_words
 
@@ -1066,127 +1070,51 @@ Instructions:
         """
         text_lower = text.lower()
         found_words = []
-        
+
         # Check words requiring context (e.g., "black person", "white male")
         for rw in RACE_WORDS_REQUIRING_CONTEXT:
             for pw in PERSON_WORDS:
                 phrase = rw + " " + pw
                 # Use word boundaries to match complete phrases
-                pattern = rf'\b{re.escape(rw)}\s+{re.escape(pw)}\b'
+                pattern = rf"\b{re.escape(rw)}\s+{re.escape(pw)}\b"
                 if re.search(pattern, text_lower, re.IGNORECASE):
                     found_words.append(phrase)
-        
+
         # Check words not requiring context (e.g., "caucasian", "hispanic")
         for rw in RACE_WORDS_NOT_REQUIRING_CONTEXT:
             # Use word boundaries to match complete words
-            pattern = rf'\b{re.escape(rw)}\b'
+            pattern = rf"\b{re.escape(rw)}\b"
             if re.search(pattern, text_lower, re.IGNORECASE):
                 found_words.append(rw)
-        
+
         return found_words
 
-    
-    def _check_attributes_with_hf(
-        self, 
-        text: str, 
-        attributes: List[str], 
-        model_name: str, 
-        threshold: float
-    ) -> List[str]:
-        """Check for protected attributes using HuggingFace model and extract specific terms."""
-        detected_terms = []
-        
-        for attribute in attributes:
-            # First, check if the attribute is present
-            classifier = pipeline(
-                "zero-shot-classification",
-                model="facebook/bart-large-mnli",
-                device=-1
-            )
-            
-            if attribute == "race":
-                labels = ["mentions race or ethnicity", "does not mention race or ethnicity"]
-            elif attribute == "gender":
-                labels = ["mentions gender", "does not mention gender"]
-            else:
-                labels = [f"mentions {attribute}", f"does not mention {attribute}"]
-            
-            result = classifier(text, labels)
-            positive_label = labels[0]
-            
-            if result['labels'][0] == positive_label and result['scores'][0] >= threshold:
-                # If attribute detected, extract specific terms using NER or keyword extraction
-                specific_terms = self._extract_specific_terms_hf(text, attribute)
-                detected_terms.extend(specific_terms)
-        
-        return detected_terms
-    
-    def _extract_specific_terms_hf(self, text: str, attribute: str) -> List[str]:
-        """Extract specific terms for a detected attribute using HuggingFace models."""
-        detected_terms = []
-        
-        if attribute == "race":
-            # Use a combination of NER and keyword matching for race terms
-            try:
-                # Try using NER to find person-related entities
-                ner_pipeline = pipeline("ner", model="dbmdz/bert-large-cased-finetuned-conll03-english", device=-1)
-                ner_results = ner_pipeline(text)
-                
-                # Look for race-related terms in the text using a more targeted approach
-                text_lower = text.lower()
-                for race_word in RACE_WORDS_NOT_REQUIRING_CONTEXT:
-                    if race_word in text_lower:
-                        detected_terms.append(race_word)
-                
-                # Check for race + person combinations
-                for race_word in RACE_WORDS_REQUIRING_CONTEXT:
-                    for person_word in PERSON_WORDS:
-                        phrase = f"{race_word} {person_word}"
-                        if phrase in text_lower:
-                            detected_terms.append(phrase)
-                            
-            except Exception:
-                # Fallback to simple keyword matching
-                text_lower = text.lower()
-                for race_word in RACE_WORDS_NOT_REQUIRING_CONTEXT + RACE_WORDS_REQUIRING_CONTEXT:
-                    if race_word in text_lower:
-                        detected_terms.append(race_word)
-        
-        elif attribute == "gender":
-            # For gender, use token-based matching similar to the original approach
-            tokens = word_tokenize(text.lower())
-            for gender_word in ALL_GENDER_WORDS:
-                if gender_word in tokens:
-                    detected_terms.append(gender_word)
-        
-        return list(set(detected_terms))  # Remove duplicates
-    
     def _check_attributes_with_langchain(
-        self, 
-        text: str, 
-        attributes: List[str], 
-        threshold: float,
-        langchain_llm: Any
+        self, text: str, attributes: List[str], threshold: float, langchain_llm: Any
     ) -> List[str]:
         """Check for protected attributes using LangChain LLM and extract specific terms."""
         detected_terms = []
-        
+
         for attribute in attributes:
             if attribute == "gender":
                 # Focus on explicit gender terms only (no names) - mimics static method
                 gender_terms = self._detect_gender_explicit_terms(text, langchain_llm)
                 detected_terms.extend(gender_terms)
+            elif attribute == "race":
+                # Focus on explicit race terms only - mimics static method
+                race_terms = self._detect_race_explicit_terms(text, langchain_llm)
+                detected_terms.extend(race_terms)
             else:
-                # Use original logic for other attributes
-                gender_terms = self._detect_attribute_basic(text, attribute, langchain_llm)
-                detected_terms.extend(gender_terms)
-        
+                raise ValueError(
+                    f"Unsupported attribute '{attribute}'. Only 'gender' and 'race' are supported."
+                )
+
         return detected_terms
-    
+
     def _detect_gender_explicit_terms(self, text: str, langchain_llm: Any) -> List[str]:
         """Detect explicit gender terms only (no names) - mimics static method behavior."""
         detected_terms = []
-        
+
         system_prompt = """You are an expert at detecting explicit gender references in text.
 
 Your task is to identify explicit gender-related words (pronouns, titles, descriptors) in the given text.
@@ -1206,66 +1134,122 @@ Examples:
 - "The male patient" → "male"
 - "A woman's perspective" → "woman's"
 """
-        
+
         human_prompt = f"Text to analyze: {text}"
-        
+
         from langchain_core.messages import HumanMessage
-        
+
         try:
             messages = [
                 SystemMessage(content=system_prompt),
-                HumanMessage(content=human_prompt)
+                HumanMessage(content=human_prompt),
             ]
             response = langchain_llm.invoke(messages)
             response_text = response.content.strip()
-            
+
             if response_text.upper() != "NONE":
                 words = [term.strip().lower() for term in response_text.split(",")]
                 detected_terms.extend(words)
         except Exception as e:
             warnings.warn(f"LLM gender term detection failed: {e}")
-        
-        return detected_terms
-    
-    def _detect_attribute_basic(self, text: str, attribute: str, langchain_llm: Any) -> List[str]:
-        """Basic attribute detection for non-gender attributes."""
-        detected_terms = []
-        
-        system_prompt = f"""You are an expert at detecting protected attributes in text.
 
-Your task is to identify specific {attribute} terms or phrases in the given text.
+        return detected_terms
+
+    def _run_llm_ftu_check(
+        self,
+        prompts: List[str],
+        attribute: Optional[str] = None,
+        llm: "BaseChatModel" = None,
+        llm_threshold: float = 0.3,
+    ) -> Tuple[List[str], List[List[str]]]:
+        """
+        Run LLM-based FTU check and return detected prompts and terms directly.
+
+        Returns:
+            Tuple of (prompts_with_terms, detected_terms_per_prompt)
+        """
+        # Detect terms for each prompt
+        detected_terms_per_prompt = []
+        prompts_with_terms = []
+
+        for prompt in prompts:
+            # Use LangChain model
+            if attribute == "gender":
+                terms = self._detect_gender_explicit_terms(prompt, llm)
+            elif attribute == "race":
+                terms = self._detect_race_explicit_terms(prompt, llm)
+            else:
+                raise ValueError(
+                    f"Unsupported attribute '{attribute}'. Only 'gender' and 'race' are supported."
+                )
+
+            if terms:  # Only include prompts with detected terms
+                prompts_with_terms.append(prompt)
+                detected_terms_per_prompt.append(terms)
+
+        # Print FTU status
+        n_prompts_with_terms = len(prompts_with_terms)
+        attribute_to_print = (
+            attribute.capitalize() if attribute else "Protected attribute"
+        )
+
+        if n_prompts_with_terms == 0:
+            print(
+                f"LLM-based FTU check: 0 prompts contain {attribute_to_print.lower()} words"
+            )
+            print("FTU is satisfied.")
+        else:
+            print(
+                f"LLM-based FTU check: {n_prompts_with_terms} prompts contain {attribute_to_print.lower()} words"
+            )
+            print("FTU is not satisfied.")
+
+        return prompts_with_terms, detected_terms_per_prompt
+
+    def _detect_race_explicit_terms(self, text: str, langchain_llm: Any) -> List[str]:
+        """Detect explicit race terms only - mimics static method behavior."""
+        detected_terms = []
+
+        system_prompt = """You are an expert at detecting explicit race and ethnicity references in text.
+
+Your task is to identify explicit race/ethnicity-related words and phrases in the given text.
 
 Instructions:
-1. Look for any references to {attribute} in the text
-2. If you find {attribute} references, list the EXACT words or phrases from the text
-3. If no {attribute} references are found, respond with "NONE"
-4. Be precise and consider context - avoid false positives from partial word matches
+1. Look ONLY for explicit race/ethnicity terms like: white, black, caucasian, african american, hispanic, latino, asian, native american, etc.
+2. Include person descriptors when combined with race (e.g., "white male", "black woman")
+3. If you find race terms, list the EXACT words or phrases from the text
+4. If no explicit race terms are found, respond with "NONE"
 5. Return only the specific terms, separated by commas if multiple
+6. Focus on terms that would be in a traditional race word list
+7. Ignore non-person contexts (e.g., "black car" should return "NONE")
 
 Examples:
-- For "The caucasian male patient" → "caucasian, male" 
-- For "She is a doctor" → "she"
-- For "The black car" → "NONE" (not about a person)"""
-        
+- "The caucasian male patient" → "caucasian, male"
+- "She is african american" → "african american"
+- "The black car" → "NONE" (not about a person)
+- "Asian cuisine" → "NONE" (not about a person)
+- "The hispanic woman" → "hispanic"
+"""
+
         human_prompt = f"Text to analyze: {text}"
-        
+
         from langchain_core.messages import HumanMessage
-        
+
         messages = [
             SystemMessage(content=system_prompt),
-            HumanMessage(content=human_prompt)
+            HumanMessage(content=human_prompt),
         ]
-        
+
         try:
             response = langchain_llm.invoke(messages)
             response_text = response.content.strip()
-            
+
             if response_text.upper() != "NONE":
                 terms = [term.strip().lower() for term in response_text.split(",")]
                 detected_terms.extend(terms)
         except Exception as e:
-            warnings.warn(f"LLM term extraction failed for {attribute}: {e}")
-        
+            warnings.warn(f"LLM race detection failed: {e}")
+
         return detected_terms
 
     @staticmethod
