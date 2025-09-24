@@ -352,10 +352,16 @@ class CounterfactualGenerator(ResponseGenerator):
                 filtered_terms.append(terms)
         
         if not filtered_prompts:
-            return {
+            # No prompts with detected terms - return empty structure matching expected groups
+            groups = self.group_mapping[attribute] if attribute else list(custom_dict.keys())
+            result = {
                 "original_prompt": [],
                 "attribute_words": [],
             }
+            # Add empty lists for each group
+            for group in groups:
+                result[f"{group}_prompt"] = []
+            return result
         
         if attribute == "race":
             # For race, create counterfactuals for each race group
