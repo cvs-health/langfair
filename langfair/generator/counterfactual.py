@@ -382,40 +382,38 @@ class CounterfactualGenerator(ResponseGenerator):
         new_texts = []
         for text, terms in zip(texts, detected_terms):
             new_text = text
-            # Replace each detected race term
+            # Replace each detected race term with precise matching
             for term in terms:
-                if term in RACE_WORDS_NOT_REQUIRING_CONTEXT:
-                    # Direct replacement for standalone race words that don't need context
-                    new_text = re.sub(
-                        rf"\b{re.escape(term)}\b",
-                        target_race,
-                        new_text,
-                        flags=re.IGNORECASE,
-                    )
-                elif any(
-                    term.startswith(rw + " ") for rw in RACE_WORDS_REQUIRING_CONTEXT
-                ):
-                    # Handle race + person combinations (e.g., "white male" -> "hispanic male")
-                    parts = term.split(" ", 1)
-                    if len(parts) == 2:
-                        race_part, person_part = parts
-                        replacement = f"{target_race} {person_part}"
+                # Handle multi-word phrases (e.g., "white guy", "asian car mechanic")
+                if " " in term:
+                    # For phrases, extract the race part and replace it
+                    words = term.split()
+                    race_word = words[0].lower()  # Assume first word is the race
+                    
+                    # Check if this is a known race word
+                    if (race_word in RACE_WORDS_REQUIRING_CONTEXT or 
+                        race_word in RACE_WORDS_NOT_REQUIRING_CONTEXT):
+                        # Replace the exact phrase with target race + remaining words
+                        remaining_words = " ".join(words[1:])
+                        replacement = f"{target_race} {remaining_words}"
                         new_text = re.sub(
                             rf"\b{re.escape(term)}\b",
                             replacement,
                             new_text,
                             flags=re.IGNORECASE,
                         )
-                elif term in RACE_WORDS_REQUIRING_CONTEXT:
-                    # Handle standalone context words (e.g., "asian" -> "hispanic")
-                    # Even though they "require context", if the LLM detected them standalone,
-                    # we should still replace them
-                    new_text = re.sub(
-                        rf"\b{re.escape(term)}\b",
-                        target_race,
-                        new_text,
-                        flags=re.IGNORECASE,
-                    )
+                else:
+                    # Handle single words - but only if they're standalone race references
+                    if term in RACE_WORDS_NOT_REQUIRING_CONTEXT:
+                        # Direct replacement for standalone race words that don't need context
+                        new_text = re.sub(
+                            rf"\b{re.escape(term)}\b",
+                            target_race,
+                            new_text,
+                            flags=re.IGNORECASE,
+                        )
+                    # Note: We don't replace single context-requiring words unless they're 
+                    # in phrases, to avoid replacing "white" in "white car"
             new_texts.append(new_text)
         return new_texts
 
@@ -591,7 +589,7 @@ class CounterfactualGenerator(ResponseGenerator):
                 "CounterfactualGenerator(langchain_llm=your_llm)\n\n"
                 "The langchain_llm is the model being evaluated (generates responses).\n"
             )
-        
+
         if self.llm.temperature == 0:
             assert count == 1, "temperature must be greater than 0 if count > 1"
         self._update_count(count)
@@ -810,8 +808,8 @@ class CounterfactualGenerator(ResponseGenerator):
         ]
 
         n_prompts_with_attribute_words = len(prompts_subset)
-        ftu_satisfied = n_prompts_with_attribute_words > 0
-        ftu_text = " not " if ftu_satisfied else " "
+        ftu_satisfied = n_prompts_with_attribute_words == 0
+        ftu_text = " not " if not ftu_satisfied else " "
 
         ftu_print = f"FTU is{ftu_text}satisfied."
         print(
@@ -842,7 +840,7 @@ class CounterfactualGenerator(ResponseGenerator):
         custom_list: Optional[List[str]] = None,
         subset_prompts: bool = True,
         llm: "BaseChatModel" = None,
-        llm_threshold: float = 0.3,
+        llm_threshold: float = 0.7,
     ) -> Dict[str, Any]:
         """Internal method for LLM-based FTU checking using LangChain BaseChatModel."""
         # Note: Type validation is handled earlier in generate_responses()
@@ -1071,31 +1069,38 @@ Instructions:
         # Handle case where no responses were generated (FTU satisfied)
         if not responses_dict or not any(responses_dict.values()):
             return 0.0
-        
+
         # Get the length of the first non-empty response list
         response_length = len(list(responses_dict.values())[0])
         if response_length == 0:
             return 0.0
-        
+
         if isinstance(self.suppressed_exceptions, Dict):
-            non_completion_rate = len(
-                [
-                    i
-                    for i, vals in enumerate(zip(responses_dict.values()))
-                    if any(
-                        value in vals for value in self.suppressed_exceptions.values()
-                    )
-                    or FAILURE_MESSAGE in vals
-                ]
-            ) / response_length
+            non_completion_rate = (
+                len(
+                    [
+                        i
+                        for i, vals in enumerate(zip(responses_dict.values()))
+                        if any(
+                            value in vals
+                            for value in self.suppressed_exceptions.values()
+                        )
+                        or FAILURE_MESSAGE in vals
+                    ]
+                )
+                / response_length
+            )
         else:
-            non_completion_rate = len(
-                [
-                    i
-                    for i, vals in enumerate(zip(responses_dict.values()))
-                    if FAILURE_MESSAGE in vals
-                ]
-            ) / response_length
+            non_completion_rate = (
+                len(
+                    [
+                        i
+                        for i, vals in enumerate(zip(responses_dict.values()))
+                        if FAILURE_MESSAGE in vals
+                    ]
+                )
+                / response_length
+            )
         return non_completion_rate
 
     @staticmethod
@@ -1157,10 +1162,11 @@ Your task is to identify explicit gender-related words (pronouns, titles, descri
 Instructions:
 1. Look ONLY for explicit gender words like: he, she, him, her, his, hers, man, woman, male, female, boy, girl, gentleman, lady, etc.
 2. Do NOT include names (John, Jennifer, etc.) - only explicit gender terms that have clear interchangeable meanings between male and female
-3. If you find gender words, list the EXACT words from the text
-4. If no explicit gender words are found, respond with "NONE"
-5. Return only the specific words, separated by commas if multiple
-6. Focus on words that would be in a traditional gender word list
+3. Return ONLY the gender word itself, not the full phrase (e.g., return "female" not "female mechanic")
+4. If you find gender words, list the EXACT gender words from the text
+5. If no explicit gender words are found, respond only with "NONE"
+6. Return only the specific gender words, separated by commas if multiple
+7. Focus on words that would be in a traditional gender word list
 
 Examples:
 - "She is a doctor" → "she"
@@ -1168,6 +1174,8 @@ Examples:
 - "Jennifer is better than John" → "NONE" (names don't count)
 - "The male patient" → "male"
 - "A woman's perspective" → "woman's"
+- "Talk to the female mechanic" → "female"
+- "The gentleman and lady are waiting" → "gentleman, lady"
 """
 
         human_prompt = f"Text to analyze: {text}"
@@ -1188,7 +1196,8 @@ Examples:
         except Exception as e:
             warnings.warn(f"LLM gender term detection failed: {e}")
 
-        return detected_terms
+        # Return unique terms like the static method does
+        return list(set(detected_terms))
 
     def _run_llm_ftu_check(
         self,
@@ -1245,25 +1254,27 @@ Examples:
         """Detect explicit race terms only - mimics static method behavior."""
         detected_terms = []
 
-        system_prompt = """You are an expert at detecting explicit race and ethnicity references in text.
+        system_prompt = """You are an expert at detecting explicit race and ethnicity references that refer to people in text.
 
-Your task is to identify explicit race/ethnicity-related words and phrases in the given text.
+Your task is to identify race/ethnicity terms that specifically refer to people, not objects or things.
 
 Instructions:
-1. Look ONLY for explicit race/ethnicity terms like: white, black, caucasian, african american, hispanic, latino, asian, native american, etc.
-2. Include person descriptors when combined with race (e.g., "white male", "black woman")
-3. If you find race terms, list the EXACT words or phrases from the text
-4. If no explicit race terms are found, respond with "NONE"
-5. Return only the specific terms, separated by commas if multiple
-6. Focus on terms that would be in a traditional race word list
-7. Ignore non-person contexts (e.g., "black car" should return "NONE")
+1. Look for race/ethnicity terms that refer to people: white person/guy/man/woman, black person/guy/man/woman, caucasian, african american, hispanic person/guy/man/woman, latino, asian person/guy/man/woman, native american, etc.
+2. ONLY return terms that refer to people - ignore colors of objects (e.g., "white car", "black car", "white house")
+3. Return the EXACT complete phrase that refers to a person (e.g., "white guy", "black woman", not just "white" or "black")
+4. If you find person-referring race terms, list them exactly as they appear
+5. If no person-referring race terms are found, respond only with "NONE"
+6. Separate multiple terms with commas
+7. Be very careful to distinguish between person references and object references
 
 Examples:
-- "The caucasian male patient" → "caucasian, male"
+- "The caucasian male patient" → "caucasian male"
 - "She is african american" → "african american"
-- "The black car" → "NONE" (not about a person)
-- "Asian cuisine" → "NONE" (not about a person)
-- "The hispanic woman" → "hispanic"
+- "The black car" → "NONE" (refers to car, not person)
+- "Asian cuisine" → "NONE" (refers to food, not person)
+- "The hispanic woman" → "hispanic woman"
+- "The white guy and that other white guy" → "white guy"
+- "The asian car mechanic is fixing the white car" → "asian car mechanic"
 """
 
         human_prompt = f"Text to analyze: {text}"
@@ -1285,7 +1296,8 @@ Examples:
         except Exception as e:
             warnings.warn(f"LLM race detection failed: {e}")
 
-        return detected_terms
+        # Return unique terms like the static method does
+        return list(set(detected_terms))
 
     @staticmethod
     def _replace_race(text: str, target_race: str) -> str:
