@@ -422,115 +422,74 @@ class CounterfactualGenerator(ResponseGenerator):
         text: str,
         detected_terms: List[str]
     ) -> Dict[str, str]:
-        """Creates counterfactual variations using detected terms."""
-        # Check if we have gendered names that need special handling
-        names = self._extract_names_from_terms(detected_terms)
+        """Creates counterfactual variations using detected explicit gender/race terms only.
         
-        if names:
-            # Use name-swapping approach for gendered names
-            return self._create_name_swap_counterfactuals(text, names, ref_dict)
-        else:
-            # Use traditional word replacement
-            return self._sub_from_dict(ref_dict=ref_dict, text=text)
+        This method focuses on explicit terms (he/she, male/female, caucasian/black, etc.)
+        like the static method, but uses LLM-detected terms for better robustness.
+        """
+        # Filter out names - we only want explicit gender/race terms like the static method
+        explicit_terms = [term for term in detected_terms if ":name:" not in term]
+        
+        if not explicit_terms:
+            # No explicit terms found, return original text for all groups
+            return {group: text for group in ref_dict.keys()}
+        
+        # Use traditional word replacement with the detected explicit terms
+        return self._sub_from_dict_with_detected_terms(ref_dict=ref_dict, text=text, detected_terms=explicit_terms)
     
-    def _extract_names_from_terms(self, detected_terms: List[str]) -> Dict[str, str]:
-        """Extract gendered names from detected terms."""
-        names = {}
-        for term in detected_terms:
-            if ":name:" in term:
-                # Format: "maria:name:female"
-                parts = term.split(":name:")
-                if len(parts) == 2:
-                    name, gender = parts
-                    names[name] = gender
-        return names
-    
-    def _create_name_swap_counterfactuals(
+    def _sub_from_dict_with_detected_terms(
         self, 
+        ref_dict: Dict[str, List[str]], 
         text: str, 
-        names: Dict[str, str], 
-        ref_dict: Dict[str, List[str]]
+        detected_terms: List[str]
     ) -> Dict[str, str]:
-        """Create counterfactuals by swapping gendered names."""
-        # Group names by gender
-        male_names = [name for name, gender in names.items() if gender == "male"]
-        female_names = [name for name, gender in names.items() if gender == "female"]
+        """Substitute detected explicit terms using the reference dictionary.
         
-        # Create variations for each group in ref_dict
+        This mimics the static method behavior but uses LLM-detected terms.
+        """
         variations = {}
         
-        for group_key in ref_dict.keys():
-            # For all groups, create a simple name swap
-            # This creates the most meaningful counterfactual by swapping all names
-            variations[group_key] = self._create_simple_name_swap(text, names)
+        for group_key, word_list in ref_dict.items():
+            new_text = text
+            
+            # For each detected term, try to replace it with words from the current group
+            for term in detected_terms:
+                term_lower = term.lower()
+                
+                # Find the best replacement from the word list
+                # This mimics how the static method maps words
+                replacement = None
+                
+                # For gender, try to find direct mappings
+                if group_key in ["male", "female"]:
+                    if term_lower in GENDER_MAPPING:
+                        # Use the opposite gender mapping like static method
+                        if group_key == "male" and term_lower in FEMALE_WORDS:
+                            replacement = GENDER_MAPPING[term_lower]  # female -> male
+                        elif group_key == "female" and term_lower in MALE_WORDS:
+                            replacement = GENDER_MAPPING[term_lower]  # male -> female
+                        elif group_key == "male" and term_lower in MALE_WORDS:
+                            replacement = term_lower  # keep male terms in male group
+                        elif group_key == "female" and term_lower in FEMALE_WORDS:
+                            replacement = term_lower  # keep female terms in female group
+                
+                # If we found a replacement, apply it
+                if replacement:
+                    # Use word boundaries for precise replacement
+                    new_text = re.sub(
+                        rf'\b{re.escape(term)}\b', 
+                        replacement, 
+                        new_text, 
+                        flags=re.IGNORECASE
+                    )
+            
+            variations[group_key] = new_text
         
         return variations
     
-    def _swap_names_in_text(
-        self, 
-        text: str, 
-        names_to_replace: List[str], 
-        replacement_names: List[str]
-    ) -> str:
-        """Swap specific names in text with names from another gender."""
-        result = text
-        
-        # Simple approach: replace first name with first available replacement
-        for i, name_to_replace in enumerate(names_to_replace):
-            if i < len(replacement_names):
-                replacement_name = replacement_names[i]
-                # Case-sensitive replacement to preserve capitalization
-                result = re.sub(
-                    rf'\b{re.escape(name_to_replace.title())}\b', 
-                    replacement_name.title(), 
-                    result
-                )
-                result = re.sub(
-                    rf'\b{re.escape(name_to_replace.lower())}\b', 
-                    replacement_name.lower(), 
-                    result
-                )
-        
-        return result
     
-    def _create_simple_name_swap(self, text: str, names: Dict[str, str]) -> str:
-        """Create a simple counterfactual by swapping all gendered names."""
-        result = text
-        
-        # Group names by gender
-        male_names = [name for name, gender in names.items() if gender == "male"]
-        female_names = [name for name, gender in names.items() if gender == "female"]
-        
-        # Create temporary placeholders to avoid double-swapping
-        temp_markers = {}
-        
-        # Replace male names with temp markers
-        for i, male_name in enumerate(male_names):
-            temp_marker = f"__TEMP_MALE_{i}__"
-            temp_markers[temp_marker] = male_name
-            result = re.sub(
-                rf'\b{re.escape(male_name.title())}\b', 
-                temp_marker, 
-                result
-            )
-        
-        # Replace female names with male names
-        for i, female_name in enumerate(female_names):
-            if i < len(male_names):
-                male_replacement = male_names[i].title()
-                result = re.sub(
-                    rf'\b{re.escape(female_name.title())}\b', 
-                    male_replacement, 
-                    result
-                )
-        
-        # Replace temp markers with female names
-        for i, (temp_marker, original_male) in enumerate(temp_markers.items()):
-            if i < len(female_names):
-                female_replacement = female_names[i].title()
-                result = result.replace(temp_marker, female_replacement)
-        
-        return result
+    
+    
 
     def neutralize_tokens(
         self, texts: List[str], attribute: str = "gender"
@@ -1208,8 +1167,8 @@ Instructions:
         
         for attribute in attributes:
             if attribute == "gender":
-                # Enhanced gender detection that includes names
-                gender_terms = self._detect_gender_with_names(text, langchain_llm)
+                # Focus on explicit gender terms only (no names) - mimics static method
+                gender_terms = self._detect_gender_explicit_terms(text, langchain_llm)
                 detected_terms.extend(gender_terms)
             else:
                 # Use original logic for other attributes
@@ -1218,52 +1177,37 @@ Instructions:
         
         return detected_terms
     
-    def _detect_gender_with_names(self, text: str, langchain_llm: Any) -> List[str]:
-        """Enhanced gender detection that includes gendered names."""
+    def _detect_gender_explicit_terms(self, text: str, langchain_llm: Any) -> List[str]:
+        """Detect explicit gender terms only (no names) - mimics static method behavior."""
         detected_terms = []
         
-        # First, detect traditional gender words
-        system_prompt_words = """You are an expert at detecting gender references in text.
+        system_prompt = """You are an expert at detecting explicit gender references in text.
 
-Your task is to identify gender-related words (pronouns, titles, etc.) in the given text.
+Your task is to identify explicit gender-related words (pronouns, titles, descriptors) in the given text.
 
 Instructions:
-1. Look for gender words like: he, she, him, her, man, woman, male, female, etc.
-2. If you find gender words, list the EXACT words from the text
-3. If no gender words are found, respond with "NONE"
-4. Do NOT include names - only gender words
+1. Look ONLY for explicit gender words like: he, she, him, her, his, hers, man, woman, male, female, boy, girl, gentleman, lady, etc.
+2. Do NOT include names (John, Jennifer, etc.) - only explicit gender terms that have clear interchangeable meanings between male and female
+3. If you find gender words, list the EXACT words from the text
+4. If no explicit gender words are found, respond with "NONE"
 5. Return only the specific words, separated by commas if multiple
+6. Focus on words that would be in a traditional gender word list
 
 Examples:
 - "She is a doctor" → "she"
-- "The man walked" → "man"
-- "Maria is better than Ben" → "NONE" (names don't count here)"""
-        
-        # Then, detect gendered names
-        system_prompt_names = """You are an expert at detecting gendered names in text.
-
-Your task is to identify person names that typically indicate gender.
-
-Instructions:
-1. Find all person names in the text
-2. For each name, determine if it's typically associated with male or female gender
-3. Only include names that clearly suggest gender (not gender-neutral names)
-4. Return format: "name1:gender1, name2:gender2" or "NONE" if no gendered names
-5. Use lowercase for consistency
-
-Examples:
-- "Maria is better than Ben at sewing" → "maria:female, ben:male"
-- "Alex helped Jordan" → "NONE" (gender-neutral names)
-- "The doctor was helpful" → "NONE" (no names)"""
+- "The man walked to his car" → "man, his"
+- "Jennifer is better than John" → "NONE" (names don't count)
+- "The male patient" → "male"
+- "A woman's perspective" → "woman's"
+"""
         
         human_prompt = f"Text to analyze: {text}"
         
         from langchain_core.messages import HumanMessage
         
-        # Detect gender words
         try:
             messages = [
-                SystemMessage(content=system_prompt_words),
+                SystemMessage(content=system_prompt),
                 HumanMessage(content=human_prompt)
             ]
             response = langchain_llm.invoke(messages)
@@ -1273,27 +1217,7 @@ Examples:
                 words = [term.strip().lower() for term in response_text.split(",")]
                 detected_terms.extend(words)
         except Exception as e:
-            warnings.warn(f"LLM gender word detection failed: {e}")
-        
-        # Detect gendered names
-        try:
-            messages = [
-                SystemMessage(content=system_prompt_names),
-                HumanMessage(content=human_prompt)
-            ]
-            response = langchain_llm.invoke(messages)
-            response_text = response.content.strip()
-            
-            if response_text.upper() != "NONE":
-                # Parse name:gender pairs
-                name_pairs = response_text.split(",")
-                for pair in name_pairs:
-                    if ":" in pair:
-                        name, gender = pair.strip().split(":", 1)
-                        # Store as "name:gender" to distinguish from regular words
-                        detected_terms.append(f"{name.strip().lower()}:name:{gender.strip().lower()}")
-        except Exception as e:
-            warnings.warn(f"LLM name detection failed: {e}")
+            warnings.warn(f"LLM gender term detection failed: {e}")
         
         return detected_terms
     
