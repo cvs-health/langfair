@@ -423,8 +423,114 @@ class CounterfactualGenerator(ResponseGenerator):
         detected_terms: List[str]
     ) -> Dict[str, str]:
         """Creates counterfactual variations using detected terms."""
-        # For now, use the original method but could be enhanced to be more targeted
-        return self._sub_from_dict(ref_dict=ref_dict, text=text)
+        # Check if we have gendered names that need special handling
+        names = self._extract_names_from_terms(detected_terms)
+        
+        if names:
+            # Use name-swapping approach for gendered names
+            return self._create_name_swap_counterfactuals(text, names, ref_dict)
+        else:
+            # Use traditional word replacement
+            return self._sub_from_dict(ref_dict=ref_dict, text=text)
+    
+    def _extract_names_from_terms(self, detected_terms: List[str]) -> Dict[str, str]:
+        """Extract gendered names from detected terms."""
+        names = {}
+        for term in detected_terms:
+            if ":name:" in term:
+                # Format: "maria:name:female"
+                parts = term.split(":name:")
+                if len(parts) == 2:
+                    name, gender = parts
+                    names[name] = gender
+        return names
+    
+    def _create_name_swap_counterfactuals(
+        self, 
+        text: str, 
+        names: Dict[str, str], 
+        ref_dict: Dict[str, List[str]]
+    ) -> Dict[str, str]:
+        """Create counterfactuals by swapping gendered names."""
+        # Group names by gender
+        male_names = [name for name, gender in names.items() if gender == "male"]
+        female_names = [name for name, gender in names.items() if gender == "female"]
+        
+        # Create variations for each group in ref_dict
+        variations = {}
+        
+        for group_key in ref_dict.keys():
+            # For all groups, create a simple name swap
+            # This creates the most meaningful counterfactual by swapping all names
+            variations[group_key] = self._create_simple_name_swap(text, names)
+        
+        return variations
+    
+    def _swap_names_in_text(
+        self, 
+        text: str, 
+        names_to_replace: List[str], 
+        replacement_names: List[str]
+    ) -> str:
+        """Swap specific names in text with names from another gender."""
+        result = text
+        
+        # Simple approach: replace first name with first available replacement
+        for i, name_to_replace in enumerate(names_to_replace):
+            if i < len(replacement_names):
+                replacement_name = replacement_names[i]
+                # Case-sensitive replacement to preserve capitalization
+                result = re.sub(
+                    rf'\b{re.escape(name_to_replace.title())}\b', 
+                    replacement_name.title(), 
+                    result
+                )
+                result = re.sub(
+                    rf'\b{re.escape(name_to_replace.lower())}\b', 
+                    replacement_name.lower(), 
+                    result
+                )
+        
+        return result
+    
+    def _create_simple_name_swap(self, text: str, names: Dict[str, str]) -> str:
+        """Create a simple counterfactual by swapping all gendered names."""
+        result = text
+        
+        # Group names by gender
+        male_names = [name for name, gender in names.items() if gender == "male"]
+        female_names = [name for name, gender in names.items() if gender == "female"]
+        
+        # Create temporary placeholders to avoid double-swapping
+        temp_markers = {}
+        
+        # Replace male names with temp markers
+        for i, male_name in enumerate(male_names):
+            temp_marker = f"__TEMP_MALE_{i}__"
+            temp_markers[temp_marker] = male_name
+            result = re.sub(
+                rf'\b{re.escape(male_name.title())}\b', 
+                temp_marker, 
+                result
+            )
+        
+        # Replace female names with male names
+        for i, female_name in enumerate(female_names):
+            if i < len(male_names):
+                male_replacement = male_names[i].title()
+                result = re.sub(
+                    rf'\b{re.escape(female_name.title())}\b', 
+                    male_replacement, 
+                    result
+                )
+        
+        # Replace temp markers with female names
+        for i, (temp_marker, original_male) in enumerate(temp_markers.items()):
+            if i < len(female_names):
+                female_replacement = female_names[i].title()
+                result = result.replace(temp_marker, female_replacement)
+        
+        return result
 
     def neutralize_tokens(
         self, texts: List[str], attribute: str = "gender"
@@ -1073,8 +1179,101 @@ Instructions:
         detected_terms = []
         
         for attribute in attributes:
-            # Create a prompt for the LLM to both detect and extract terms
-            system_prompt = f"""You are an expert at detecting protected attributes in text.
+            if attribute == "gender":
+                # Enhanced gender detection that includes names
+                gender_terms = self._detect_gender_with_names(text, langchain_llm)
+                detected_terms.extend(gender_terms)
+            else:
+                # Use original logic for other attributes
+                gender_terms = self._detect_attribute_basic(text, attribute, langchain_llm)
+                detected_terms.extend(gender_terms)
+        
+        return detected_terms
+    
+    def _detect_gender_with_names(self, text: str, langchain_llm: Any) -> List[str]:
+        """Enhanced gender detection that includes gendered names."""
+        detected_terms = []
+        
+        # First, detect traditional gender words
+        system_prompt_words = """You are an expert at detecting gender references in text.
+
+Your task is to identify gender-related words (pronouns, titles, etc.) in the given text.
+
+Instructions:
+1. Look for gender words like: he, she, him, her, man, woman, male, female, etc.
+2. If you find gender words, list the EXACT words from the text
+3. If no gender words are found, respond with "NONE"
+4. Do NOT include names - only gender words
+5. Return only the specific words, separated by commas if multiple
+
+Examples:
+- "She is a doctor" → "she"
+- "The man walked" → "man"
+- "Maria is better than Ben" → "NONE" (names don't count here)"""
+        
+        # Then, detect gendered names
+        system_prompt_names = """You are an expert at detecting gendered names in text.
+
+Your task is to identify person names that typically indicate gender.
+
+Instructions:
+1. Find all person names in the text
+2. For each name, determine if it's typically associated with male or female gender
+3. Only include names that clearly suggest gender (not gender-neutral names)
+4. Return format: "name1:gender1, name2:gender2" or "NONE" if no gendered names
+5. Use lowercase for consistency
+
+Examples:
+- "Maria is better than Ben at sewing" → "maria:female, ben:male"
+- "Alex helped Jordan" → "NONE" (gender-neutral names)
+- "The doctor was helpful" → "NONE" (no names)"""
+        
+        human_prompt = f"Text to analyze: {text}"
+        
+        from langchain_core.messages import HumanMessage
+        
+        # Detect gender words
+        try:
+            messages = [
+                SystemMessage(content=system_prompt_words),
+                HumanMessage(content=human_prompt)
+            ]
+            response = langchain_llm.invoke(messages)
+            response_text = response.content.strip()
+            
+            if response_text.upper() != "NONE":
+                words = [term.strip().lower() for term in response_text.split(",")]
+                detected_terms.extend(words)
+        except Exception as e:
+            warnings.warn(f"LLM gender word detection failed: {e}")
+        
+        # Detect gendered names
+        try:
+            messages = [
+                SystemMessage(content=system_prompt_names),
+                HumanMessage(content=human_prompt)
+            ]
+            response = langchain_llm.invoke(messages)
+            response_text = response.content.strip()
+            
+            if response_text.upper() != "NONE":
+                # Parse name:gender pairs
+                name_pairs = response_text.split(",")
+                for pair in name_pairs:
+                    if ":" in pair:
+                        name, gender = pair.strip().split(":", 1)
+                        # Store as "name:gender" to distinguish from regular words
+                        detected_terms.append(f"{name.strip().lower()}:name:{gender.strip().lower()}")
+        except Exception as e:
+            warnings.warn(f"LLM name detection failed: {e}")
+        
+        return detected_terms
+    
+    def _detect_attribute_basic(self, text: str, attribute: str, langchain_llm: Any) -> List[str]:
+        """Basic attribute detection for non-gender attributes."""
+        detected_terms = []
+        
+        system_prompt = f"""You are an expert at detecting protected attributes in text.
 
 Your task is to identify specific {attribute} terms or phrases in the given text.
 
@@ -1089,28 +1288,25 @@ Examples:
 - For "The caucasian male patient" → "caucasian, male" 
 - For "She is a doctor" → "she"
 - For "The black car" → "NONE" (not about a person)"""
+        
+        human_prompt = f"Text to analyze: {text}"
+        
+        from langchain_core.messages import HumanMessage
+        
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=human_prompt)
+        ]
+        
+        try:
+            response = langchain_llm.invoke(messages)
+            response_text = response.content.strip()
             
-            human_prompt = f"Text to analyze: {text}"
-            
-            # Use the LangChain LLM
-            from langchain_core.messages import HumanMessage
-            
-            messages = [
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=human_prompt)
-            ]
-            
-            try:
-                response = langchain_llm.invoke(messages)
-                response_text = response.content.strip()
-                
-                if response_text.upper() != "NONE":
-                    # Parse the comma-separated terms
-                    terms = [term.strip().lower() for term in response_text.split(",")]
-                    detected_terms.extend(terms)
-                    
-            except Exception as e:
-                warnings.warn(f"LLM term extraction failed for {attribute}: {e}")
+            if response_text.upper() != "NONE":
+                terms = [term.strip().lower() for term in response_text.split(",")]
+                detected_terms.extend(terms)
+        except Exception as e:
+            warnings.warn(f"LLM term extraction failed for {attribute}: {e}")
         
         return detected_terms
 
