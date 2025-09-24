@@ -584,6 +584,14 @@ class CounterfactualGenerator(ResponseGenerator):
                 'system_prompt' : str
                     The system prompt used for generating responses
         """
+        # Early validation: ensure we have an LLM for response generation
+        if self.llm is None:
+            raise ValueError(
+                "No LLM available for response generation. You must provide langchain_llm when creating CounterfactualGenerator:\n"
+                "CounterfactualGenerator(langchain_llm=your_llm)\n\n"
+                "The langchain_llm is the model being evaluated (generates responses).\n"
+            )
+        
         if self.llm.temperature == 0:
             assert count == 1, "temperature must be greater than 0 if count > 1"
         self._update_count(count)
