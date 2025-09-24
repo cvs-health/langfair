@@ -240,9 +240,11 @@ class AutoEval:
                             self.counterfactual_responses[
                                 attribute
                             ] = await self.cf_generator_object.generate_responses(
-                                count=count, prompts=self.prompts, attribute=attribute,
+                                count=count,
+                                prompts=self.prompts,
+                                attribute=attribute,
                                 show_progress_bars=show_progress_bars,
-                                existing_progress_bar=self.progress_bar
+                                existing_progress_bar=self.progress_bar,
                             )
                         except AssertionError as e:
                             # Handle case where prompts don't contain the specific attribute words
