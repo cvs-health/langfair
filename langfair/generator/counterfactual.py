@@ -10,6 +10,7 @@
 
 import asyncio
 import itertools
+import logging
 import re
 import warnings
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -98,6 +99,7 @@ class CounterfactualGenerator(ResponseGenerator):
             max_calls_per_min=max_calls_per_min,
         )
         self.use_n_param = use_n_param
+        self.logger = logging.getLogger(__name__)
         self.attribute_to_word_lists = {
             "race": ALL_RACE_WORDS,
             "gender": ALL_GENDER_WORDS,
@@ -1139,6 +1141,8 @@ class CounterfactualGenerator(ResponseGenerator):
             if self._term_exists_in_text(term, original_text):
                 validated_terms.append(term)
             else:
+                self.logger.debug(f"LLM detected term '{term}' not found in original text - dropping term (possible hallucination)")
+                # Still warn about hallucinations as they indicate data quality issues
                 warnings.warn(f"LLM detected term '{term}' not found in original text - dropping term")
         
         return validated_terms, is_well_formatted
@@ -1206,12 +1210,12 @@ Do not include explanations or extra text. Just the terms with <LF> markers, or 
                     return list(set(detected_terms))
                 else:
                     # Well-formatted but no valid terms found - fall back to static method
-                    warnings.warn(f"LLM {attribute} detection: well-formatted response but no valid terms found, falling back to static method")
+                    self.logger.debug(f"LLM {attribute} detection: well-formatted response but no valid terms found, falling back to static method. Response: '{response_text}' for text: '{text[:100]}...'")
                     static_terms = self._token_parser(text, attribute=attribute)
                     return static_terms if static_terms else []
             
             # Retry with corrective prompt
-            warnings.warn(f"LLM {attribute} detection: poorly formatted response, retrying with corrective prompt...")
+            self.logger.debug(f"LLM {attribute} detection: poorly formatted response, retrying with corrective prompt. Response: '{response_text}' for text: '{text[:100]}...'")
             retry_prompt = self._create_retry_prompt(response_text, attribute)
             messages.append(HumanMessage(content=retry_prompt))
             
@@ -1222,13 +1226,15 @@ Do not include explanations or extra text. Just the terms with <LF> markers, or 
             retry_detected_terms, retry_is_well_formatted = self._parse_llm_response(retry_response_text, text)
             
             if not retry_is_well_formatted:
-                warnings.warn(f"LLM {attribute} detection: still poorly formatted after retry, falling back to static method")
+                self.logger.debug(f"LLM {attribute} detection: still poorly formatted after retry, falling back to static method. Retry response: '{retry_response_text}' for text: '{text[:100]}...'")
                 static_terms = self._token_parser(text, attribute=attribute)
                 return static_terms if static_terms else []
             
             return list(set(retry_detected_terms))
             
         except Exception as e:
+            self.logger.warning(f"LLM {attribute} detection failed with exception: {e}, falling back to static method for text: '{text[:100]}...'")
+            # Keep this as a warning since exceptions indicate real issues
             warnings.warn(f"LLM {attribute} detection failed: {e}, falling back to static method")
             static_terms = self._token_parser(text, attribute=attribute)
             return static_terms if static_terms else []
