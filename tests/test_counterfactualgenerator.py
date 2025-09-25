@@ -156,16 +156,21 @@ def test_llm_retry_logic_basic():
     """Test basic pipe parsing and hallucination prevention."""
     cf_gen = CounterfactualGenerator()
     
-    # Test pipe format works
-    terms, is_formatted = cf_gen._parse_llm_response("he|she", "He said she was coming")
+    # Test LF delimiter format works
+    terms, is_formatted = cf_gen._parse_llm_response("<LF>he<LF>\n<LF>she<LF>", "He said she was coming")
     assert terms == ["he", "she"]
     assert is_formatted == True
     
     # Test hallucination prevention
     with warnings.catch_warnings(record=True):
         warnings.simplefilter("always")
-        terms, _ = cf_gen._parse_llm_response("he|nonexistent", "He was walking")
+        terms, _ = cf_gen._parse_llm_response("<LF>he<LF>\n<LF>nonexistent<LF>", "He was walking")
         assert terms == ["he"]  # Should drop nonexistent term
+    
+    # Test exact substring matching (LLM should return exact substrings from text)
+    terms, is_formatted = cf_gen._parse_llm_response("<LF>asian| man<LF>", "The asian| man was looking at a tree.")
+    assert terms == ["asian| man"]  # Should find exact substring including punctuation
+    assert is_formatted == True
 
 
 def test_llm_retry_logic_malformed_then_success():
@@ -177,7 +182,7 @@ def test_llm_retry_logic_malformed_then_success():
     first_response = Mock()
     first_response.content = "The gender terms are: male, female"  # Poorly formatted
     second_response = Mock()
-    second_response.content = "male|female"  # Well formatted
+    second_response.content = "<LF>male<LF>\n<LF>female<LF>"  # Well formatted
     mock_llm.invoke.side_effect = [first_response, second_response]
     
     result = cf_gen._detect_terms_with_retry("The male and female patients", mock_llm, "gender", "test prompt")

@@ -1146,10 +1146,12 @@ class CounterfactualGenerator(ResponseGenerator):
         detected_terms = []
         is_well_formatted = True
         
-        # Strategy 1: Pipe separation (expected format)
-        if "|" in response_text:
-            terms = [term.strip().lower() for term in response_text.split("|")]
-            detected_terms = [term for term in terms if term and not term.isspace()]
+        # Strategy 1: Line-based LF delimiter extraction (expected format)
+        # Look for terms flanked by <LF> markers, one per line
+        lf_pattern = r'<LF>(.*?)<LF>'
+        lf_matches = re.findall(lf_pattern, response_text, re.IGNORECASE | re.DOTALL)
+        if lf_matches:
+            detected_terms = [term.strip().lower() for term in lf_matches if term.strip()]
         
         # Strategy 2: Single term response
         elif response_text and len(response_text.split()) <= 3:  # Simple heuristic for single term/phrase
@@ -1176,23 +1178,28 @@ class CounterfactualGenerator(ResponseGenerator):
         """
         Check if a term actually exists in the original text.
         This is the key validation - prevents hallucinated terms.
+        
+        Uses exact substring matching since LLM should return exact substrings from the original text.
         """
         if not term or not text:
             return False
         
-        # Use word boundaries for precise matching
-        pattern = rf"\b{re.escape(term)}\b"
-        return bool(re.search(pattern, text, re.IGNORECASE))
+        # Simple case-insensitive substring check
+        # The LLM should return exact substrings from the original text
+        return term.lower() in text.lower()
     
     def _create_retry_prompt(self, original_response: str, attribute: str) -> str:
         """Create an improved prompt for retry when LLM gives poorly formatted response."""
         return f"""You just responded with: "{original_response}"
 
 This response is not in the correct format. Please respond with ONLY:
-- If you find {attribute} terms: list them separated by pipe characters (e.g., "he|she|his")  
+- If you find {attribute} terms: put each term on its own line flanked by <LF> markers
+  Example:
+  <LF>he<LF>
+  <LF>she<LF>
 - If you find no {attribute} terms: respond with exactly "NONE"
 
-Do not include explanations or extra text. Just the terms separated by pipes, or "NONE"."""
+Do not include explanations or extra text. Just the terms with <LF> markers, or "NONE"."""
 
     def _detect_terms_with_retry(self, text: str, langchain_llm: Any, attribute: str, system_prompt: str) -> List[str]:
         """
@@ -1293,16 +1300,19 @@ Instructions:
 1. Look ONLY for explicit gender words like: he, she, him, her, his, hers, man, woman, male, female, boy, girl, gentleman, lady, etc.
 2. Do NOT include names (John, Jennifer, etc.) - only explicit gender terms
 3. Return ONLY the gender word itself, not the full phrase (e.g., return "female" not "female mechanic")
-4. If you find gender words, list them separated by pipe characters (e.g., "he|she|his")
+4. If you find gender words, put each term on its own line flanked by <LF> markers:
+   <LF>he<LF>
+   <LF>she<LF>
 5. If no explicit gender words are found, respond only with "NONE"
-6. Do not include explanations or extra text - just the terms or "NONE"
+6. Do not include explanations or extra text - just the terms with <LF> markers or "NONE"
 
 Examples:
-- "She is a doctor" → "she"
-- "The man walked to his car" → "man|his"
-- "Jennifer is better than John" → "NONE"
-- "The male patient" → "male"
-- "Talk to the female mechanic" → "female"
+- "She is a doctor" → <LF>she<LF>
+- "The man walked to his car" → <LF>man<LF>
+                                 <LF>his<LF>
+- "Jennifer is better than John" → NONE
+- "The male patient" → <LF>male<LF>
+- "Talk to the female mechanic" → <LF>female<LF>
 """
         
         return self._detect_terms_with_retry(text, langchain_llm, "gender", system_prompt)
@@ -1367,16 +1377,18 @@ Instructions:
 1. Look for race/ethnicity terms that refer to people: white person/guy/man/woman, black person/guy/man/woman, caucasian, african american, hispanic person/guy/man/woman, latino, asian person/guy/man/woman, native american, etc.
 2. ONLY return terms that refer to people - ignore colors of objects (e.g., "white car", "black car")
 3. Return the EXACT complete phrase that refers to a person (e.g., "white guy", "black woman")
-4. If you find person-referring race terms, list them separated by pipe characters (e.g., "caucasian male|hispanic woman")
+4. If you find person-referring race terms, put each term on its own line flanked by <LF> markers:
+   <LF>caucasian male<LF>
+   <LF>hispanic woman<LF>
 5. If no person-referring race terms are found, respond only with "NONE"
-6. Do not include explanations or extra text - just the terms or "NONE"
+6. Do not include explanations or extra text - just the terms with <LF> markers or "NONE"
 
 Examples:
-- "The caucasian male patient" → "caucasian male"
-- "She is african american" → "african american"
-- "The black car" → "NONE"
-- "The hispanic woman" → "hispanic woman"
-- "The asian car mechanic" → "asian car mechanic"
+- "The caucasian male patient" → <LF>caucasian male<LF>
+- "She is african american" → <LF>african american<LF>
+- "The black car" → NONE
+- "The hispanic woman" → <LF>hispanic woman<LF>
+- "The asian car mechanic" → <LF>asian car mechanic<LF>
 """
         
         return self._detect_terms_with_retry(text, langchain_llm, "race", system_prompt)
