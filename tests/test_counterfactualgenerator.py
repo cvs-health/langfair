@@ -260,3 +260,66 @@ def test_llm_retry_logic_none_response_trusted():
     
     # Should only make 1 call (no retry needed)
     assert mock_llm.invoke.call_count == 1
+
+
+def test_spatially_separated_race_terms():
+    """Test that spatially separated race terms are properly replaced in LLM mode."""
+    cf_gen = CounterfactualGenerator()
+    
+    # Test prompt with spatially separated race terms
+    prompt = "That guy is white and she is black and that person over there is asian."
+    
+    # Simulate LLM-detected terms (what the LLM FTU checker would find)
+    detected_terms = [["white", "black", "asian"]]
+    
+    # Test LLM counterfactual generation
+    cf_result = cf_gen.create_prompts_from_llm_terms(
+        prompts=[prompt], 
+        llm_detected_terms=detected_terms,
+        attribute="race"
+    )
+    
+    # Verify all race groups have prompts generated
+    assert "white_prompt" in cf_result
+    assert "black_prompt" in cf_result
+    assert "hispanic_prompt" in cf_result
+    assert "asian_prompt" in cf_result
+    
+    # Verify replacements worked correctly
+    white_prompt = cf_result["white_prompt"][0]
+    black_prompt = cf_result["black_prompt"][0]
+    hispanic_prompt = cf_result["hispanic_prompt"][0]
+    asian_prompt = cf_result["asian_prompt"][0]
+    
+    # White prompt should contain only "white", not "black" or "asian"
+    assert "white" in white_prompt.lower()
+    assert "black" not in white_prompt.lower()
+    assert "asian" not in asian_prompt.lower() if "asian" in white_prompt.lower() else True  # Handle edge case
+    
+    # Black prompt should contain only "black", not "white" or "asian"  
+    assert "black" in black_prompt.lower()
+    assert "white" not in black_prompt.lower()
+    assert "asian" not in black_prompt.lower()
+    
+    # Hispanic prompt should contain only "hispanic", not original race terms
+    assert "hispanic" in hispanic_prompt.lower()
+    assert "white" not in hispanic_prompt.lower()
+    assert "black" not in hispanic_prompt.lower()
+    assert "asian" not in hispanic_prompt.lower()
+    
+    # Asian prompt should contain only "asian", not "white" or "black"
+    assert "asian" in asian_prompt.lower()
+    assert "white" not in asian_prompt.lower()
+    assert "black" not in asian_prompt.lower()
+    
+    # Verify the structure is maintained (guy, she, person should still be there)
+    for race_prompt in [white_prompt, black_prompt, hispanic_prompt, asian_prompt]:
+        assert "guy" in race_prompt.lower()
+        assert "she" in race_prompt.lower()  
+        assert "person" in race_prompt.lower()
+    
+    print(f"Original: {prompt}")
+    print(f"White: {white_prompt}")
+    print(f"Black: {black_prompt}")
+    print(f"Hispanic: {hispanic_prompt}")
+    print(f"Asian: {asian_prompt}")

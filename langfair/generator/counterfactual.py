@@ -403,13 +403,10 @@ class CounterfactualGenerator(ResponseGenerator):
                         # Use literal replacement to handle punctuation like pipes
                         return self._replace_term_preserving_case(current_text, term, replacement)
                 else:
-                    # Handle single words - but only if they're standalone race references
-                    if term in RACE_WORDS_NOT_REQUIRING_CONTEXT:
-                        # Direct replacement for standalone race words that don't need context
-                        return self._replace_term_preserving_case(current_text, term, target_race)
-                    # Note: We don't replace single context-requiring words unless they're 
-                    # in phrases, to avoid replacing "white" in "white car"
-                return current_text
+                    # Handle single words
+                    # Since the LLM has already identified these as race terms referring to people,
+                    # we trust its judgment and replace them regardless of whether they require context
+                    return self._replace_term_preserving_case(current_text, term, target_race)
             
             # Apply race substitution
             new_text = self._apply_race_substitution(text, terms, race_replacement_func)
