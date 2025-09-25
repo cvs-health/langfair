@@ -383,50 +383,34 @@ class CounterfactualGenerator(ResponseGenerator):
         for text, terms in zip(texts, detected_terms):
             # Define replacement function for this specific text and target race
             def race_replacement_func(current_text: str, term: str) -> str:
-                # Handle multi-word phrases (e.g., "white guy", "asian car mechanic")
+                # Handle multi-word phrases (e.g., "white guy", "young asian woman")
                 if " " in term:
-                    # For phrases, extract the race part and replace it
-                    words = term.split()
-                    race_word = words[0].lower()  # Assume first word is the race
+                    # Find the actual race word in the term (not just first word)
+                    race_word, race_pos, race_word_with_punct = self._find_race_word_in_term(term)
                     
-                    # Check if this is a known race word
-                    if (race_word in RACE_WORDS_REQUIRING_CONTEXT or 
-                        race_word in RACE_WORDS_NOT_REQUIRING_CONTEXT):
-                        # Replace the exact phrase with target race + remaining words
-                        remaining_words = " ".join(words[1:])
-                        replacement = f"{target_race} {remaining_words}"
-                        return re.sub(
-                            rf"\b{re.escape(term)}\b",
-                            replacement,
-                            current_text,
-                            flags=re.IGNORECASE,
-                        )
+                    if race_word is not None:
+                        # Replace only the race word, preserve other descriptors
+                        words = term.split()
+                        new_words = words.copy()
+                        
+                        # Apply punctuation pattern from original race word to target race
+                        new_race_word = self._preserve_punctuation_pattern(race_word_with_punct, target_race)
+                        new_words[race_pos] = new_race_word
+                        
+                        replacement = " ".join(new_words)
+                        # Use literal replacement to handle punctuation like pipes
+                        return self._replace_term_preserving_case(current_text, term, replacement)
                 else:
                     # Handle single words - but only if they're standalone race references
                     if term in RACE_WORDS_NOT_REQUIRING_CONTEXT:
                         # Direct replacement for standalone race words that don't need context
-                        return re.sub(
-                            rf"\b{re.escape(term)}\b",
-                            target_race,
-                            current_text,
-                            flags=re.IGNORECASE,
-                        )
+                        return self._replace_term_preserving_case(current_text, term, target_race)
                     # Note: We don't replace single context-requiring words unless they're 
                     # in phrases, to avoid replacing "white" in "white car"
                 return current_text
             
-            # Use validation to catch hallucinated terms
-            new_text, substitution_log = self._validate_and_substitute_terms(
-                text, terms, race_replacement_func, "race term"
-            )
-            
-            # Log substitution results if there were issues
-            if substitution_log["not_found"] or substitution_log["failed"]:
-                total_attempted = len(terms)
-                successful = len(substitution_log["successful"])
-                if successful < total_attempted:
-                    warnings.warn(f"Race substitution: {successful}/{total_attempted} terms successfully replaced in text: '{text[:50]}...'")
-            
+            # Apply race substitution
+            new_text = self._apply_race_substitution(text, terms, race_replacement_func)
             new_texts.append(new_text)
         return new_texts
 
@@ -485,27 +469,12 @@ class CounterfactualGenerator(ResponseGenerator):
 
                 # If we found a replacement, apply it
                 if replacement:
-                    # Use word boundaries for precise replacement
-                    return re.sub(
-                        rf"\b{re.escape(term)}\b",
-                        replacement,
-                        current_text,
-                        flags=re.IGNORECASE,
-                    )
+                    # Use literal replacement to handle any punctuation
+                    return self._replace_term_preserving_case(current_text, term, replacement)
                 return current_text
             
-            # Use validation to catch hallucinated terms
-            new_text, substitution_log = self._validate_and_substitute_terms(
-                text, detected_terms, gender_replacement_func, f"{group_key} gender term"
-            )
-            
-            # Log substitution results if there were issues
-            if substitution_log["not_found"] or substitution_log["failed"]:
-                total_attempted = len(detected_terms)
-                successful = len(substitution_log["successful"])
-                if successful < total_attempted:
-                    warnings.warn(f"Gender substitution ({group_key}): {successful}/{total_attempted} terms successfully replaced in text: '{text[:50]}...'")
-
+            # Apply gender substitution
+            new_text = self._apply_gender_substitution(text, detected_terms, gender_replacement_func)
             variations[group_key] = new_text
 
         return variations
@@ -909,12 +878,12 @@ class CounterfactualGenerator(ResponseGenerator):
         n_prompts_with_attributes = len(
             [attrs for attrs in detected_attributes if attrs]
         )
-        ftu_satisfied = n_prompts_with_attributes > 0
+        ftu_satisfied = n_prompts_with_attributes == 0
 
         attribute_to_print = (
             "Protected attribute" if not attribute else attribute.capitalize()
         )
-        ftu_text = " not " if ftu_satisfied else " "
+        ftu_text = " not " if not ftu_satisfied else " "
         print(
             f"LLM-based FTU check: {n_prompts_with_attributes} prompts contain {attribute_to_print.lower()} words"
         )
@@ -1264,39 +1233,111 @@ Do not include explanations or extra text. Just the terms with <LF> markers, or 
             static_terms = self._token_parser(text, attribute=attribute)
             return static_terms if static_terms else []
 
-    def _validate_and_substitute_terms(self, text: str, detected_terms: List[str], 
-                                     replacement_func, term_description: str = "term") -> tuple:
-        """Validate terms exist in text before substitution and provide feedback."""
-        substitution_log = {
-            "successful": [],
-            "not_found": [],
-            "failed": []
-        }
-        
+    def _apply_race_substitution(self, text: str, terms: List[str], replacement_func) -> str:
+        """Apply race substitution without complex logging."""
         new_text = text
-        
-        for term in detected_terms:
-            # Check if term actually exists in the text
-            pattern = rf"\b{re.escape(term)}\b"
-            if not re.search(pattern, text, re.IGNORECASE):
-                substitution_log["not_found"].append(term)
-                warnings.warn(f"LLM detected {term_description} '{term}' not found in text: '{text[:50]}...'")
-                continue
-            
-            try:
-                # Attempt substitution
-                old_text = new_text
+        for term in terms:
+            if self._term_exists_in_text(term, text):
                 new_text = replacement_func(new_text, term)
-                
-                if new_text != old_text:
-                    substitution_log["successful"].append(term)
-                else:
-                    substitution_log["failed"].append(term)
-            except Exception as e:
-                substitution_log["failed"].append(term)
-                warnings.warn(f"Failed to substitute {term_description} '{term}': {e}")
+        return new_text
+    
+    def _apply_gender_substitution(self, text: str, terms: List[str], replacement_func) -> str:
+        """Apply gender substitution without complex logging."""
+        new_text = text
+        for term in terms:
+            if self._term_exists_in_text(term, text):
+                new_text = replacement_func(new_text, term)
+        return new_text
+
+    def _replace_term_preserving_case(self, text: str, old_term: str, new_term: str) -> str:
+        """
+        Replace exact term while preserving case and handling punctuation.
+        Uses literal string replacement instead of regex to handle pipes and other punctuation.
+        """
+        # Find the term in the text (case insensitive)
+        text_lower = text.lower()
+        old_term_lower = old_term.lower()
         
-        return new_text, substitution_log
+        # Find the position of the term
+        pos = text_lower.find(old_term_lower)
+        if pos == -1:
+            return text  # Term not found
+        
+        # Get the actual case of the term as it appears in the text
+        actual_term = text[pos:pos + len(old_term)]
+        
+        # Preserve the case pattern of the original term
+        if actual_term.isupper():
+            replacement = new_term.upper()
+        elif actual_term.istitle():
+            replacement = new_term.capitalize()
+        elif actual_term.islower():
+            replacement = new_term.lower()
+        else:
+            # Mixed case - use new term as-is
+            replacement = new_term
+        
+        # Replace the first occurrence
+        return text[:pos] + replacement + text[pos + len(old_term):]
+
+    def _find_race_word_in_term(self, term: str) -> tuple:
+        """
+        Find the actual race word and its position in the term.
+        
+        Returns:
+            tuple: (race_word, position, original_word_with_punct) or (None, -1, None) if not found
+        """
+        from langfair.constants.word_lists import RACE_WORDS_REQUIRING_CONTEXT, RACE_WORDS_NOT_REQUIRING_CONTEXT
+        import string
+        
+        words = term.split()
+        
+        for i, word in enumerate(words):
+            # Strip punctuation for lookup
+            clean_word = word.strip(string.punctuation).lower()
+            
+            if (clean_word in RACE_WORDS_REQUIRING_CONTEXT or 
+                clean_word in RACE_WORDS_NOT_REQUIRING_CONTEXT):
+                return clean_word, i, word  # race_word, position, original_with_punct
+        
+        return None, -1, None  # No race word found
+    
+    def _preserve_punctuation_pattern(self, original_word: str, new_word: str) -> str:
+        """
+        Apply the punctuation pattern from original_word to new_word.
+        
+        Examples:
+            ("asian|", "white") -> "white|"
+            ("Asian,", "black") -> "Black,"
+        """
+        import string
+        
+        # Extract leading punctuation
+        prefix = ""
+        for char in original_word:
+            if char in string.punctuation:
+                prefix += char
+            else:
+                break
+        
+        # Extract trailing punctuation  
+        suffix = ""
+        for char in reversed(original_word):
+            if char in string.punctuation:
+                suffix = char + suffix
+            else:
+                break
+        
+        # Preserve case pattern
+        original_clean = original_word.strip(string.punctuation)
+        if original_clean.isupper():
+            new_word = new_word.upper()
+        elif original_clean.istitle():
+            new_word = new_word.capitalize()
+        elif original_clean.islower():
+            new_word = new_word.lower()
+        
+        return prefix + new_word + suffix
 
     def _detect_gender_explicit_terms(self, text: str, langchain_llm: Any) -> List[str]:
         """Detect explicit gender terms using unified retry logic."""
