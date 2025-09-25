@@ -1179,13 +1179,13 @@ class CounterfactualGenerator(ResponseGenerator):
         Check if a term actually exists in the original text.
         This is the key validation - prevents hallucinated terms.
         
-        Uses exact substring matching since LLM should return exact substrings from the original text.
+        Uses exact substring matching only - LLM must return exact substrings.
         """
         if not term or not text:
             return False
         
-        # Simple case-insensitive substring check
-        # The LLM should return exact substrings from the original text
+        # Exact case-insensitive substring matching only
+        # If LLM can't return exact substrings, it should fall back to static method
         return term.lower() in text.lower()
     
     def _create_retry_prompt(self, original_response: str, attribute: str) -> str:
@@ -1194,6 +1194,8 @@ class CounterfactualGenerator(ResponseGenerator):
 
 This response is not in the correct format. Please respond with ONLY:
 - If you find {attribute} terms: put each term on its own line flanked by <LF> markers
+- IMPORTANT: Copy the terms EXACTLY as they appear in the original text - preserve ALL punctuation and special characters
+- Do NOT clean up, normalize, or fix the text - copy it character-for-character
   Example:
   <LF>he<LF>
   <LF>she<LF>
@@ -1231,7 +1233,13 @@ Do not include explanations or extra text. Just the terms with <LF> markers, or 
             detected_terms, is_well_formatted = self._parse_llm_response(response_text, text)
             
             if is_well_formatted:
-                return list(set(detected_terms))
+                if detected_terms:
+                    return list(set(detected_terms))
+                else:
+                    # Well-formatted but no valid terms found - fall back to static method
+                    warnings.warn(f"LLM {attribute} detection: well-formatted response but no valid terms found, falling back to static method")
+                    static_terms = self._token_parser(text, attribute=attribute)
+                    return static_terms if static_terms else []
             
             # Retry with corrective prompt
             warnings.warn(f"LLM {attribute} detection: poorly formatted response, retrying with corrective prompt...")
@@ -1299,12 +1307,13 @@ Your task is to identify explicit gender-related words (pronouns, titles, descri
 Instructions:
 1. Look ONLY for explicit gender words like: he, she, him, her, his, hers, man, woman, male, female, boy, girl, gentleman, lady, etc.
 2. Do NOT include names (John, Jennifer, etc.) - only explicit gender terms
-3. Return ONLY the gender word itself, not the full phrase (e.g., return "female" not "female mechanic")
-4. If you find gender words, put each term on its own line flanked by <LF> markers:
+3. Return the EXACT word as it appears in the original text - preserve ALL punctuation, spacing, and special characters
+4. Do NOT clean up or normalize the text - copy it exactly character-for-character as it appears
+5. If you find gender words, put each term on its own line flanked by <LF> markers:
    <LF>he<LF>
    <LF>she<LF>
-5. If no explicit gender words are found, respond only with "NONE"
-6. Do not include explanations or extra text - just the terms with <LF> markers or "NONE"
+6. If no explicit gender words are found, respond only with "NONE"
+7. Do not include explanations or extra text - just the terms with <LF> markers or "NONE"
 
 Examples:
 - "She is a doctor" → <LF>she<LF>
@@ -1376,12 +1385,13 @@ Your task is to identify race/ethnicity terms that specifically refer to people,
 Instructions:
 1. Look for race/ethnicity terms that refer to people: white person/guy/man/woman, black person/guy/man/woman, caucasian, african american, hispanic person/guy/man/woman, latino, asian person/guy/man/woman, native american, etc.
 2. ONLY return terms that refer to people - ignore colors of objects (e.g., "white car", "black car")
-3. Return the EXACT complete phrase that refers to a person (e.g., "white guy", "black woman")
-4. If you find person-referring race terms, put each term on its own line flanked by <LF> markers:
+3. Return the EXACT phrase as it appears in the original text - preserve ALL punctuation, spacing, and special characters
+4. Do NOT clean up or normalize the text - copy it exactly character-for-character as it appears
+5. If you find person-referring race terms, put each term on its own line flanked by <LF> markers:
    <LF>caucasian male<LF>
    <LF>hispanic woman<LF>
-5. If no person-referring race terms are found, respond only with "NONE"
-6. Do not include explanations or extra text - just the terms with <LF> markers or "NONE"
+6. If no person-referring race terms are found, respond only with "NONE"
+7. Do not include explanations or extra text - just the terms with <LF> markers or "NONE"
 
 Examples:
 - "The caucasian male patient" → <LF>caucasian male<LF>

@@ -167,10 +167,12 @@ def test_llm_retry_logic_basic():
         terms, _ = cf_gen._parse_llm_response("<LF>he<LF>\n<LF>nonexistent<LF>", "He was walking")
         assert terms == ["he"]  # Should drop nonexistent term
     
-    # Test exact substring matching (LLM should return exact substrings from text)
-    terms, is_formatted = cf_gen._parse_llm_response("<LF>asian| man<LF>", "The asian| man was looking at a tree.")
-    assert terms == ["asian| man"]  # Should find exact substring including punctuation
-    assert is_formatted == True
+    # Test exact matching requirement (LLM normalization should fail validation)
+    with warnings.catch_warnings(record=True):
+        warnings.simplefilter("always")
+        terms, is_formatted = cf_gen._parse_llm_response("<LF>asian man<LF>", "The asian| man was looking at a tree.")
+        assert terms == []  # Should drop term when LLM normalizes punctuation (not exact match)
+        assert is_formatted == True  # Format is correct, but term validation fails
 
 
 def test_llm_retry_logic_malformed_then_success():
