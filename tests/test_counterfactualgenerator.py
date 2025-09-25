@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import pytest
+import warnings
+from unittest.mock import Mock, MagicMock
 from langchain_openai import AzureChatOpenAI
 
 from langfair.generator import CounterfactualGenerator
@@ -148,3 +150,61 @@ def test_race_parsing_false_positives():
     assert any("hispanic" in word.lower() for word in result3), (
         f"Expected 'hispanic' not found: {result3}"
     )
+
+
+def test_llm_retry_logic_basic():
+    """Test basic pipe parsing and hallucination prevention."""
+    cf_gen = CounterfactualGenerator()
+    
+    # Test pipe format works
+    terms, is_formatted = cf_gen._parse_llm_response("he|she", "He said she was coming")
+    assert terms == ["he", "she"]
+    assert is_formatted == True
+    
+    # Test hallucination prevention
+    with warnings.catch_warnings(record=True):
+        warnings.simplefilter("always")
+        terms, _ = cf_gen._parse_llm_response("he|nonexistent", "He was walking")
+        assert terms == ["he"]  # Should drop nonexistent term
+
+
+def test_llm_retry_logic_malformed_then_success():
+    """Test retry logic when LLM gives poorly formatted response first, then succeeds."""
+    cf_gen = CounterfactualGenerator()
+    
+    # Mock LLM that fails first, succeeds on retry
+    mock_llm = Mock()
+    first_response = Mock()
+    first_response.content = "The gender terms are: male, female"  # Poorly formatted
+    second_response = Mock()
+    second_response.content = "male|female"  # Well formatted
+    mock_llm.invoke.side_effect = [first_response, second_response]
+    
+    result = cf_gen._detect_terms_with_retry("The male and female patients", mock_llm, "gender", "test prompt")
+    
+    # Should successfully get terms from LLM after retry (not from static fallback)
+    assert set(result) == {"male", "female"}  # Retry mechanism should succeed with LLM
+    assert mock_llm.invoke.call_count == 2  # Should call LLM twice (first fails, retry succeeds)
+    
+    # This verifies the retry worked because we're getting the specific terms
+    # from the LLM's successful second response
+
+
+def test_llm_retry_logic_fallback_to_static():
+    """Test fallback to static method when LLM fails twice."""
+    cf_gen = CounterfactualGenerator()
+    
+    # Mock LLM that fails both times with clearly poorly formatted responses
+    mock_llm = Mock()
+    mock_llm.invoke.side_effect = [
+        Mock(content="I found these terms in the text but can't format properly"),
+        Mock(content="Still giving you a long explanatory response instead of proper format")
+    ]
+    
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        result = cf_gen._detect_terms_with_retry("He said she was leaving", mock_llm, "gender", "test prompt")
+    
+    # Should fall back to static method and successfully find terms
+    assert "he" in result and "she" in result  # Static method should find these gender terms
+    assert mock_llm.invoke.call_count == 2  # Should have tried LLM twice before fallback

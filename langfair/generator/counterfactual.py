@@ -378,12 +378,11 @@ class CounterfactualGenerator(ResponseGenerator):
         detected_terms: List[List[str]],
         target_race: str,
     ) -> List[str]:
-        """Implements counterfactual substitution using LLM-detected race terms."""
+        """Implements counterfactual substitution using LLM-detected race terms with validation."""
         new_texts = []
         for text, terms in zip(texts, detected_terms):
-            new_text = text
-            # Replace each detected race term with precise matching
-            for term in terms:
+            # Define replacement function for this specific text and target race
+            def race_replacement_func(current_text: str, term: str) -> str:
                 # Handle multi-word phrases (e.g., "white guy", "asian car mechanic")
                 if " " in term:
                     # For phrases, extract the race part and replace it
@@ -396,24 +395,38 @@ class CounterfactualGenerator(ResponseGenerator):
                         # Replace the exact phrase with target race + remaining words
                         remaining_words = " ".join(words[1:])
                         replacement = f"{target_race} {remaining_words}"
-                        new_text = re.sub(
+                        return re.sub(
                             rf"\b{re.escape(term)}\b",
                             replacement,
-                            new_text,
+                            current_text,
                             flags=re.IGNORECASE,
                         )
                 else:
                     # Handle single words - but only if they're standalone race references
                     if term in RACE_WORDS_NOT_REQUIRING_CONTEXT:
                         # Direct replacement for standalone race words that don't need context
-                        new_text = re.sub(
+                        return re.sub(
                             rf"\b{re.escape(term)}\b",
                             target_race,
-                            new_text,
+                            current_text,
                             flags=re.IGNORECASE,
                         )
                     # Note: We don't replace single context-requiring words unless they're 
                     # in phrases, to avoid replacing "white" in "white car"
+                return current_text
+            
+            # Use validation to catch hallucinated terms
+            new_text, substitution_log = self._validate_and_substitute_terms(
+                text, terms, race_replacement_func, "race term"
+            )
+            
+            # Log substitution results if there were issues
+            if substitution_log["not_found"] or substitution_log["failed"]:
+                total_attempted = len(terms)
+                successful = len(substitution_log["successful"])
+                if successful < total_attempted:
+                    warnings.warn(f"Race substitution: {successful}/{total_attempted} terms successfully replaced in text: '{text[:50]}...'")
+            
             new_texts.append(new_text)
         return new_texts
 
@@ -440,17 +453,15 @@ class CounterfactualGenerator(ResponseGenerator):
     def _sub_from_dict_with_detected_terms(
         self, ref_dict: Dict[str, List[str]], text: str, detected_terms: List[str]
     ) -> Dict[str, str]:
-        """Substitute detected explicit terms using the reference dictionary.
+        """Substitute detected explicit terms using the reference dictionary with validation.
 
         This mimics the static method behavior but uses LLM-detected terms.
         """
         variations = {}
 
         for group_key, word_list in ref_dict.items():
-            new_text = text
-
-            # For each detected term, try to replace it with words from the current group
-            for term in detected_terms:
+            # Define replacement function for this specific group
+            def gender_replacement_func(current_text: str, term: str) -> str:
                 term_lower = term.lower()
 
                 # Find the best replacement from the word list
@@ -475,12 +486,25 @@ class CounterfactualGenerator(ResponseGenerator):
                 # If we found a replacement, apply it
                 if replacement:
                     # Use word boundaries for precise replacement
-                    new_text = re.sub(
+                    return re.sub(
                         rf"\b{re.escape(term)}\b",
                         replacement,
-                        new_text,
+                        current_text,
                         flags=re.IGNORECASE,
                     )
+                return current_text
+            
+            # Use validation to catch hallucinated terms
+            new_text, substitution_log = self._validate_and_substitute_terms(
+                text, detected_terms, gender_replacement_func, f"{group_key} gender term"
+            )
+            
+            # Log substitution results if there were issues
+            if substitution_log["not_found"] or substitution_log["failed"]:
+                total_attempted = len(detected_terms)
+                successful = len(substitution_log["successful"])
+                if successful < total_attempted:
+                    warnings.warn(f"Gender substitution ({group_key}): {successful}/{total_attempted} terms successfully replaced in text: '{text[:50]}...'")
 
             variations[group_key] = new_text
 
@@ -523,7 +547,6 @@ class CounterfactualGenerator(ResponseGenerator):
         count: int = 25,
         custom_dict: Optional[Dict[str, List[str]]] = None,
         llm_ftu: Optional["BaseChatModel"] = None,
-        llm_ftu_threshold: float = 0.5,
     ) -> Dict[str, Any]:
         """
         Creates prompts by counterfactual substitution and generates responses asynchronously
@@ -547,9 +570,7 @@ class CounterfactualGenerator(ResponseGenerator):
             - None: No automatic FTU checking, uses static approach (default)
             - BaseChatModel: Uses the provided LangChain model for automatic FTU checking
             If provided, will automatically run LLM-based FTU check before generating counterfactuals.
-
-        llm_ftu_threshold : float, default=0.3
-            Confidence threshold for LLM-based FTU checking. Only used when llm_ftu is not None.
+            Note: Cannot be used with custom_dict - only supports standard 'gender' and 'race' attributes.
 
         system_prompt : str, default="You are a helpful assistant."
             Specifies system prompt for generation
@@ -589,6 +610,14 @@ class CounterfactualGenerator(ResponseGenerator):
                 "CounterfactualGenerator(langchain_llm=your_llm)\n\n"
                 "The langchain_llm is the model being evaluated (generates responses).\n"
             )
+        
+        # Validation: prevent llm_ftu usage with custom_dict
+        if llm_ftu is not None and custom_dict is not None:
+            raise ValueError(
+                "llm_ftu cannot be used with custom_dict. LLM-based FTU checking only supports "
+                "standard 'gender' and 'race' attributes. When using custom_dict, FTU checking "
+                "is handled automatically using static word matching."
+            )
 
         if self.llm.temperature == 0:
             assert count == 1, "temperature must be greater than 0 if count > 1"
@@ -613,7 +642,6 @@ class CounterfactualGenerator(ResponseGenerator):
                 prompts=prompts,
                 attribute=attribute,
                 llm=llm_ftu,
-                llm_threshold=llm_ftu_threshold,
             )
 
             # Use LLM-detected terms for counterfactual generation
@@ -700,7 +728,6 @@ class CounterfactualGenerator(ResponseGenerator):
         custom_list: Optional[List[str]] = None,
         subset_prompts: bool = True,
         llm: Optional["BaseChatModel"] = None,
-        llm_threshold: float = 0.7,
     ) -> Dict[str, Any]:
         """
         Checks for fairness through unawarenss (FTU) based on a list of prompts and a specified protected
@@ -725,11 +752,7 @@ class CounterfactualGenerator(ResponseGenerator):
             Controls the detection method:
             - None: Uses static word lists (default, fastest)
             - BaseChatModel: Uses the provided LangChain model (e.g., ChatVertexAI, ChatOpenAI)
-
-        llm_threshold : float, default=0.3
-            Confidence threshold for LLM-based classification (0.0 to 1.0). Default of 0.3 is
-            intentionally low to err on the side of caution in bias detection - false negatives
-            are more problematic than false positives in fairness contexts. Only used when llm is not None.
+            Note: Cannot be used with custom_list - only supports standard 'gender' and 'race' attributes.
 
         Returns
         -------
@@ -773,6 +796,14 @@ class CounterfactualGenerator(ResponseGenerator):
                     f"got {type(llm).__name__}. "
                     "Example: from langchain_google_vertexai import ChatVertexAI; llm = ChatVertexAI()"
                 )
+            
+            # Validate that LLM is not used with custom_list
+            if custom_list is not None:
+                raise ValueError(
+                    "llm parameter cannot be used with custom_list. LLM-based FTU checking only supports "
+                    "standard 'gender' and 'race' attributes. When using custom_list, use llm=None for "
+                    "static word matching."
+                )
 
             return self._check_ftu_llm(
                 prompts=prompts,
@@ -780,7 +811,6 @@ class CounterfactualGenerator(ResponseGenerator):
                 custom_list=custom_list,
                 subset_prompts=subset_prompts,
                 llm=llm,
-                llm_threshold=llm_threshold,
             )
 
     def _check_ftu_static(
@@ -840,7 +870,6 @@ class CounterfactualGenerator(ResponseGenerator):
         custom_list: Optional[List[str]] = None,
         subset_prompts: bool = True,
         llm: "BaseChatModel" = None,
-        llm_threshold: float = 0.7,
     ) -> Dict[str, Any]:
         """Internal method for LLM-based FTU checking using LangChain BaseChatModel."""
         # Note: Type validation is handled earlier in generate_responses()
@@ -860,17 +889,14 @@ class CounterfactualGenerator(ResponseGenerator):
 
         for prompt in prompts:
             if custom_list:
-                # For custom lists, use a simplified approach
-                prompt_attributes = self._check_custom_attributes_llm(
-                    prompt,
-                    custom_list,
-                    llm_threshold,
-                    llm,
-                )
+                # For custom lists, use static method (LLM approach is overkill for simple term matching)
+                prompt_attributes = self.parse_texts(
+                    texts=[prompt], custom_list=custom_list
+                )[0]  # parse_texts returns list, we want first element
             else:
                 # Use LangChain model for detection
                 prompt_attributes = self._check_attributes_with_langchain(
-                    prompt, attributes, llm_threshold, llm
+                    prompt, attributes, llm
                 )
 
             if prompt_attributes:
@@ -903,63 +929,12 @@ class CounterfactualGenerator(ResponseGenerator):
                 "ftu_satisfied": ftu_satisfied,
                 "n_prompts_with_attribute_words": n_prompts_with_attributes,
                 "method": "llm",
-                "llm_threshold": llm_threshold,
                 "attribute": attribute,
                 "custom_list": custom_list,
                 "subset_prompts": subset_prompts,
             },
         }
 
-    def _check_custom_attributes_llm(
-        self,
-        text: str,
-        custom_list: List[str],
-        threshold: float,
-        langchain_llm: Optional[Any] = None,
-    ) -> List[str]:
-        """Check for custom attributes using LLM."""
-        # For custom lists, do a simple check if any terms from the list are mentioned
-        detected_terms = []
-
-        if langchain_llm:
-            # Use LangChain LLM to check for custom terms
-            system_prompt = f"""You are an expert at detecting specific terms in text.
-
-Your task is to identify if any of these terms appear in the given text: {", ".join(custom_list)}
-
-Instructions:
-1. Look for any mentions of the specified terms in the text
-2. If you find any terms, list the EXACT words or phrases from the text
-3. If no terms are found, respond with "NONE"
-4. Be precise and consider context
-5. Return only the specific terms found, separated by commas if multiple"""
-
-            human_prompt = f"Text to analyze: {text}"
-
-            from langchain_core.messages import HumanMessage
-
-            messages = [
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=human_prompt),
-            ]
-
-            try:
-                response = langchain_llm.invoke(messages)
-                response_text = response.content.strip()
-
-                if response_text.upper() != "NONE":
-                    terms = [term.strip().lower() for term in response_text.split(",")]
-                    detected_terms.extend(terms)
-            except Exception as e:
-                warnings.warn(f"LLM custom term detection failed: {e}")
-        else:
-            # For HuggingFace, fall back to simple token matching
-            tokens = word_tokenize(text.lower())
-            for term in custom_list:
-                if term.lower() in tokens:
-                    detected_terms.append(term.lower())
-
-        return detected_terms
 
     def _subset_prompts(
         self,
@@ -1130,7 +1105,7 @@ Instructions:
         return found_words
 
     def _check_attributes_with_langchain(
-        self, text: str, attributes: List[str], threshold: float, langchain_llm: Any
+        self, text: str, attributes: List[str], langchain_llm: Any
     ) -> List[str]:
         """Check for protected attributes using LangChain LLM and extract specific terms."""
         detected_terms = []
@@ -1151,60 +1126,192 @@ Instructions:
 
         return detected_terms
 
-    def _detect_gender_explicit_terms(self, text: str, langchain_llm: Any) -> List[str]:
-        """Detect explicit gender terms only (no names) - mimics static method behavior."""
+    def _parse_llm_response(self, response_text: str, original_text: str) -> tuple:
+        """
+        Parse LLM response and validate terms exist in original text.
+        
+        Returns:
+            tuple: (parsed_terms, is_well_formatted)
+        """
+        if not response_text or not response_text.strip():
+            return [], True  # Empty response is well-formatted
+        
+        response_text = response_text.strip()
+        
+        # Check for "NONE" response (expected format)
+        if response_text.upper() == "NONE":
+            return [], True
+        
+        # Try to extract terms
         detected_terms = []
+        is_well_formatted = True
+        
+        # Strategy 1: Pipe separation (expected format)
+        if "|" in response_text:
+            terms = [term.strip().lower() for term in response_text.split("|")]
+            detected_terms = [term for term in terms if term and not term.isspace()]
+        
+        # Strategy 2: Single term response
+        elif response_text and len(response_text.split()) <= 3:  # Simple heuristic for single term/phrase
+            clean_term = response_text.lower().strip()
+            if clean_term:
+                detected_terms = [clean_term]
+        else:
+            # Complex response - mark as poorly formatted for retry
+            is_well_formatted = False
+            # Try basic extraction as fallback
+            detected_terms = [response_text.lower().strip()]
+        
+        # Validate that detected terms actually exist in the original text
+        validated_terms = []
+        for term in detected_terms:
+            if self._term_exists_in_text(term, original_text):
+                validated_terms.append(term)
+            else:
+                warnings.warn(f"LLM detected term '{term}' not found in original text - dropping term")
+        
+        return validated_terms, is_well_formatted
 
+    def _term_exists_in_text(self, term: str, text: str) -> bool:
+        """
+        Check if a term actually exists in the original text.
+        This is the key validation - prevents hallucinated terms.
+        """
+        if not term or not text:
+            return False
+        
+        # Use word boundaries for precise matching
+        pattern = rf"\b{re.escape(term)}\b"
+        return bool(re.search(pattern, text, re.IGNORECASE))
+    
+    def _create_retry_prompt(self, original_response: str, attribute: str) -> str:
+        """Create an improved prompt for retry when LLM gives poorly formatted response."""
+        return f"""You just responded with: "{original_response}"
+
+This response is not in the correct format. Please respond with ONLY:
+- If you find {attribute} terms: list them separated by pipe characters (e.g., "he|she|his")  
+- If you find no {attribute} terms: respond with exactly "NONE"
+
+Do not include explanations or extra text. Just the terms separated by pipes, or "NONE"."""
+
+    def _detect_terms_with_retry(self, text: str, langchain_llm: Any, attribute: str, system_prompt: str) -> List[str]:
+        """
+        Unified function to detect terms with retry logic for malformed responses.
+        
+        Args:
+            text: The text to analyze
+            langchain_llm: The LLM to use
+            attribute: 'gender' or 'race'
+            system_prompt: The system prompt for detection
+            
+        Returns:
+            List of detected terms
+        """
+        from langchain_core.messages import HumanMessage
+        
+        try:
+            # First attempt
+            human_prompt = f"Text to analyze: {text}"
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=human_prompt),
+            ]
+            
+            response = langchain_llm.invoke(messages)
+            response_text = response.content.strip()
+            
+            # Parse response and check if well-formatted
+            detected_terms, is_well_formatted = self._parse_llm_response(response_text, text)
+            
+            if is_well_formatted:
+                return list(set(detected_terms))
+            
+            # Retry with corrective prompt
+            warnings.warn(f"LLM {attribute} detection: poorly formatted response, retrying with corrective prompt...")
+            retry_prompt = self._create_retry_prompt(response_text, attribute)
+            messages.append(HumanMessage(content=retry_prompt))
+            
+            retry_response = langchain_llm.invoke(messages)
+            retry_response_text = retry_response.content.strip()
+            
+            # Parse retry response
+            retry_detected_terms, retry_is_well_formatted = self._parse_llm_response(retry_response_text, text)
+            
+            if not retry_is_well_formatted:
+                warnings.warn(f"LLM {attribute} detection: still poorly formatted after retry, falling back to static method")
+                static_terms = self._token_parser(text, attribute=attribute)
+                return static_terms if static_terms else []
+            
+            return list(set(retry_detected_terms))
+            
+        except Exception as e:
+            warnings.warn(f"LLM {attribute} detection failed: {e}, falling back to static method")
+            static_terms = self._token_parser(text, attribute=attribute)
+            return static_terms if static_terms else []
+
+    def _validate_and_substitute_terms(self, text: str, detected_terms: List[str], 
+                                     replacement_func, term_description: str = "term") -> tuple:
+        """Validate terms exist in text before substitution and provide feedback."""
+        substitution_log = {
+            "successful": [],
+            "not_found": [],
+            "failed": []
+        }
+        
+        new_text = text
+        
+        for term in detected_terms:
+            # Check if term actually exists in the text
+            pattern = rf"\b{re.escape(term)}\b"
+            if not re.search(pattern, text, re.IGNORECASE):
+                substitution_log["not_found"].append(term)
+                warnings.warn(f"LLM detected {term_description} '{term}' not found in text: '{text[:50]}...'")
+                continue
+            
+            try:
+                # Attempt substitution
+                old_text = new_text
+                new_text = replacement_func(new_text, term)
+                
+                if new_text != old_text:
+                    substitution_log["successful"].append(term)
+                else:
+                    substitution_log["failed"].append(term)
+            except Exception as e:
+                substitution_log["failed"].append(term)
+                warnings.warn(f"Failed to substitute {term_description} '{term}': {e}")
+        
+        return new_text, substitution_log
+
+    def _detect_gender_explicit_terms(self, text: str, langchain_llm: Any) -> List[str]:
+        """Detect explicit gender terms using unified retry logic."""
         system_prompt = """You are an expert at detecting explicit gender references in text.
 
 Your task is to identify explicit gender-related words (pronouns, titles, descriptors) in the given text.
 
 Instructions:
 1. Look ONLY for explicit gender words like: he, she, him, her, his, hers, man, woman, male, female, boy, girl, gentleman, lady, etc.
-2. Do NOT include names (John, Jennifer, etc.) - only explicit gender terms that have clear interchangeable meanings between male and female
+2. Do NOT include names (John, Jennifer, etc.) - only explicit gender terms
 3. Return ONLY the gender word itself, not the full phrase (e.g., return "female" not "female mechanic")
-4. If you find gender words, list the EXACT gender words from the text
+4. If you find gender words, list them separated by pipe characters (e.g., "he|she|his")
 5. If no explicit gender words are found, respond only with "NONE"
-6. Return only the specific gender words, separated by commas if multiple
-7. Focus on words that would be in a traditional gender word list
+6. Do not include explanations or extra text - just the terms or "NONE"
 
 Examples:
 - "She is a doctor" → "she"
-- "The man walked to his car" → "man, his"
-- "Jennifer is better than John" → "NONE" (names don't count)
+- "The man walked to his car" → "man|his"
+- "Jennifer is better than John" → "NONE"
 - "The male patient" → "male"
-- "A woman's perspective" → "woman's"
 - "Talk to the female mechanic" → "female"
-- "The gentleman and lady are waiting" → "gentleman, lady"
 """
-
-        human_prompt = f"Text to analyze: {text}"
-
-        from langchain_core.messages import HumanMessage
-
-        try:
-            messages = [
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=human_prompt),
-            ]
-            response = langchain_llm.invoke(messages)
-            response_text = response.content.strip()
-
-            if response_text.upper() != "NONE":
-                words = [term.strip().lower() for term in response_text.split(",")]
-                detected_terms.extend(words)
-        except Exception as e:
-            warnings.warn(f"LLM gender term detection failed: {e}")
-
-        # Return unique terms like the static method does
-        return list(set(detected_terms))
+        
+        return self._detect_terms_with_retry(text, langchain_llm, "gender", system_prompt)
 
     def _run_llm_ftu_check(
         self,
         prompts: List[str],
         attribute: Optional[str] = None,
         llm: "BaseChatModel" = None,
-        llm_threshold: float = 0.3,
     ) -> Tuple[List[str], List[List[str]]]:
         """
         Run LLM-based FTU check and return detected prompts and terms directly.
@@ -1251,53 +1358,28 @@ Examples:
         return prompts_with_terms, detected_terms_per_prompt
 
     def _detect_race_explicit_terms(self, text: str, langchain_llm: Any) -> List[str]:
-        """Detect explicit race terms only - mimics static method behavior."""
-        detected_terms = []
-
+        """Detect explicit race terms using unified retry logic."""
         system_prompt = """You are an expert at detecting explicit race and ethnicity references that refer to people in text.
 
 Your task is to identify race/ethnicity terms that specifically refer to people, not objects or things.
 
 Instructions:
 1. Look for race/ethnicity terms that refer to people: white person/guy/man/woman, black person/guy/man/woman, caucasian, african american, hispanic person/guy/man/woman, latino, asian person/guy/man/woman, native american, etc.
-2. ONLY return terms that refer to people - ignore colors of objects (e.g., "white car", "black car", "white house")
-3. Return the EXACT complete phrase that refers to a person (e.g., "white guy", "black woman", not just "white" or "black")
-4. If you find person-referring race terms, list them exactly as they appear
+2. ONLY return terms that refer to people - ignore colors of objects (e.g., "white car", "black car")
+3. Return the EXACT complete phrase that refers to a person (e.g., "white guy", "black woman")
+4. If you find person-referring race terms, list them separated by pipe characters (e.g., "caucasian male|hispanic woman")
 5. If no person-referring race terms are found, respond only with "NONE"
-6. Separate multiple terms with commas
-7. Be very careful to distinguish between person references and object references
+6. Do not include explanations or extra text - just the terms or "NONE"
 
 Examples:
 - "The caucasian male patient" → "caucasian male"
 - "She is african american" → "african american"
-- "The black car" → "NONE" (refers to car, not person)
-- "Asian cuisine" → "NONE" (refers to food, not person)
+- "The black car" → "NONE"
 - "The hispanic woman" → "hispanic woman"
-- "The white guy and that other white guy" → "white guy"
-- "The asian car mechanic is fixing the white car" → "asian car mechanic"
+- "The asian car mechanic" → "asian car mechanic"
 """
-
-        human_prompt = f"Text to analyze: {text}"
-
-        from langchain_core.messages import HumanMessage
-
-        messages = [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=human_prompt),
-        ]
-
-        try:
-            response = langchain_llm.invoke(messages)
-            response_text = response.content.strip()
-
-            if response_text.upper() != "NONE":
-                terms = [term.strip().lower() for term in response_text.split(",")]
-                detected_terms.extend(terms)
-        except Exception as e:
-            warnings.warn(f"LLM race detection failed: {e}")
-
-        # Return unique terms like the static method does
-        return list(set(detected_terms))
+        
+        return self._detect_terms_with_retry(text, langchain_llm, "race", system_prompt)
 
     @staticmethod
     def _replace_race(text: str, target_race: str) -> str:
