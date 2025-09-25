@@ -1102,16 +1102,20 @@ class CounterfactualGenerator(ResponseGenerator):
         Parse LLM response and validate terms exist in original text.
         
         Returns:
-            tuple: (parsed_terms, is_well_formatted)
+            tuple: (parsed_terms, is_well_formatted, had_invalid_terms, invalid_terms_list)
+            - parsed_terms: List of validated terms found
+            - is_well_formatted: True if response was in expected format
+            - had_invalid_terms: True if LLM detected terms but they failed validation
+            - invalid_terms_list: List of terms that failed validation (for retry prompts)
         """
         if not response_text or not response_text.strip():
-            return [], True  # Empty response is well-formatted
+            return [], False, False, []  # Empty response is poorly formatted - should trigger retry
         
         response_text = response_text.strip()
         
         # Check for "NONE" response (expected format)
         if response_text.upper() == "NONE":
-            return [], True
+            return [], True, False, []  # NONE is well-formatted and means no terms found
         
         # Try to extract terms
         detected_terms = []
@@ -1137,15 +1141,20 @@ class CounterfactualGenerator(ResponseGenerator):
         
         # Validate that detected terms actually exist in the original text
         validated_terms = []
+        invalid_terms = []
+        had_invalid_terms = False
+        
         for term in detected_terms:
             if self._term_exists_in_text(term, original_text):
                 validated_terms.append(term)
             else:
+                had_invalid_terms = True
+                invalid_terms.append(term)
                 self.logger.debug(f"LLM detected term '{term}' not found in original text - dropping term (possible hallucination)")
                 # Still warn about hallucinations as they indicate data quality issues
                 warnings.warn(f"LLM detected term '{term}' not found in original text - dropping term")
         
-        return validated_terms, is_well_formatted
+        return validated_terms, is_well_formatted, had_invalid_terms, invalid_terms
 
     def _term_exists_in_text(self, term: str, text: str) -> bool:
         """
@@ -1161,8 +1170,8 @@ class CounterfactualGenerator(ResponseGenerator):
         # If LLM can't return exact substrings, it should fall back to static method
         return term.lower() in text.lower()
     
-    def _create_retry_prompt(self, original_response: str, attribute: str) -> str:
-        """Create an improved prompt for retry when LLM gives poorly formatted response."""
+    def _create_format_retry_prompt(self, original_response: str, attribute: str) -> str:
+        """Create retry prompt for poorly formatted LLM response."""
         return f"""You just responded with: "{original_response}"
 
 This response is not in the correct format. Please respond with ONLY:
@@ -1173,6 +1182,25 @@ This response is not in the correct format. Please respond with ONLY:
   <LF>he<LF>
   <LF>she<LF>
 - If you find no {attribute} terms: respond with exactly "NONE"
+
+Do not include explanations or extra text. Just the terms with <LF> markers, or "NONE"."""
+
+    def _create_invalid_terms_retry_prompt(self, original_response: str, attribute: str, invalid_terms: List[str]) -> str:
+        """Create retry prompt for when LLM detected terms that don't exist in the original text."""
+        invalid_terms_str = "', '".join(invalid_terms)
+        return f"""You just responded with: "{original_response}"
+
+The terms '{invalid_terms_str}' that you detected do NOT exist in the original text. You may have hallucinated or normalized these terms.
+
+Please try again and respond with ONLY:
+- If you find {attribute} terms: put each term on its own line flanked by <LF> markers
+- CRITICAL: The terms must exist EXACTLY as written in the original text - character-for-character
+- Do NOT modify, clean up, or normalize any punctuation or spacing
+- If you find no {attribute} terms that exist exactly in the text: respond with exactly "NONE"
+
+Example format:
+<LF>he<LF>
+<LF>she<LF>
 
 Do not include explanations or extra text. Just the terms with <LF> markers, or "NONE"."""
 
@@ -1203,41 +1231,75 @@ Do not include explanations or extra text. Just the terms with <LF> markers, or 
             response_text = response.content.strip()
             
             # Parse response and check if well-formatted
-            detected_terms, is_well_formatted = self._parse_llm_response(response_text, text)
+            detected_terms, is_well_formatted, had_invalid_terms, invalid_terms = self._parse_llm_response(response_text, text)
             
+            # Handle well-formatted responses
             if is_well_formatted:
-                if detected_terms:
+                if had_invalid_terms:
+                    # LLM detected some invalid terms - retry to get better results
+                    self.logger.debug(f"LLM {attribute} detection: detected invalid terms, retrying with corrective prompt. Response: '{response_text}' for text: '{text[:100]}...'")
+                    retry_prompt = self._create_invalid_terms_retry_prompt(response_text, attribute, invalid_terms)
+                    messages.append(HumanMessage(content=retry_prompt))
+                    
+                    retry_response = langchain_llm.invoke(messages)
+                    retry_response_text = retry_response.content.strip()
+                    
+                    # Parse retry response
+                    retry_detected_terms, retry_is_well_formatted, retry_had_invalid_terms, retry_invalid_terms = self._parse_llm_response(retry_response_text, text)
+                    
+                    # Handle retry results - use retry results if better, otherwise fall back
+                    if retry_is_well_formatted and retry_detected_terms:
+                        return list(set(retry_detected_terms))
+                    elif retry_is_well_formatted and not retry_had_invalid_terms:
+                        # Retry gave clean response (even if no terms) - trust it
+                        return list(set(retry_detected_terms))
+                    else:
+                        # Retry failed or still has invalid terms - use original valid terms or fall back to static
+                        if detected_terms:
+                            return list(set(detected_terms))  # Use original valid terms
+                        else:
+                            self.logger.debug(f"LLM {attribute} detection: retry failed, falling back to static method. Retry response: '{retry_response_text}' for text: '{text[:100]}...'")
+                            return self._token_parser(text, attribute=attribute) or []
+                elif detected_terms:
+                    # LLM found valid terms with no invalid ones - use them
                     return list(set(detected_terms))
                 else:
-                    # Well-formatted but no valid terms found - fall back to static method
-                    self.logger.debug(f"LLM {attribute} detection: well-formatted response but no valid terms found, falling back to static method. Response: '{response_text}' for text: '{text[:100]}...'")
-                    static_terms = self._token_parser(text, attribute=attribute)
-                    return static_terms if static_terms else []
+                    # LLM gave well-formatted response with no terms (e.g., "NONE")
+                    # Trust the LLM - it correctly determined no terms
+                    return []
             
-            # Retry with corrective prompt
+            # Retry with format corrective prompt
             self.logger.debug(f"LLM {attribute} detection: poorly formatted response, retrying with corrective prompt. Response: '{response_text}' for text: '{text[:100]}...'")
-            retry_prompt = self._create_retry_prompt(response_text, attribute)
+            retry_prompt = self._create_format_retry_prompt(response_text, attribute)
             messages.append(HumanMessage(content=retry_prompt))
             
             retry_response = langchain_llm.invoke(messages)
             retry_response_text = retry_response.content.strip()
             
             # Parse retry response
-            retry_detected_terms, retry_is_well_formatted = self._parse_llm_response(retry_response_text, text)
+            retry_detected_terms, retry_is_well_formatted, retry_had_invalid_terms, retry_invalid_terms = self._parse_llm_response(retry_response_text, text)
             
-            if not retry_is_well_formatted:
-                self.logger.debug(f"LLM {attribute} detection: still poorly formatted after retry, falling back to static method. Retry response: '{retry_response_text}' for text: '{text[:100]}...'")
-                static_terms = self._token_parser(text, attribute=attribute)
-                return static_terms if static_terms else []
-            
-            return list(set(retry_detected_terms))
+            # Handle retry results
+            if retry_is_well_formatted:
+                if retry_detected_terms:
+                    return list(set(retry_detected_terms))
+                elif retry_had_invalid_terms:
+                    # Retry detected terms but they failed validation - fall back to static method
+                    self.logger.debug(f"LLM {attribute} detection: retry detected invalid terms, falling back to static method. Retry response: '{retry_response_text}' for text: '{text[:100]}...'")
+                    return self._token_parser(text, attribute=attribute) or []
+                else:
+                    # Retry was well-formatted with no terms (e.g., "NONE") - trust it
+                    return []
+            else:
+                # Retry also poorly formatted - fall back to static method
+                self.logger.debug(f"LLM {attribute} detection: retry also poorly formatted, falling back to static method. Retry response: '{retry_response_text}' for text: '{text[:100]}...'")
+                return self._token_parser(text, attribute=attribute) or []
             
         except Exception as e:
             self.logger.warning(f"LLM {attribute} detection failed with exception: {e}, falling back to static method for text: '{text[:100]}...'")
             # Keep this as a warning since exceptions indicate real issues
             warnings.warn(f"LLM {attribute} detection failed: {e}, falling back to static method")
-            static_terms = self._token_parser(text, attribute=attribute)
-            return static_terms if static_terms else []
+            return self._token_parser(text, attribute=attribute) or []
 
     def _apply_race_substitution(self, text: str, terms: List[str], replacement_func) -> str:
         """Apply race substitution without complex logging."""

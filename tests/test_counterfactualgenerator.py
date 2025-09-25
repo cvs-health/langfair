@@ -157,22 +157,27 @@ def test_llm_retry_logic_basic():
     cf_gen = CounterfactualGenerator()
     
     # Test LF delimiter format works
-    terms, is_formatted = cf_gen._parse_llm_response("<LF>he<LF>\n<LF>she<LF>", "He said she was coming")
+    terms, is_formatted, had_invalid, invalid_terms = cf_gen._parse_llm_response("<LF>he<LF>\n<LF>she<LF>", "He said she was coming")
     assert terms == ["he", "she"]
     assert is_formatted == True
+    assert had_invalid == False
     
     # Test hallucination prevention
     with warnings.catch_warnings(record=True):
         warnings.simplefilter("always")
-        terms, _ = cf_gen._parse_llm_response("<LF>he<LF>\n<LF>nonexistent<LF>", "He was walking")
+        terms, _, had_invalid, invalid_terms = cf_gen._parse_llm_response("<LF>he<LF>\n<LF>nonexistent<LF>", "He was walking")
         assert terms == ["he"]  # Should drop nonexistent term
+        assert had_invalid == True
+        assert "nonexistent" in invalid_terms
     
     # Test exact matching requirement (LLM normalization should fail validation)
     with warnings.catch_warnings(record=True):
         warnings.simplefilter("always")
-        terms, is_formatted = cf_gen._parse_llm_response("<LF>asian man<LF>", "The asian| man was looking at a tree.")
+        terms, is_formatted, had_invalid, invalid_terms = cf_gen._parse_llm_response("<LF>asian man<LF>", "The asian| man was looking at a tree.")
         assert terms == []  # Should drop term when LLM normalizes punctuation (not exact match)
         assert is_formatted == True  # Format is correct, but term validation fails
+        assert had_invalid == True
+        assert "asian man" in invalid_terms
 
 
 def test_llm_retry_logic_malformed_then_success():
@@ -197,6 +202,29 @@ def test_llm_retry_logic_malformed_then_success():
     # from the LLM's successful second response
 
 
+def test_llm_retry_logic_invalid_terms_then_success():
+    """Test retry logic when LLM gives valid format but invalid terms first, then succeeds."""
+    cf_gen = CounterfactualGenerator()
+    
+    # Mock LLM that gives hallucinated terms first, then correct terms
+    mock_llm = Mock()
+    mock_responses = [
+        Mock(content="<LF>he<LF>\n<LF>hallucinated_term<LF>"),  # Valid format, invalid terms
+        Mock(content="<LF>he<LF>")                              # Valid format, valid terms
+    ]
+    mock_llm.invoke.side_effect = mock_responses
+    
+    with warnings.catch_warnings(record=True):
+        warnings.simplefilter("always")
+        result = cf_gen._detect_terms_with_retry("He was walking", mock_llm, "gender", "test prompt")
+    
+    # Should succeed after retry and find the expected terms
+    assert result == ["he"]
+    
+    # Should have made 2 calls (initial + retry)
+    assert mock_llm.invoke.call_count == 2
+
+
 def test_llm_retry_logic_fallback_to_static():
     """Test fallback to static method when LLM fails twice."""
     cf_gen = CounterfactualGenerator()
@@ -215,3 +243,20 @@ def test_llm_retry_logic_fallback_to_static():
     # Should fall back to static method and successfully find terms
     assert "he" in result and "she" in result  # Static method should find these gender terms
     assert mock_llm.invoke.call_count == 2  # Should have tried LLM twice before fallback
+
+
+def test_llm_retry_logic_none_response_trusted():
+    """Test that NONE response is trusted and doesn't trigger retry."""
+    cf_gen = CounterfactualGenerator()
+    
+    # Mock LLM that gives NONE response (should be trusted, no retry)
+    mock_llm = Mock()
+    mock_llm.invoke.return_value = Mock(content="NONE")
+    
+    result = cf_gen._detect_terms_with_retry("The tree was tall", mock_llm, "gender", "test prompt")
+    
+    # Should trust NONE and return empty list
+    assert result == []
+    
+    # Should only make 1 call (no retry needed)
+    assert mock_llm.invoke.call_count == 1
