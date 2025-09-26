@@ -232,20 +232,9 @@ class ToxicityMetrics:
                 )
                 self.progress_bar.start()
         if scores is None:
-            if show_progress_bars:
-                self.progress_bar.add_task(
-                    "[No Progress Bar] -  Computing toxicity scores..."
-                )
-            else:
-                print("Computing toxicity scores...")
             scores = self.get_toxicity_scores(
                 responses, show_progress_bars, self.progress_bar
             )
-
-        if show_progress_bars:
-            self.progress_bar.add_task("[No Progress Bar] -  Evaluating metrics...")
-        else:
-            print("Evaluating metrics...")
         evaluate_dict = {"response": responses, "score": scores}
         if prompts is not None:
             evaluate_dict["prompt"] = prompts
@@ -254,8 +243,6 @@ class ToxicityMetrics:
                     metric.name: metric.evaluate(
                         data=evaluate_dict,
                         threshold=self.toxic_threshold,
-                        show_progress_bars=show_progress_bars,
-                        existing_progress_bar=self.progress_bar,
                     )
                     for metric in self.metrics
                 }
@@ -270,16 +257,10 @@ class ToxicityMetrics:
             }
         time.sleep(0.1)
         if self.progress_bar and not existing_progress_bar:
-            self.progress_bar.add_task(
-                "[No Progress Bar] -  Evaluated metrics successfully!"
-            )
             self.progress_bar.stop()
             self.progress_bar = None
-        elif not existing_progress_bar:
-            print("Evaluated metrics successfully!")
         if return_data:
             result["data"] = evaluate_dict
-
         return result
 
     def _default_instances(self) -> None:
@@ -334,8 +315,8 @@ class ToxicityMetrics:
         scores = []
         if show_progress_bars and existing_progress_bar:
             self.progress_bar_task = existing_progress_bar.add_task(
-                f"    -  Computing toxicity scores with {classifier} for {len(responses)} responses...",
-                total=math.ceil(len(responses) / self.batch_size),
+                f"Computing toxicity scores with {classifier} for {len(responses)} responses...",
+                total=len(responses),
             )
         else:
             print(
@@ -349,7 +330,7 @@ class ToxicityMetrics:
                     ]
                 )
                 if show_progress_bars and existing_progress_bar:
-                    existing_progress_bar.update(self.progress_bar_task, advance=1)
+                    existing_progress_bar.update(self.progress_bar_task, advance=self.batch_size)
             return scores
 
         elif classifier in AvailableClassifiers[:3]:
@@ -357,7 +338,7 @@ class ToxicityMetrics:
                 results_t = self.classifier_objects[classifier].predict(t)
                 scores.extend([max(values) for values in zip(*results_t.values())])
                 if show_progress_bars and existing_progress_bar:
-                    existing_progress_bar.update(self.progress_bar_task, advance=1)
+                    existing_progress_bar.update(self.progress_bar_task, advance=self.batch_size)
             return scores
 
         elif classifier == "toxigen":
@@ -369,7 +350,7 @@ class ToxicityMetrics:
                 ]
                 scores.extend(scores_t)
                 if show_progress_bars and existing_progress_bar:
-                    existing_progress_bar.update(self.progress_bar_task, advance=1)
+                    existing_progress_bar.update(self.progress_bar_task, advance=self.batch_size)
             return scores
 
     @staticmethod
