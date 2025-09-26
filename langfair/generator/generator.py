@@ -90,6 +90,7 @@ class ResponseGenerator:
             warnings.warn(
                 "max_calls_per_min is deprecated and will not be used. Use LangChain's `InMemoryRateLimiter` instead",
                 DeprecationWarning,
+                stacklevel=2
             )
 
     async def estimate_token_cost(
@@ -140,115 +141,12 @@ class ResponseGenerator:
            A dictionary containing the estimated token costs, including prompt token cost, completion token cost,
            and total token cost.
         """
-        # TODO: Add token costs for other models
-        # TODO: Scrape rather than hard-code costs.
-        assert tiktoken_model_name in self.cost_mapping.keys(), (
-            f"Only {list(self.cost_mapping.keys())} are supported"
+        warnings.warn(
+            "estimate_token_cost method has been deprecated as of v0.8.0 and will not be used",
+            DeprecationWarning,
+            stacklevel=2
         )
-        if show_progress_bars:
-            if existing_progress_bar:
-                self.progress_bar = existing_progress_bar
-            else:
-                completion_text = "[progress.percentage]{task.completed}/{task.total}"
-                self.progress_bar = Progress(
-                    ConditionalTextColumn("[progress.description]{task.description}"),
-                    ConditionalBarColumn(),
-                    ConditionalTextPercentageColumn(completion_text),
-                    ConditionalTimeElapsedColumn(),
-                    ConditionalSpinnerColumn(),
-                )
-                self.progress_bar.start()
-                self.progress_bar.add_task(
-                    f"[No Progress Bar]- Estimating cost for model '{tiktoken_model_name}'... "
-                )
-                self.progress_bar.add_task(
-                    f"[No Progress Bar]- Token costs were last updated on {self.token_cost_date} \n   and may have changed since then."
-                )
-                self.progress_bar.add_task(
-                    f"[No Progress Bar]- Estimating cost based on {count} generations per prompt..."
-                )
-        else:
-            print(f"Estimating cost for model '{tiktoken_model_name}'... ")
-            print(
-                f"Token costs were last updated on {self.token_cost_date} and may have changed since then."
-            )
-            print(f"Estimating cost based on {count} generations per prompt...")
-
-        if example_responses is None:
-            if show_progress_bars:
-                self.progress_bar.add_task(
-                    "[No Progress Bar]- Generating sample of responses for cost estimation..."
-                )
-            else:
-                print("Generating sample of responses for cost estimation...")
-            prompts = list(prompts)
-            sampled_prompts = random.sample(
-                prompts, min(response_sample_size, len(prompts))
-            )  # nosec - bandit thinks this insecure use of random.sample could be used in a crypto context
-            generation = await self.generate_responses(
-                sampled_prompts,
-                count=1,
-                show_progress_bars=show_progress_bars,
-                existing_progress_bar=self.progress_bar,
-            )
-            example_responses = generation["data"]["response"]
-
-        # Get input token counts
-        prompt_token_counts = [
-            self._num_tokens_from_messages(
-                [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                model=tiktoken_model_name,
-            )
-            for user_prompt in prompts
-        ]
-        total_prompt_tokens = sum(prompt_token_counts) * count
-
-        # Estimate output token counts
-        example_response_tokens = [
-            self._num_tokens_from_messages(
-                [{"role": "assistant", "content": response}],
-                model=tiktoken_model_name,
-                prompt=False,
-            )
-            for response in example_responses
-        ]
-        estimated_total_response_tokens = (
-            len(prompts) * np.mean(example_response_tokens) * count
-        )
-
-        # calculate costs
-        model_cost = self.cost_mapping.get(
-            tiktoken_model_name, {"input": 0, "output": 0}
-        )
-        estimated_prompt_token_cost = total_prompt_tokens * model_cost["input"]
-        estimated_completion_token_cost = (
-            estimated_total_response_tokens * model_cost["output"]
-        )
-        estimated_total_token_cost = (
-            estimated_prompt_token_cost + estimated_completion_token_cost
-        )
-
-        results = {
-            "Estimated Prompt Token Cost (USD)": estimated_prompt_token_cost,
-            "Estimated Completion Token Cost (USD)": estimated_completion_token_cost,
-            "Estimated Total Token Cost (USD)": estimated_total_token_cost,
-        }
-        time.sleep(0.1)
-        if self.progress_bar and not existing_progress_bar:
-            self.progress_bar.add_task(
-                f"[No Progress Bar]- Estimated cost for model '{tiktoken_model_name}': $ {round(estimated_total_token_cost, 2)}"
-            )
-            self.progress_bar.stop()
-            self.progress_bar = None
-        elif not existing_progress_bar:
-            print(
-                f"Estimated cost for model '{tiktoken_model_name}': $ {round(estimated_total_token_cost, 2)}"
-            )
-            print("--------------------------------------------------")
-        return results
+        pass
 
     async def generate_responses(
         self,
@@ -339,21 +237,13 @@ class ResponseGenerator:
                 )
                 self.progress_bar.start()
 
-        if self.count == 1:
-            if show_progress_bars:
-                self.progress_task = self.progress_bar.add_task(
-                    " -  Generating responses...", total=len(prompts)
-                )
-            else:
-                print("Generating responses...")
+        if show_progress_bars:
+            self.progress_task = self.progress_bar.add_task(
+                f"Generating {self.count} responses per prompt...",
+                total=len(prompts) * self.count,
+            )
         else:
-            if show_progress_bars:
-                self.progress_task = self.progress_bar.add_task(
-                    f" -  Generating {self.count} responses per prompt...",
-                    total=len(prompts) * self.count,
-                )
-            else:
-                print(f"Generating {self.count} responses per prompt...")
+            print(f"Generating {self.count} responses per prompt...")
 
         try:
             tasks, duplicated_prompts = self._create_tasks(prompts=prompts)
@@ -367,9 +257,6 @@ class ResponseGenerator:
         time.sleep(0.1)
 
         if self.progress_bar and not existing_progress_bar:
-            self.progress_bar.add_task(
-                "[No Progress Bar] -  Responses successfully generated!"
-            )
             self.progress_bar.stop()
             self.progress_bar = None
         elif not existing_progress_bar:
