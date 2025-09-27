@@ -47,7 +47,7 @@ sacremoses = "^0.1.1"
 rouge-score = "^0.1.2"
 detoxify = "^0.5.2"
 langchain = "^0.3.7"
-asyncio = "^3.4.3"
+asyncio = ">=3.4.3,<5.0.0"
 sentence-transformers = ">=3.10"
 typing = {version = "^3.7.4", python = "<3.10"}
 tiktoken = ">=0.7,<0.12"
