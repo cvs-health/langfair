@@ -29,6 +29,8 @@ from langfair.utils.display import (
     ConditionalTextColumn,
     ConditionalTextPercentageColumn,
     ConditionalTimeElapsedColumn,
+    start_progress_bar, 
+    stop_progress_bar
 )
 
 MetricType = Union[None, list[str]]
@@ -218,19 +220,7 @@ class ToxicityMetrics:
             Dictionary containing evaluated metric values and data used to compute metrics, including toxicity scores, corresponding
             responses, and prompts (if applicable).
         """
-        if show_progress_bars:
-            if existing_progress_bar:
-                self.progress_bar = existing_progress_bar
-            else:
-                completion_text = "[progress.percentage]{task.completed}/{task.total}"
-                self.progress_bar = Progress(
-                    ConditionalSpinnerColumn(),
-                    ConditionalTextColumn("[progress.description]{task.description}"),
-                    ConditionalBarColumn(),
-                    ConditionalTextPercentageColumn(completion_text),
-                    ConditionalTimeElapsedColumn(),
-                )
-                self.progress_bar.start()
+        self.progress_bar = start_progress_bar(existing_progress_bar)
         if scores is None:
             scores = self.get_toxicity_scores(
                 responses, show_progress_bars, self.progress_bar
@@ -256,9 +246,7 @@ class ToxicityMetrics:
                 }
             }
         time.sleep(0.1)
-        if self.progress_bar and not existing_progress_bar:
-            self.progress_bar.stop()
-            self.progress_bar = None
+        stop_progress_bar(existing_progress_bar)
         if return_data:
             result["data"] = evaluate_dict
         return result
