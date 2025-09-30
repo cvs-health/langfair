@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langfair"
-version = "0.7.1"
+version = "0.6.8"
 description = "LangFair is a Python library for conducting use-case level LLM bias and fairness assessments"
 readme = "README.md"
 authors = ["Dylan Bouchard <dylan.bouchard@cvshealth.com>",
@@ -9,8 +9,7 @@ maintainers = ["Dylan Bouchard <dylan.bouchard@cvshealth.com>",
                "Mohit Singh Chauhan <mohitsingh.chauhan@cvshealth.com>",
                "David Skarbrevik <david.skarbrevik@cvshealth.com>",
                "Viren Bajaj <bajajv@aetna.com>",
-               "Zeya Ahmad <zeya.ahmad@cvshealth.com>",
-               "Jinesh Mehta <jineshshailesh.mehta@cvshealth.com>"]
+               "Zeya Ahmad <zeya.ahmad@cvshealth.com>"]
 repository = "https://github.com/cvs-health/langfair"
 homepage = "https://github.com/cvs-health/langfair"
 documentation = "https://cvs-health.github.io/langfair/latest/index.html"
@@ -32,10 +31,7 @@ keywords = ["LLM", "large language model", "bias", "fairness", "Responsible AI"]
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.14"
-numpy = [
-    { version = ">=1.26.4,<3.0.0", markers = "python_version < '3.13'" },
-    { version = ">=2.3.1", markers = "python_version >= '3.13'" }
-]
+numpy = "^1.26.4"
 scipy = [
     {version = ">=1.13.0,<1.15.0", python = ">=3.9,<3.10"},
     {version = "^1.15.0", python = ">=3.10"}
@@ -53,7 +49,8 @@ typing = {version = "^3.7.4", python = "<3.10"}
 tiktoken = ">=0.7,<0.12"
 transformers = ">=4.52.1"
 torch = ">=2.6.0"
-rich = "^13.8.0"
+rich = "13.8.0"
+ipywidgets = "^8.1.7"
 
 [tool.poetry.group.dev.dependencies]
 langchain-openai = "^0.2.9"
