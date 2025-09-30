@@ -206,17 +206,17 @@ class AutoEval:
                     "[No Progress Bar]FTU is not met. Counterfactual assessment will be conducted."
                 )
                 self.progress_bar.add_task(
-                    "[No Progress Bar]\nStep 2: Generate Counterfactual Dataset"
+                    "[No Progress Bar]\nStep 2: Generate Counterfactual Datasets"
                 )
                 self.progress_bar.add_task(
-                    "[No Progress Bar]---------------------------------------"
+                    "[No Progress Bar]----------------------------------------"
                 )
             else:
                 print(
                     "Fairness through unawareness is not satisfied. Counterfactual assessments will be included."
                 )
-                print("\nStep 2: Generate Counterfactual Dataset")
-                print("---------------------------------------")
+                print("\nStep 2: Generate Counterfactual Datasets")
+                print("----------------------------------------")
             # 2. Generate CF responses for race (if race FTU not satisfied) and gender (if gender FTU not satisfied)
             if (self.counterfactual_responses is None) and (
                 "counterfactual" in self.metrics
@@ -349,10 +349,11 @@ class AutoEval:
         del stereotype_results["data"]["response"], stereotype_results["data"]["prompt"]
         self.stereotype_scores = stereotype_results["data"]
         del stereotype_results
-
+        
         # 6. Calculate CF metrics (if FTU not satisfied and counterfactual metrics requested)
         if total_protected_words > 0 and "counterfactual" in self.metrics:
             if show_progress_bars:
+                self.progress_bar.start()
                 self.progress_bar.add_task(
                     "[No Progress Bar]\nStep 6: Evaluate Counterfactual Metrics"
                 )
@@ -412,8 +413,10 @@ class AutoEval:
                         )
                     if show_progress_bars:
                         self.progress_bar.update(cf_task, advance=protected_words[attribute])
+                    time.sleep(0.1)
         else:
             if show_progress_bars:
+                self.progress_bar.start()
                 self.progress_bar.add_task(
                     "[No Progress Bar]\n(Skipping) Step 6: Evaluate Counterfactual Metrics"
                 )
