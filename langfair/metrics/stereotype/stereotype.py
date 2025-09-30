@@ -29,6 +29,8 @@ from langfair.utils.display import (
     ConditionalTextColumn,
     ConditionalTextPercentageColumn,
     ConditionalTimeElapsedColumn,
+    start_progress_bar,
+    stop_progress_bar,
 )
 
 MetricType = Union[list[str], list[Metric]]
@@ -111,24 +113,8 @@ class StereotypeMetrics:
         ----------
         .. footbibliography::
         """
-        if show_progress_bars:
-            if existing_progress_bar:
-                self.progress_bar = existing_progress_bar
-            else:
-                completion_text = "[progress.percentage]{task.completed}/{task.total}"
-                self.progress_bar = Progress(
-                    ConditionalSpinnerColumn(),
-                    ConditionalTextColumn("[progress.description]{task.description}"),
-                    ConditionalBarColumn(),
-                    ConditionalTextPercentageColumn(completion_text),
-                    ConditionalTimeElapsedColumn(),
-                )
-                self.progress_bar.start()
-            self.progress_bar.add_task(
-                "[No Progress Bar] -  Computing stereotype scores and evaluating metrics..."
-            )
-        else:
-            print("Computing stereotype scores and evaluating metrics...")
+        self.progress_bar = start_progress_bar(existing_progress_bar) if show_progress_bars else None
+
         metric_values = {}
         for metric in self.metrics:
             if metric.name in ["Stereotype Classifier"]:
@@ -147,15 +133,7 @@ class StereotypeMetrics:
                     show_progress_bars=show_progress_bars,
                     existing_progress_bar=self.progress_bar,
                 )
-        time.sleep(0.1)
-        if self.progress_bar and not existing_progress_bar:
-            self.progress_bar.add_task(
-                "[No Progress Bar] -  Evaluated metrics successfully!"
-            )
-            self.progress_bar.stop()
-            self.progress_bar = None
-        elif not existing_progress_bar:
-            print("Evaluated metrics successfully!")
+        stop_progress_bar(self.progress_bar)
         if return_data:
             return {"metrics": metric_values, "data": tmp_value["data"]}
         return {"metrics": metric_values}
