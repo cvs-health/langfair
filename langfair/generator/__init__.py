@@ -14,8 +14,6 @@
 
 from langfair.generator.counterfactual import CounterfactualGenerator
 from langfair.generator.generator import ResponseGenerator
+from langfair.generator.redteaming import AdversarialGenerator
 
-__all__ = [
-    "CounterfactualGenerator",
-    "ResponseGenerator",
-]
+__all__ = ["CounterfactualGenerator", "ResponseGenerator", "AdversarialGenerator"]
