@@ -245,8 +245,7 @@ class ToxicityMetrics:
                     ),
                 }
             }
-        time.sleep(0.1)
-        stop_progress_bar(existing_progress_bar)
+        stop_progress_bar(self.progress_bar)
         if return_data:
             result["data"] = evaluate_dict
         return result
