@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import pytest
+import warnings
+from unittest.mock import Mock, MagicMock
 from langchain_openai import AzureChatOpenAI
 
 from langfair.generator import CounterfactualGenerator
@@ -109,3 +111,215 @@ async def test_counterfactual(monkeypatch):
             if "response" in key
         ]
     )
+
+
+def test_race_parsing_false_positives():
+    """Test that _get_race_subsequences avoids false positives like 'asian' in 'caucasian'."""
+    from langfair.generator import CounterfactualGenerator
+
+    cf_gen = CounterfactualGenerator()
+
+    # Original issue: should not find "asian" in "caucasian male"
+    result = cf_gen._get_race_subsequences(
+        "The patient is a caucasian male diagnosed with ABC."
+    )
+    result_lower = [word.lower() for word in result]
+
+    # Should not contain false positive "asian"
+    assert "asian" not in result_lower, (
+        f"False positive 'asian' found in result: {result}"
+    )
+
+    # Should contain the actual race term (either standalone or with person descriptor)
+    assert any("caucasian" in word.lower() for word in result), (
+        f"Expected 'caucasian' not found in result: {result}"
+    )
+
+    # Additional edge cases to prevent regressions
+
+    # Should not find "american" in "American" (not a race term in our lists)
+    result2 = cf_gen._get_race_subsequences("The American patient was treated.")
+    assert len(result2) == 0, (
+        f"Should not find race terms in non-racial context: {result2}"
+    )
+
+    # Should correctly identify actual race terms
+    result3 = cf_gen._get_race_subsequences(
+        "The hispanic woman was seen by the doctor."
+    )
+    assert any("hispanic" in word.lower() for word in result3), (
+        f"Expected 'hispanic' not found: {result3}"
+    )
+
+
+def test_llm_retry_logic_basic():
+    """Test basic pipe parsing and hallucination prevention."""
+    cf_gen = CounterfactualGenerator()
+    
+    # Test LF delimiter format works
+    terms, is_formatted, had_invalid, invalid_terms = cf_gen._parse_llm_response("<LF>he<LF>\n<LF>she<LF>", "He said she was coming")
+    assert terms == ["he", "she"]
+    assert is_formatted == True
+    assert had_invalid == False
+    
+    # Test hallucination prevention
+    with warnings.catch_warnings(record=True):
+        warnings.simplefilter("always")
+        terms, _, had_invalid, invalid_terms = cf_gen._parse_llm_response("<LF>he<LF>\n<LF>nonexistent<LF>", "He was walking")
+        assert terms == ["he"]  # Should drop nonexistent term
+        assert had_invalid == True
+        assert "nonexistent" in invalid_terms
+    
+    # Test exact matching requirement (LLM normalization should fail validation)
+    with warnings.catch_warnings(record=True):
+        warnings.simplefilter("always")
+        terms, is_formatted, had_invalid, invalid_terms = cf_gen._parse_llm_response("<LF>asian man<LF>", "The asian| man was looking at a tree.")
+        assert terms == []  # Should drop term when LLM normalizes punctuation (not exact match)
+        assert is_formatted == True  # Format is correct, but term validation fails
+        assert had_invalid == True
+        assert "asian man" in invalid_terms
+
+
+def test_llm_retry_logic_malformed_then_success():
+    """Test retry logic when LLM gives poorly formatted response first, then succeeds."""
+    cf_gen = CounterfactualGenerator()
+    
+    # Mock LLM that fails first, succeeds on retry
+    mock_llm = Mock()
+    first_response = Mock()
+    first_response.content = "The gender terms are: male, female"  # Poorly formatted
+    second_response = Mock()
+    second_response.content = "<LF>male<LF>\n<LF>female<LF>"  # Well formatted
+    mock_llm.invoke.side_effect = [first_response, second_response]
+    
+    result = cf_gen._detect_terms_with_retry("The male and female patients", mock_llm, "gender", "test prompt")
+    
+    # Should successfully get terms from LLM after retry (not from static fallback)
+    assert set(result) == {"male", "female"}  # Retry mechanism should succeed with LLM
+    assert mock_llm.invoke.call_count == 2  # Should call LLM twice (first fails, retry succeeds)
+    
+    # This verifies the retry worked because we're getting the specific terms
+    # from the LLM's successful second response
+
+
+def test_llm_retry_logic_invalid_terms_then_success():
+    """Test retry logic when LLM gives valid format but invalid terms first, then succeeds."""
+    cf_gen = CounterfactualGenerator()
+    
+    # Mock LLM that gives hallucinated terms first, then correct terms
+    mock_llm = Mock()
+    mock_responses = [
+        Mock(content="<LF>he<LF>\n<LF>hallucinated_term<LF>"),  # Valid format, invalid terms
+        Mock(content="<LF>he<LF>")                              # Valid format, valid terms
+    ]
+    mock_llm.invoke.side_effect = mock_responses
+    
+    with warnings.catch_warnings(record=True):
+        warnings.simplefilter("always")
+        result = cf_gen._detect_terms_with_retry("He was walking", mock_llm, "gender", "test prompt")
+    
+    # Should succeed after retry and find the expected terms
+    assert result == ["he"]
+    
+    # Should have made 2 calls (initial + retry)
+    assert mock_llm.invoke.call_count == 2
+
+
+def test_llm_retry_logic_fallback_to_static():
+    """Test fallback to static method when LLM fails twice."""
+    cf_gen = CounterfactualGenerator()
+    
+    # Mock LLM that fails both times with clearly poorly formatted responses
+    mock_llm = Mock()
+    mock_llm.invoke.side_effect = [
+        Mock(content="I found these terms in the text but can't format properly"),
+        Mock(content="Still giving you a long explanatory response instead of proper format")
+    ]
+    
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        result = cf_gen._detect_terms_with_retry("He said she was leaving", mock_llm, "gender", "test prompt")
+    
+    # Should fall back to static method and successfully find terms
+    assert "he" in result and "she" in result  # Static method should find these gender terms
+    assert mock_llm.invoke.call_count == 2  # Should have tried LLM twice before fallback
+
+
+def test_llm_retry_logic_none_response_trusted():
+    """Test that NONE response is trusted and doesn't trigger retry."""
+    cf_gen = CounterfactualGenerator()
+    
+    # Mock LLM that gives NONE response (should be trusted, no retry)
+    mock_llm = Mock()
+    mock_llm.invoke.return_value = Mock(content="NONE")
+    
+    result = cf_gen._detect_terms_with_retry("The tree was tall", mock_llm, "gender", "test prompt")
+    
+    # Should trust NONE and return empty list
+    assert result == []
+    
+    # Should only make 1 call (no retry needed)
+    assert mock_llm.invoke.call_count == 1
+
+
+def test_spatially_separated_race_terms():
+    """Test that spatially separated race terms are properly replaced in LLM mode."""
+    cf_gen = CounterfactualGenerator()
+    
+    # Test prompt with spatially separated race terms
+    prompt = "That guy is white and she is black and that person over there is asian."
+    
+    # Simulate LLM-detected terms (what the LLM FTU checker would find)
+    detected_terms = [["white", "black", "asian"]]
+    
+    # Test LLM counterfactual generation
+    cf_result = cf_gen.create_prompts_from_llm_terms(
+        prompts=[prompt], 
+        llm_detected_terms=detected_terms,
+        attribute="race"
+    )
+    
+    # Verify all race groups have prompts generated
+    assert "white_prompt" in cf_result
+    assert "black_prompt" in cf_result
+    assert "hispanic_prompt" in cf_result
+    assert "asian_prompt" in cf_result
+    
+    # Verify replacements worked correctly
+    white_prompt = cf_result["white_prompt"][0]
+    black_prompt = cf_result["black_prompt"][0]
+    hispanic_prompt = cf_result["hispanic_prompt"][0]
+    asian_prompt = cf_result["asian_prompt"][0]
+    
+    # White prompt should contain only "white", not "black" or "asian"
+    assert "white" in white_prompt.lower()
+    assert "black" not in white_prompt.lower()
+    assert "asian" not in asian_prompt.lower() if "asian" in white_prompt.lower() else True  # Handle edge case
+    
+    # Black prompt should contain only "black", not "white" or "asian"  
+    assert "black" in black_prompt.lower()
+    assert "white" not in black_prompt.lower()
+    assert "asian" not in black_prompt.lower()
+    
+    # Hispanic prompt should contain only "hispanic", not original race terms
+    assert "hispanic" in hispanic_prompt.lower()
+    assert "white" not in hispanic_prompt.lower()
+    assert "black" not in hispanic_prompt.lower()
+    assert "asian" not in hispanic_prompt.lower()
+    
+    # Asian prompt should contain only "asian", not "white" or "black"
+    assert "asian" in asian_prompt.lower()
+    assert "white" not in asian_prompt.lower()
+    assert "black" not in asian_prompt.lower()
+    
+    # Verify the structure is maintained (guy, she, person should still be there)
+    for race_prompt in [white_prompt, black_prompt, hispanic_prompt, asian_prompt]:
+        assert "guy" in race_prompt.lower()
+        assert "she" in race_prompt.lower()  
+        assert "person" in race_prompt.lower()
+    
+    print(f"Original: {prompt}")
+    print(f"White: {white_prompt}")
+    print(f"Black: {black_prompt}")
+    print(f"Hispanic: {hispanic_prompt}")
+    print(f"Asian: {asian_prompt}")
