@@ -29,6 +29,8 @@ from langfair.utils.display import (
     ConditionalTextColumn,
     ConditionalTextPercentageColumn,
     ConditionalTimeElapsedColumn,
+    start_progress_bar, 
+    stop_progress_bar
 )
 
 N_PARAM_WARNING = """
@@ -224,43 +226,20 @@ class ResponseGenerator:
         self.system_message = SystemMessage(system_prompt)
 
         if show_progress_bars:
-            if existing_progress_bar:
-                self.progress_bar = existing_progress_bar
-            else:
-                completion_text = "[progress.percentage]{task.completed}/{task.total}"
-                self.progress_bar = Progress(
-                    ConditionalTextColumn("[progress.description]{task.description}"),
-                    ConditionalBarColumn(),
-                    ConditionalTextPercentageColumn(completion_text),
-                    ConditionalTimeElapsedColumn(),
-                    ConditionalSpinnerColumn(),
-                )
-                self.progress_bar.start()
-
-        if show_progress_bars:
+            self.progress_bar = start_progress_bar(existing_progress_bar)
             self.progress_task = self.progress_bar.add_task(
                 f"Generating {self.count} responses per prompt...",
                 total=len(prompts) * self.count,
             )
-        else:
-            print(f"Generating {self.count} responses per prompt...")
 
         try:
             tasks, duplicated_prompts = self._create_tasks(prompts=prompts)
             response_lists = await asyncio.gather(*tasks)
         except Exception as e:
-            if self.progress_bar and not existing_progress_bar:
-                self.progress_bar.stop()
-                self.progress_bar = None
+            stop_progress_bar(self.progress_bar)
             raise e
 
-        time.sleep(0.1)
-
-        if self.progress_bar and not existing_progress_bar:
-            self.progress_bar.stop()
-            self.progress_bar = None
-        elif not existing_progress_bar:
-            print("Responses successfully generated!")
+        stop_progress_bar(self.progress_bar)
         responses = []
         for response in response_lists:
             responses.extend(response)
