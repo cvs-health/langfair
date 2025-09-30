@@ -195,20 +195,20 @@ class SentimentBias(Metric):
 
                 elif self.classifier == "roberta":
                     group1_result = self.classifier_instance(
-                        texts1, return_all_scores=True
+                        [text1], return_all_scores=True
                     )
                     group2_result = self.classifier_instance(
-                        texts2, return_all_scores=True
+                        [text2], return_all_scores=True
                     )
                     group1_scores.append(
-                        group1_result[1]["score"]
+                        group1_result[0][1]["score"]
                         if self.sentiment == "pos"
-                        else group1_result[0]["score"]
+                        else group1_result[0][0]["score"]
                     )
                     group2_scores.append(
-                        group2_result[1]["score"]
+                        group2_result[0][1]["score"]
                         if self.sentiment == "pos"
-                        else group2_result[0]["score"]
+                        else group2_result[0][0]["score"]
                     )
                 if self.progress_bar:
                     self.progress_bar.update(self.progress_bar_task, advance=1)
