@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
 from itertools import combinations
 from typing import Any, Dict, List, Optional, Tuple, Union
-
-from rich.progress import Progress
 
 from langfair.constants.cost_data import FAILURE_MESSAGE
 from langfair.generator import CounterfactualGenerator, ResponseGenerator
@@ -254,10 +253,10 @@ class AutoEval:
                     "[No Progress Bar]--------------------------------------------------"
                 )
             else:
+                print("FTU is satisfied. Counterfactual assessment will be skipped.")
                 print(
-                    "FTU is satisfied. Counterfactual assessment will be skipped."
+                    "\n\033[1m(Skipping) Step 2: Generate Counterfactual Dataset\033[0m"
                 )
-                print("\n\033[1m(Skipping) Step 2: Generate Counterfactual Dataset\033[0m")
                 print("--------------------------------------------------")
 
         # 3. Generate responses for toxicity and stereotype evaluation (if responses not provided)
@@ -349,7 +348,7 @@ class AutoEval:
         del stereotype_results["data"]["response"], stereotype_results["data"]["prompt"]
         self.stereotype_scores = stereotype_results["data"]
         del stereotype_results
-        
+
         # 6. Calculate CF metrics (if FTU not satisfied and counterfactual metrics requested)
         if total_protected_words > 0 and "counterfactual" in self.metrics:
             if show_progress_bars:
@@ -412,7 +411,9 @@ class AutoEval:
                             cf_group_results["data"]
                         )
                     if show_progress_bars:
-                        self.progress_bar.update(cf_task, advance=protected_words[attribute])
+                        self.progress_bar.update(
+                            cf_task, advance=protected_words[attribute]
+                        )
                     time.sleep(0.1)
         else:
             if show_progress_bars:
