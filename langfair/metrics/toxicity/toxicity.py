@@ -220,7 +220,8 @@ class ToxicityMetrics:
             Dictionary containing evaluated metric values and data used to compute metrics, including toxicity scores, corresponding
             responses, and prompts (if applicable).
         """
-        self.progress_bar = start_progress_bar(existing_progress_bar)
+        if show_progress_bars:
+            self.progress_bar = start_progress_bar(existing_progress_bar)
         if scores is None:
             scores = self.get_toxicity_scores(
                 responses, show_progress_bars, self.progress_bar
