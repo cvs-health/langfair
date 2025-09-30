@@ -13,7 +13,8 @@
 # limitations under the License.
 
 
-from rich.progress import BarColumn, SpinnerColumn, TextColumn, TimeElapsedColumn
+import time
+from rich.progress import Progress, BarColumn, SpinnerColumn, TextColumn, TimeElapsedColumn
 
 
 class ConditionalBarColumn(BarColumn):
@@ -53,3 +54,25 @@ class ConditionalSpinnerColumn(SpinnerColumn):
         if task.description.startswith("[No Progress Bar]"):
             return ""
         return super().render(task)
+
+def start_progress_bar(existing_progress_bar: Progress = None) -> Progress:
+    """Helper function to instantiate rich Progress"""
+    if existing_progress_bar:
+        progress_bar =  existing_progress_bar
+    else:
+        completion_text = "[progress.percentage]{task.completed}/{task.total}"
+        progress_bar = Progress(
+            ConditionalSpinnerColumn(),
+            ConditionalTextColumn("[progress.description]{task.description}"),
+            ConditionalBarColumn(),
+            ConditionalTextPercentageColumn(completion_text),
+            ConditionalTimeElapsedColumn(),
+        )
+    progress_bar.start()
+    return progress_bar
+
+def stop_progress_bar(progress_bar: Progress) -> None:
+    """Pauses progress bar and implements sleep timer"""
+    time.sleep(0.1)
+    if progress_bar:
+        progress_bar.stop()
