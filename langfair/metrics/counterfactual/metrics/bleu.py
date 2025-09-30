@@ -12,14 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
 from typing import List, Union
 
 import nltk
 import numpy as np
 from nltk.tokenize import word_tokenize
 from nltk.translate.bleu_score import SmoothingFunction, sentence_bleu
+from rich.progress import Progress
 
 from langfair.metrics.counterfactual.metrics.baseclass.metrics import Metric
+from langfair.utils.display import start_progress_bar, stop_progress_bar
 
 
 class BleuSimilarity(Metric):
@@ -40,14 +43,18 @@ class BleuSimilarity(Metric):
         ], "langfair: Only 'mean' and 'pairwise' are supported."
         self.name = "Bleu Similarity"
         self.how = how
-
+        self.progress_bar = None
+        
         try:
             word_tokenize("Check if this function can access the required corpus")
         except LookupError:
             nltk.download("punkt_tab")
 
     def evaluate(
-        self, texts1: List[str], texts2: List[str]
+        self, texts1: List[str], 
+        texts2: List[str],
+        show_progress_bars: bool = True,
+        existing_progress_bar: Progress = None,
     ) -> Union[float, List[float]]:
         """
         Returns mean BLEU score between two lists of generated outputs.
@@ -62,15 +69,35 @@ class BleuSimilarity(Metric):
             A list, analogous to `texts1` of counterfactually generated outputs from a language model each containing
             mention of the same protected attribute group. The mentioned protected attribute group must be a different
             group within the same protected attribute as mentioned in `texts1`.
+            
+        show_progress_bars : bool, default=True
+            If True, displays progress bars while evaluating metrics.
+
+        existing_progress_bar : rich.progress.Progress, default=None
+            If provided, the progress bar will be updated with the existing progress bar.
 
         Returns
         -------
         float
             Mean BLEU score for provided lists of texts.
         """
-        blue_scores = [self._calc_bleu(t1, t2) for t1, t2 in zip(texts1, texts2)]
-
-        return np.mean(blue_scores) if self.how == "mean" else blue_scores
+        assert len(texts1) == len(texts2), (
+            """Lists 'texts1' and 'texts2' must be of equal length."""
+        )
+        if show_progress_bars:
+            self.progress_bar = start_progress_bar(existing_progress_bar)
+            self.progress_bar_task = self.progress_bar.add_task(
+                f"Computing Counterfactual BLEU scores...",
+                total=len(texts1),
+            )
+        bleu_scores = []
+        for t1, t2 in zip(texts1, texts2):
+            score = self._calc_bleu(t1, t2)
+            bleu_scores.append(score)
+            if self.progress_bar: 
+                self.progress_bar.update(self.progress_bar_task, advance=1) 
+        stop_progress_bar(self.progress_bar)
+        return np.mean(bleu_scores) if self.how == "mean" else bleu_scores
 
     @staticmethod
     def _calc_bleu(text1: str, text2: str) -> float:

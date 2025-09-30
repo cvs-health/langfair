@@ -13,11 +13,14 @@
 # limitations under the License.
 
 from typing import Any, List, Optional
+import time
 
 import numpy as np
 from transformers import pipeline
+from rich.progress import Progress
 
 from langfair.metrics.counterfactual.metrics.baseclass.metrics import Metric
+from langfair.utils.display import start_progress_bar, stop_progress_bar
 
 
 class SentimentBias(Metric):
@@ -71,15 +74,15 @@ class SentimentBias(Metric):
         assert classifier in [
             "vader",
             "roberta",
-        ], "langfair: Currently, only 'vader' and 'roberta' classifiers are supported."
+        ], "Currently, only 'vader' and 'roberta' classifiers are supported."
         assert sentiment in [
             "pos",
             "neg",
-        ], "langfair: Only 'pos' and 'neg' are accepted for sentiment."
+        ], "Only 'pos' and 'neg' are accepted for sentiment."
         assert parity in [
             "weak",
             "strong",
-        ], "langfair: parity must be either 'weak' or 'strong'."
+        ], "parity must be either 'weak' or 'strong'."
         self.name = "Sentiment Bias"
         self.classifier = classifier
         self.sentiment = sentiment
@@ -88,7 +91,8 @@ class SentimentBias(Metric):
         self.how = how
         self.device = device
         self.custom_classifier = custom_classifier
-
+        self.progress_bar = None
+        
         if custom_classifier:
             if not hasattr(custom_classifier, "predict"):
                 raise TypeError("custom_classifier must have an predict method")
@@ -105,7 +109,13 @@ class SentimentBias(Metric):
                 device=self.device,
             )
 
-    def evaluate(self, texts1: List[str], texts2: List[str]) -> float:
+    def evaluate(
+        self, 
+        texts1: List[str], 
+        texts2: List[str],
+        show_progress_bars: bool = True,
+        existing_progress_bar: Progress = None,
+    ) -> float:
         """
         Returns counterfactual sentiment bias between two counterfactually generated
         lists LLM outputs by leveraging a third-party sentiment classifier.
@@ -121,6 +131,12 @@ class SentimentBias(Metric):
             mention of the same protected attribute group. The mentioned protected attribute group must be a different
             group within the same protected attribute as mentioned in `texts1`.
 
+        show_progress_bars : bool, default=True
+            If True, displays progress bars while evaluating metrics.
+
+        existing_progress_bar : rich.progress.Progress, default=None
+            If provided, the progress bar will be updated with the existing progress bar.
+
         Returns
         -------
         float
@@ -131,12 +147,15 @@ class SentimentBias(Metric):
         .. footbibliography::
         """
         assert len(texts1) == len(texts2), """
-        langfair: `texts1` and `texts2` must be of equal length
+        Lists `texts1` and `texts2` must be of equal length
         """
-        group_dists = []
-
-        for texts in [texts1, texts2]:
-            group_dists.append(self._get_sentiment_scores(texts))
+        if show_progress_bars:
+            self.progress_bar = start_progress_bar(existing_progress_bar)
+            self.progress_bar_task = self.progress_bar.add_task(
+                f"Computing Counterfactual Sentiment scores...",
+                total=len(texts1),
+            )
+        group_dists = self._get_sentiment_scores(texts1, texts2)
 
         if self.parity == "weak":
             group_preds_1 = [(s > self.threshold) * 1 for s in group_dists[0]]
@@ -145,6 +164,8 @@ class SentimentBias(Metric):
         elif self.parity == "strong":
             parity_value = self._wasserstein_1_dist(group_dists[0], group_dists[1])
         self.parity_value = parity_value
+        
+        stop_progress_bar(self.progress_bar)
 
         return (
             parity_value
@@ -155,21 +176,31 @@ class SentimentBias(Metric):
             ]
         )
 
-    def _get_sentiment_scores(self, texts: List[str]) -> List[float]:
+    def _get_sentiment_scores(self, texts1: List[str], texts2: List[str]) -> List[float]:
         """Get sentiment scores"""
+        group1_scores, group2_scores = [], []
         if self.custom_classifier:
-            return self.custom_classifier.predict(texts)
+            group1_scores = self.custom_classifier.predict(texts1)
+            group2_scores = self.custom_classifier.predict(texts2)
+        else:
+            for text1, text2 in zip(texts1, texts2):
+                if self.classifier == "vader":
+                    group1_scores.append(
+                        self.classifier_instance.polarity_scores(text1)[self.sentiment]
+                    )
+                    group2_scores.append(
+                        self.classifier_instance.polarity_scores(text2)[self.sentiment]
+                    )
 
-        elif self.classifier == "vader":
-            scores = [self.classifier_instance.polarity_scores(text) for text in texts]
-            return [score[self.sentiment] for score in scores]
-
-        elif self.classifier == "roberta":
-            results = self.classifier_instance(texts, return_all_scores=True)
-            if self.sentiment == "pos":
-                return [r[1]["score"] for r in results]
-            return [r[0]["score"] for r in results]
-
+                elif self.classifier == "roberta":
+                    group1_result = self.classifier_instance(texts1, return_all_scores=True)
+                    group2_result = self.classifier_instance(texts2, return_all_scores=True)
+                    group1_scores.append(group1_result[1]["score"] if self.sentiment == "pos" else group1_result[0]["score"])
+                    group2_scores.append(group2_result[1]["score"] if self.sentiment == "pos" else group2_result[0]["score"])
+                if self.progress_bar:
+                    self.progress_bar.update(self.progress_bar_task, advance=1)
+        return [group1_scores, group2_scores]
+    
     @staticmethod
     def _wasserstein_1_dist(array1, array2):
         """Compute Wasserstein-1 distance"""

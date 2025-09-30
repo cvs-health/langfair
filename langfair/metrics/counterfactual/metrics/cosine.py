@@ -13,13 +13,16 @@
 # limitations under the License.
 
 import os
+import time
 from typing import Any, List, Tuple, Union
 
 import numpy as np
 from numpy.linalg import norm
+from rich.progress import Progress
 from sentence_transformers import SentenceTransformer
 
 from langfair.metrics.counterfactual.metrics.baseclass.metrics import Metric
+from langfair.utils.display import start_progress_bar, stop_progress_bar
 
 
 class CosineSimilarity(Metric):
@@ -55,9 +58,14 @@ class CosineSimilarity(Metric):
             if not os.path.exists(transformer)
             else transformer
         )
+        self.progress_bar = None
 
     def evaluate(
-        self, texts1: List[str], texts2: List[str]
+        self, 
+        texts1: List[str], 
+        texts2: List[str],
+        show_progress_bars: bool = True,
+        existing_progress_bar: Progress = None,
     ) -> Union[float, List[float]]:
         """
         Returns mean cosine similarity between two counterfactually generated
@@ -74,22 +82,47 @@ class CosineSimilarity(Metric):
             mention of the same protected attribute group. The mentioned protected attribute group must be a different
             group within the same protected attribute as mentioned in `texts1`.
 
+        show_progress_bars : bool, default=True
+            If True, displays progress bars while evaluating metrics.
+
+        existing_progress_bar : rich.progress.Progress, default=None
+            If provided, the progress bar will be updated with the existing progress bar.
+
         Returns
         -------
         float
             Mean cosine similarity score for provided lists of texts.
         """
         assert len(texts1) == len(texts2), (
-            """langfair: Lists 'texts1' and 'texts2' must be of equal length."""
+            """Lists 'texts1' and 'texts2' must be of equal length."""
         )
-
-        embeddings1, embeddings2 = self._get_embeddings(
+        if show_progress_bars:
+            self.progress_bar = start_progress_bar(existing_progress_bar)
+            self.progress_bar_task = self.progress_bar.add_task(
+                f"Computing Counterfactual Cosine Similarity scores...",
+                total=len(texts1),
+            )
+            
+        embeddings1_list, embeddings2_list = self._get_embeddings(
             transformer=self.transformer_instance,
             texts1=list(texts1),
             texts2=list(texts2),
         )
-        cosine = self._calc_cosine_sim(embeddings1, embeddings2)
-        return np.mean(cosine) if self.how == "mean" else cosine
+        cosine_list = []
+        for e1, e2 in zip(embeddings1_list, embeddings2_list):
+            cosine_list.append(self._calc_cosine_sim(e1, e2))
+            if self.progress_bar: 
+                self.progress_bar.update(self.progress_bar_task, advance=1) 
+        stop_progress_bar(self.progress_bar)
+        return np.mean(cosine_list) if self.how == "mean" else cosine_list
+    
+    def _calc_cosine_sim(self, embeddings1: Any, embeddings2: Any) -> List[float]:
+        """
+        Helper function to get cosine similarity
+        """
+        return np.dot(embeddings1, embeddings2) / (
+            norm(embeddings1) * norm(embeddings2)
+        )
 
     @staticmethod
     def _get_embeddings(
@@ -98,19 +131,7 @@ class CosineSimilarity(Metric):
         """
         Helper function to get embeddings
         """
-        embeddings1 = transformer.encode(texts1)
-        embeddings2 = transformer.encode(texts2)
-        return embeddings1, embeddings2
+        embeddings1_list = transformer.encode(texts1)
+        embeddings2_list = transformer.encode(texts2)
+        return embeddings1_list, embeddings2_list
 
-    @staticmethod
-    def _calc_cosine_sim(embeddings1: Any, embeddings2: Any) -> List[float]:
-        """
-        Helper function to get cosine dist
-        """
-        cosine_list = []
-        for i in range(0, len(embeddings1)):
-            cosine_i = np.dot(embeddings1[i], embeddings2[i]) / (
-                norm(embeddings1[i]) * norm(embeddings2[i])
-            )
-            cosine_list.append(cosine_i)
-        return cosine_list
