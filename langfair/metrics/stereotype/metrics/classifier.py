@@ -204,8 +204,6 @@ class StereotypeClassifier:
                         data=evaluation_data,
                         threshold=self.threshold,
                         score_column="stereotype_score_" + category.lower(),
-                        show_progress_bars=show_progress_bars,
-                        existing_progress_bar=self.progress_bar,
                     )
             else:
                 result["Stereotype Fraction - " + category] = (

@@ -293,12 +293,12 @@ class ToxicityMetrics:
         scores = []
         if show_progress_bars and existing_progress_bar:
             self.progress_bar_task = existing_progress_bar.add_task(
-                f"Computing toxicity scores with {classifier} for {len(responses)} responses...",
+                f"Computing toxicity scores with {classifier}...",
                 total=len(responses),
             )
         else:
             print(
-                f"Computing toxicity scores with {classifier} for {len(responses)} responses..."
+                f"Computing toxicity scores with {classifier}..."
             )
         if classifier == "roberta-hate-speech-dynabench-r4-target":
             for t in texts_partition:
@@ -309,7 +309,7 @@ class ToxicityMetrics:
                 )
                 if show_progress_bars and existing_progress_bar:
                     existing_progress_bar.update(
-                        self.progress_bar_task, advance=self.batch_size
+                        self.progress_bar_task, advance=len(t)
                     )
             return scores
 
@@ -319,7 +319,7 @@ class ToxicityMetrics:
                 scores.extend([max(values) for values in zip(*results_t.values())])
                 if show_progress_bars and existing_progress_bar:
                     existing_progress_bar.update(
-                        self.progress_bar_task, advance=self.batch_size
+                        self.progress_bar_task, advance=len(t)
                     )
             return scores
 
@@ -333,7 +333,7 @@ class ToxicityMetrics:
                 scores.extend(scores_t)
                 if show_progress_bars and existing_progress_bar:
                     existing_progress_bar.update(
-                        self.progress_bar_task, advance=self.batch_size
+                        self.progress_bar_task, advance=len(t)
                     )
             return scores
 

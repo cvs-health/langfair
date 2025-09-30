@@ -400,7 +400,7 @@ class CounterfactualGenerator(ResponseGenerator):
             prompt_key = group + "_prompt"
             if self.progress_bar:
                 self.progress_task = self.progress_bar.add_task(
-                    f"[Task] Generating {count} responses for each {group} prompt",
+                    f"[Task]Generating {count} responses for each {group} prompt...",
                     total=len(prompts_dict[prompt_key]) * self.count,
                 )
             try:
@@ -551,7 +551,7 @@ class CounterfactualGenerator(ResponseGenerator):
         """
         if self.progress_bar:
             self.progress_bar.add_task(
-                f"[No Progress Bar] {attribute_to_print} words found in {len(prompts_subset)} prompts."
+                f"[No Progress Bar]{attribute_to_print} words found in {len(prompts_subset)} prompts."
             )
         else:
             print(f"{attribute_to_print} words found in {len(prompts_subset)} prompts.")

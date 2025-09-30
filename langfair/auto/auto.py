@@ -23,11 +23,8 @@ from langfair.metrics.counterfactual import CounterfactualMetrics
 from langfair.metrics.stereotype import StereotypeMetrics
 from langfair.metrics.toxicity import ToxicityMetrics
 from langfair.utils.display import (
-    ConditionalBarColumn,
-    ConditionalSpinnerColumn,
-    ConditionalTextColumn,
-    ConditionalTextPercentageColumn,
-    ConditionalTimeElapsedColumn,
+    start_progress_bar,
+    stop_progress_bar,
 )
 
 MetricTypes = Union[None, list, dict]
@@ -171,20 +168,12 @@ class AutoEval:
             self.metrics = self._validate_metrics(metrics)
 
         if show_progress_bars:
-            completion_text = "[progress.percentage]{task.completed}/{task.total}"
-            self.progress_bar = Progress(
-                ConditionalSpinnerColumn(),
-                ConditionalTextColumn("[progress.description]{task.description}"),
-                ConditionalBarColumn(),
-                ConditionalTextPercentageColumn(completion_text),
-                ConditionalTimeElapsedColumn(),
-            )
-            self.progress_bar.start()
+            self.progress_bar = start_progress_bar()
             self.progress_bar.add_task(
-                "[No Progress Bar] Step 1: Fairness Through Unawareness Check"
+                "[No Progress Bar]Step 1: Fairness Through Unawareness Check"
             )
             self.progress_bar.add_task(
-                "[No Progress Bar] ------------------------------------------"
+                "[No Progress Bar]------------------------------------------"
             )
         else:
             print("Step 1: Fairness Through Unawareness Check")
@@ -204,7 +193,7 @@ class AutoEval:
             total_protected_words += protected_words[attribute]
             if show_progress_bars:
                 self.progress_bar.add_task(
-                    f"[No Progress Bar] -  Number of prompts containing {attribute} words: {protected_words[attribute]}"
+                    f"[No Progress Bar]Number of prompts containing {attribute} words: {protected_words[attribute]}"
                 )
             else:
                 print(
@@ -214,17 +203,17 @@ class AutoEval:
         if total_protected_words > 0:
             if show_progress_bars:
                 self.progress_bar.add_task(
-                    "[No Progress Bar]\n -  Note: Fairness through unawareness is not satisfied. \n Toxicity, stereotype, and counterfactual fairness \n assessments will be conducted."
+                    "[No Progress Bar]FTU is not met. Counterfactual assessment will be conducted."
                 )
                 self.progress_bar.add_task(
-                    "[No Progress Bar] \n Step 2: Generate Counterfactual Dataset"
+                    "[No Progress Bar]\nStep 2: Generate Counterfactual Dataset"
                 )
                 self.progress_bar.add_task(
-                    "[No Progress Bar] ---------------------------------------"
+                    "[No Progress Bar]---------------------------------------"
                 )
             else:
                 print(
-                    "Fairness through unawareness is not satisfied. \nToxicity, stereotype, and counterfactual fairness assessments will be conducted."
+                    "Fairness through unawareness is not satisfied. Counterfactual assessments will be included."
                 )
                 print("\nStep 2: Generate Counterfactual Dataset")
                 print("---------------------------------------")
@@ -254,20 +243,31 @@ class AutoEval:
                             # Remove this attribute from protected_words to prevent KeyError later
                             protected_words[attribute] = 0
         else:
-            print(
-                "Fairness through unawareness is satisfied. Toxicity and stereotype assessments will be conducted."
-            )
-            print("\n\033[1m(Skipping) Step 2: Generate Counterfactual Dataset\033[0m")
-            print("--------------------------------------------------")
+            if show_progress_bars:
+                self.progress_bar.add_task(
+                    "[No Progress Bar]FTU is satisfied. Counterfactual assessment will be skipped."
+                )
+                self.progress_bar.add_task(
+                    "[No Progress Bar]\n\033[1m(Skipping) Step 2: Generate Counterfactual Dataset\033[0m"
+                )
+                self.progress_bar.add_task(
+                    "[No Progress Bar]--------------------------------------------------"
+                )
+            else:
+                print(
+                    "FTU is satisfied. Counterfactual assessment will be skipped."
+                )
+                print("\n\033[1m(Skipping) Step 2: Generate Counterfactual Dataset\033[0m")
+                print("--------------------------------------------------")
 
         # 3. Generate responses for toxicity and stereotype evaluation (if responses not provided)
         if self.responses is None:
             if show_progress_bars:
                 self.progress_bar.add_task(
-                    "[No Progress Bar] \n Step 3: Generating Model Responses"
+                    "[No Progress Bar]\nStep 3: Generating Model Responses"
                 )
                 self.progress_bar.add_task(
-                    "[No Progress Bar] ----------------------------------"
+                    "[No Progress Bar]----------------------------------"
                 )
             else:
                 print("\nStep 3: Generating Model Responses")
@@ -283,10 +283,10 @@ class AutoEval:
         else:
             if show_progress_bars:
                 self.progress_bar.add_task(
-                    "[No Progress Bar] \n(Skipping) Step 3: Generating Model Responses"
+                    "[No Progress Bar]\n(Skipping) Step 3: Generating Model Responses"
                 )
                 self.progress_bar.add_task(
-                    "[No Progress Bar] ---------------------------------------------"
+                    "[No Progress Bar]---------------------------------------------"
                 )
             else:
                 print("\n(Skipping) Step 3: Generating Model Responses")
@@ -295,10 +295,10 @@ class AutoEval:
         # 4. Calculate toxicity metrics
         if show_progress_bars:
             self.progress_bar.add_task(
-                "[No Progress Bar] \n Step 4: Evaluate Toxicity Metrics"
+                "[No Progress Bar]\nStep 4: Evaluate Toxicity Metrics"
             )
             self.progress_bar.add_task(
-                "[No Progress Bar] ---------------------------------"
+                "[No Progress Bar]---------------------------------"
             )
         else:
             print("\nStep 4: Evaluate Toxicity Metrics")
@@ -308,6 +308,7 @@ class AutoEval:
             prompts=list(self.prompts),
             responses=list(self.responses),
             return_data=True,
+            show_progress_bars=show_progress_bars,
             existing_progress_bar=self.progress_bar,
         )
         self.results["metrics"]["Toxicity"] = toxicity_results["metrics"]
@@ -319,10 +320,10 @@ class AutoEval:
         # 5. Calculate stereotype metrics
         if show_progress_bars:
             self.progress_bar.add_task(
-                "[No Progress Bar] \n Step 5: Evaluate Stereotype Metrics"
+                "[No Progress Bar]\nStep 5: Evaluate Stereotype Metrics"
             )
             self.progress_bar.add_task(
-                "[No Progress Bar] -----------------------------------"
+                "[No Progress Bar]-----------------------------------"
             )
         else:
             print("\nStep 5: Evaluate Stereotype Metrics")
@@ -340,6 +341,7 @@ class AutoEval:
             responses=list(self.responses),
             return_data=True,
             categories=attributes,
+            show_progress_bars=show_progress_bars,
             existing_progress_bar=self.progress_bar,
         )
         self.results["metrics"]["Stereotype"] = stereotype_results["metrics"]
@@ -352,10 +354,10 @@ class AutoEval:
         if total_protected_words > 0 and "counterfactual" in self.metrics:
             if show_progress_bars:
                 self.progress_bar.add_task(
-                    "[No Progress Bar] \n Step 6: Evaluate Counterfactual Metrics"
+                    "[No Progress Bar]\nStep 6: Evaluate Counterfactual Metrics"
                 )
                 self.progress_bar.add_task(
-                    "[No Progress Bar] ---------------------------------------"
+                    "[No Progress Bar]---------------------------------------"
                 )
             else:
                 print("\nStep 6: Evaluate Counterfactual Metrics")
@@ -368,21 +370,16 @@ class AutoEval:
                 transformer=self.counterfactual_transformer,
                 sentiment_classifier=self.counterfactual_sentiment_classifier,
             )
-            if show_progress_bars:
-                total_pairs = 0
-                for attribute in Protected_Attributes.keys():
-                    if protected_words[attribute] > 0:
-                        total_pairs += len(
-                            list(combinations(Protected_Attributes[attribute], 2))
-                        )
-                self.progress_bar.add_task(
-                    "[No Progress Bar] -  Evaluating counterfactual metrics...",
-                )
             for attribute in Protected_Attributes.keys():
                 if (
                     protected_words[attribute] > 0
                     and attribute in self.counterfactual_responses
                 ):
+                    if show_progress_bars:
+                        cf_task = self.progress_bar.add_task(
+                            f"Computing counterfactual metrics for {attribute}...",
+                            total=protected_words[attribute],
+                        )
                     for group1, group2 in combinations(
                         Protected_Attributes[attribute], 2
                     ):
@@ -405,6 +402,7 @@ class AutoEval:
                             ],
                             attribute=attribute,
                             return_data=True,
+                            show_progress_bars=False,
                         )
                         self.results["metrics"]["Counterfactual"][
                             f"{group1}-{group2}"
@@ -412,16 +410,18 @@ class AutoEval:
                         self.counterfactual_data[f"{group1}-{group2}"] = (
                             cf_group_results["data"]
                         )
+                    if show_progress_bars:
+                        self.progress_bar.update(cf_task, advance=protected_words[attribute])
         else:
             if show_progress_bars:
                 self.progress_bar.add_task(
-                    "[No Progress Bar] \n (Skipping) Step 6: Evaluate Counterfactual Metrics"
+                    "[No Progress Bar]\n(Skipping) Step 6: Evaluate Counterfactual Metrics"
                 )
                 self.progress_bar.add_task(
-                    "[No Progress Bar] --------------------------------------------------"
+                    "[No Progress Bar]--------------------------------------------------"
                 )
             else:
-                print("\n (Skipping) Step 6: Evaluate Counterfactual Metrics")
+                print("\n(Skipping) Step 6: Evaluate Counterfactual Metrics")
                 print("--------------------------------------------------")
             # Initialize empty counterfactual_data when metrics are skipped
             self.counterfactual_data = {}
@@ -432,8 +432,7 @@ class AutoEval:
             self.results["data"]["Counterfactual"] = self.counterfactual_data
 
         if show_progress_bars and self.progress_bar:
-            self.progress_bar.add_task("[No Progress Bar] -  Evaluation complete.")
-            self.progress_bar.stop()
+            stop_progress_bar(self.progress_bar)
         else:
             print("Evaluation complete.")
 
