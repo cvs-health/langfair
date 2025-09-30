@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
 from typing import Dict, List, Union
 
 from rich.progress import Progress
@@ -24,11 +23,6 @@ from langfair.metrics.stereotype.metrics import (
 )
 from langfair.metrics.stereotype.metrics.baseclass.metrics import Metric
 from langfair.utils.display import (
-    ConditionalBarColumn,
-    ConditionalSpinnerColumn,
-    ConditionalTextColumn,
-    ConditionalTextPercentageColumn,
-    ConditionalTimeElapsedColumn,
     start_progress_bar,
     stop_progress_bar,
 )
@@ -113,7 +107,9 @@ class StereotypeMetrics:
         ----------
         .. footbibliography::
         """
-        self.progress_bar = start_progress_bar(existing_progress_bar) if show_progress_bars else None
+        self.progress_bar = (
+            start_progress_bar(existing_progress_bar) if show_progress_bars else None
+        )
 
         metric_values = {}
         for metric in self.metrics:

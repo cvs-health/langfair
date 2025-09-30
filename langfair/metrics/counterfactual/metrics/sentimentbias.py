@@ -13,11 +13,10 @@
 # limitations under the License.
 
 from typing import Any, List, Optional
-import time
 
 import numpy as np
-from transformers import pipeline
 from rich.progress import Progress
+from transformers import pipeline
 
 from langfair.metrics.counterfactual.metrics.baseclass.metrics import Metric
 from langfair.utils.display import start_progress_bar, stop_progress_bar
@@ -92,7 +91,7 @@ class SentimentBias(Metric):
         self.device = device
         self.custom_classifier = custom_classifier
         self.progress_bar = None
-        
+
         if custom_classifier:
             if not hasattr(custom_classifier, "predict"):
                 raise TypeError("custom_classifier must have an predict method")
@@ -110,8 +109,8 @@ class SentimentBias(Metric):
             )
 
     def evaluate(
-        self, 
-        texts1: List[str], 
+        self,
+        texts1: List[str],
         texts2: List[str],
         show_progress_bars: bool = True,
         existing_progress_bar: Progress = None,
@@ -152,7 +151,7 @@ class SentimentBias(Metric):
         if show_progress_bars:
             self.progress_bar = start_progress_bar(existing_progress_bar)
             self.progress_bar_task = self.progress_bar.add_task(
-                f"Computing Counterfactual Sentiment scores...",
+                "Computing Counterfactual Sentiment scores...",
                 total=len(texts1),
             )
         group_dists = self._get_sentiment_scores(texts1, texts2)
@@ -164,7 +163,7 @@ class SentimentBias(Metric):
         elif self.parity == "strong":
             parity_value = self._wasserstein_1_dist(group_dists[0], group_dists[1])
         self.parity_value = parity_value
-        
+
         stop_progress_bar(self.progress_bar)
 
         return (
@@ -176,7 +175,9 @@ class SentimentBias(Metric):
             ]
         )
 
-    def _get_sentiment_scores(self, texts1: List[str], texts2: List[str]) -> List[float]:
+    def _get_sentiment_scores(
+        self, texts1: List[str], texts2: List[str]
+    ) -> List[float]:
         """Get sentiment scores"""
         group1_scores, group2_scores = [], []
         if self.custom_classifier:
@@ -193,14 +194,26 @@ class SentimentBias(Metric):
                     )
 
                 elif self.classifier == "roberta":
-                    group1_result = self.classifier_instance(texts1, return_all_scores=True)
-                    group2_result = self.classifier_instance(texts2, return_all_scores=True)
-                    group1_scores.append(group1_result[1]["score"] if self.sentiment == "pos" else group1_result[0]["score"])
-                    group2_scores.append(group2_result[1]["score"] if self.sentiment == "pos" else group2_result[0]["score"])
+                    group1_result = self.classifier_instance(
+                        texts1, return_all_scores=True
+                    )
+                    group2_result = self.classifier_instance(
+                        texts2, return_all_scores=True
+                    )
+                    group1_scores.append(
+                        group1_result[1]["score"]
+                        if self.sentiment == "pos"
+                        else group1_result[0]["score"]
+                    )
+                    group2_scores.append(
+                        group2_result[1]["score"]
+                        if self.sentiment == "pos"
+                        else group2_result[0]["score"]
+                    )
                 if self.progress_bar:
                     self.progress_bar.update(self.progress_bar_task, advance=1)
         return [group1_scores, group2_scores]
-    
+
     @staticmethod
     def _wasserstein_1_dist(array1, array2):
         """Compute Wasserstein-1 distance"""

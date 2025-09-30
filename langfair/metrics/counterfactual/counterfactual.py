@@ -116,7 +116,7 @@ class CounterfactualMetrics:
 
         return_data : bool, default=False
             Indicates whether to include response-level counterfactual scores in results dictionary returned by this method.
-            
+
         show_progress_bars : bool, default=True
             If True, displays progress bars while evaluating metrics.
 
@@ -136,22 +136,29 @@ class CounterfactualMetrics:
             assert attribute in [
                 "gender",
                 "race",
-            ], """To neutralize tokens, 'attribute' should be either "gender" or "race"."""
+            ], (
+                """To neutralize tokens, 'attribute' should be either "gender" or "race"."""
+            )
             masked_texts1 = self.cf_generator.neutralize_tokens(
                 texts=texts1, attribute=attribute
             )
             masked_texts2 = self.cf_generator.neutralize_tokens(
                 texts=texts2, attribute=attribute
             )
-            
-        self.progress_bar = start_progress_bar(existing_progress_bar) if show_progress_bars else None
-            
+
+        self.progress_bar = (
+            start_progress_bar(existing_progress_bar) if show_progress_bars else None
+        )
+
         metric_values = {}
         response_scores = {"texts1": texts1, "texts2": texts2}
         for metric in self.metrics:
             if metric.name == "Sentiment Bias":
                 scores = metric.evaluate(
-                    texts1=texts1, texts2=texts2, show_progress_bars=show_progress_bars, existing_progress_bar=self.progress_bar
+                    texts1=texts1,
+                    texts2=texts2,
+                    show_progress_bars=show_progress_bars,
+                    existing_progress_bar=self.progress_bar,
                 )
                 metric_values[metric.name] = metric.parity_value
             else:
@@ -160,16 +167,22 @@ class CounterfactualMetrics:
                     and self.neutralize_tokens
                 ):
                     scores = metric.evaluate(
-                        texts1=masked_texts1, texts2=masked_texts2, show_progress_bars=show_progress_bars, existing_progress_bar=self.progress_bar
+                        texts1=masked_texts1,
+                        texts2=masked_texts2,
+                        show_progress_bars=show_progress_bars,
+                        existing_progress_bar=self.progress_bar,
                     )
                 else:
                     scores = metric.evaluate(
-                        texts1=texts1, texts2=texts2, show_progress_bars=show_progress_bars, existing_progress_bar=self.progress_bar
+                        texts1=texts1,
+                        texts2=texts2,
+                        show_progress_bars=show_progress_bars,
+                        existing_progress_bar=self.progress_bar,
                     )
                 metric_values[metric.name] = np.mean(scores)
 
             response_scores[metric.name] = scores
-            
+
         stop_progress_bar(self.progress_bar)
         result = {"metrics": metric_values}
         if return_data:

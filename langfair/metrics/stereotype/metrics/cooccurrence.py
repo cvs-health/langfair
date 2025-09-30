@@ -15,7 +15,6 @@
 import itertools
 import math
 import re
-import time
 from typing import Dict, List, Tuple, Union
 
 import nltk
@@ -30,11 +29,6 @@ from langfair.constants.word_lists import (
     PROFESSION_LIST,
 )
 from langfair.utils.display import (
-    ConditionalBarColumn,
-    ConditionalSpinnerColumn,
-    ConditionalTextColumn,
-    ConditionalTextPercentageColumn,
-    ConditionalTimeElapsedColumn,
     start_progress_bar,
     stop_progress_bar,
 )
@@ -194,7 +188,7 @@ class CooccurrenceBiasMetric:
                     )
                 )
         cobs_scores_list = [float(s) for s in cobs_scores.values() if s is not None]
-    
+
         if len(cobs_scores_list) == 0:
             if show_progress_bars:
                 self.progress_bar.add_task(
@@ -258,7 +252,7 @@ class CooccurrenceBiasMetric:
         tot_co_counts = {}
         if self.progress_bar:
             progress_bar_task = self.progress_bar.add_task(
-                f"Computing Co-Occurrence Bias Scores...",
+                "Computing Co-Occurrence Bias Scores...",
                 total=len(tokenized_texts),
             )
         for text in tokenized_texts:

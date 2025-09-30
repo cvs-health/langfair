@@ -10,7 +10,6 @@
 
 import asyncio
 import itertools
-import time
 import warnings
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -34,12 +33,7 @@ from langfair.constants.word_lists import (
 )
 from langfair.generator.generator import ResponseGenerator
 from langfair.utils.display import (
-    ConditionalBarColumn,
-    ConditionalSpinnerColumn,
-    ConditionalTextColumn,
-    ConditionalTextPercentageColumn,
-    ConditionalTimeElapsedColumn,
-    start_progress_bar, 
+    start_progress_bar,
     stop_progress_bar,
 )
 
@@ -392,7 +386,7 @@ class CounterfactualGenerator(ResponseGenerator):
 
         if show_progress_bars:
             self.progress_bar = start_progress_bar(existing_progress_bar)
-            
+
         # create counterfactual prompts
         groups = self.group_mapping[attribute] if attribute else custom_dict.keys()
         prompts_dict = self.create_prompts(

@@ -14,9 +14,7 @@
 
 import statistics
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
-
-from rich.progress import Progress
+from typing import Any, Dict, List
 
 
 class Metric(ABC):

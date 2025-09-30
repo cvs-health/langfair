@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import math
-import time
 from typing import Any, Dict, List, Optional, Union
 
 from rich.progress import Progress
@@ -23,15 +21,7 @@ from langfair.metrics.utils.classifier_metrics import (
     Fraction,
     Probability,
 )
-from langfair.utils.display import (
-    ConditionalBarColumn,
-    ConditionalSpinnerColumn,
-    ConditionalTextColumn,
-    ConditionalTextPercentageColumn,
-    ConditionalTimeElapsedColumn,
-    start_progress_bar, 
-    stop_progress_bar
-)
+from langfair.utils.display import start_progress_bar, stop_progress_bar
 
 MetricType = Union[None, list[str]]
 DefaultMetricObjects = {
@@ -318,7 +308,9 @@ class ToxicityMetrics:
                     ]
                 )
                 if show_progress_bars and existing_progress_bar:
-                    existing_progress_bar.update(self.progress_bar_task, advance=self.batch_size)
+                    existing_progress_bar.update(
+                        self.progress_bar_task, advance=self.batch_size
+                    )
             return scores
 
         elif classifier in AvailableClassifiers[:3]:
@@ -326,7 +318,9 @@ class ToxicityMetrics:
                 results_t = self.classifier_objects[classifier].predict(t)
                 scores.extend([max(values) for values in zip(*results_t.values())])
                 if show_progress_bars and existing_progress_bar:
-                    existing_progress_bar.update(self.progress_bar_task, advance=self.batch_size)
+                    existing_progress_bar.update(
+                        self.progress_bar_task, advance=self.batch_size
+                    )
             return scores
 
         elif classifier == "toxigen":
@@ -338,7 +332,9 @@ class ToxicityMetrics:
                 ]
                 scores.extend(scores_t)
                 if show_progress_bars and existing_progress_bar:
-                    existing_progress_bar.update(self.progress_bar_task, advance=self.batch_size)
+                    existing_progress_bar.update(
+                        self.progress_bar_task, advance=self.batch_size
+                    )
             return scores
 
     @staticmethod

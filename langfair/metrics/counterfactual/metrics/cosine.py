@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import os
-import time
 from typing import Any, List, Tuple, Union
 
 import numpy as np
@@ -61,8 +60,8 @@ class CosineSimilarity(Metric):
         self.progress_bar = None
 
     def evaluate(
-        self, 
-        texts1: List[str], 
+        self,
+        texts1: List[str],
         texts2: List[str],
         show_progress_bars: bool = True,
         existing_progress_bar: Progress = None,
@@ -99,10 +98,10 @@ class CosineSimilarity(Metric):
         if show_progress_bars:
             self.progress_bar = start_progress_bar(existing_progress_bar)
             self.progress_bar_task = self.progress_bar.add_task(
-                f"Computing Counterfactual Cosine Similarity scores...",
+                "Computing Counterfactual Cosine Similarity scores...",
                 total=len(texts1),
             )
-            
+
         embeddings1_list, embeddings2_list = self._get_embeddings(
             transformer=self.transformer_instance,
             texts1=list(texts1),
@@ -111,11 +110,11 @@ class CosineSimilarity(Metric):
         cosine_list = []
         for e1, e2 in zip(embeddings1_list, embeddings2_list):
             cosine_list.append(self._calc_cosine_sim(e1, e2))
-            if self.progress_bar: 
-                self.progress_bar.update(self.progress_bar_task, advance=1) 
+            if self.progress_bar:
+                self.progress_bar.update(self.progress_bar_task, advance=1)
         stop_progress_bar(self.progress_bar)
         return np.mean(cosine_list) if self.how == "mean" else cosine_list
-    
+
     def _calc_cosine_sim(self, embeddings1: Any, embeddings2: Any) -> List[float]:
         """
         Helper function to get cosine similarity
@@ -134,4 +133,3 @@ class CosineSimilarity(Metric):
         embeddings1_list = transformer.encode(texts1)
         embeddings2_list = transformer.encode(texts2)
         return embeddings1_list, embeddings2_list
-

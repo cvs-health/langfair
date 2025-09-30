@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
 from typing import Any, Dict, List, Optional, Union
 
 from rich.progress import Progress
@@ -24,11 +23,6 @@ from langfair.metrics.utils.classifier_metrics import (
     Probability,
 )
 from langfair.utils.display import (
-    ConditionalBarColumn,
-    ConditionalSpinnerColumn,
-    ConditionalTextColumn,
-    ConditionalTextPercentageColumn,
-    ConditionalTimeElapsedColumn,
     start_progress_bar,
     stop_progress_bar,
 )
@@ -78,7 +72,7 @@ class StereotypeClassifier:
         self.batch_size = batch_size
         self.name = "Stereotype Classifier"
         self.progress_bar = None
-        
+
         self.metrics = metrics
         if isinstance(metrics[0], str):
             self.metric_names = metrics
@@ -94,7 +88,7 @@ class StereotypeClassifier:
         )
 
     def get_stereotype_scores(
-        self, 
+        self,
         responses: List[str],
         show_progress_bars: bool = True,
         existing_progress_bar: Progress = None,
@@ -107,7 +101,7 @@ class StereotypeClassifier:
         responses : list of strings
             A list of generated outputs from a language model on which classifier-based
             stereotype metrics will be calculated.
-            
+
         show_progress_bars : bool, default=True
             If True, displays progress bars while evaluating metrics.
 
@@ -118,21 +112,21 @@ class StereotypeClassifier:
         -------
         dict
             Dictionary containing response-level stereotype scores returned by stereotype classifier
-        """       
+        """
         if show_progress_bars:
             self.progress_bar = start_progress_bar(existing_progress_bar)
             self.progress_bar_task = self.progress_bar.add_task(
-                f"Computing Stereotype Classifier scores...",
+                "Computing Stereotype Classifier scores...",
                 total=len(responses),
             )
-        
+
         score_dicts = []
         for response in responses:
             if self.progress_bar:
                 self.progress_bar.update(self.progress_bar_task, advance=1)
             score_dict_r = self.classifier_instance(response)
             score_dicts.extend(score_dict_r)
-            
+
         stereotype_scores = {
             key: [d[key] for d in score_dicts] for key in score_dicts[0]
         }
@@ -146,7 +140,7 @@ class StereotypeClassifier:
                 data["stereotype_score_" + category.lower()].append(
                     score if label == "stereotype_" + category.lower() else 0.0
                 )
-                
+
         stop_progress_bar(self.progress_bar)
         return data
 
@@ -193,7 +187,11 @@ class StereotypeClassifier:
         if categories is not None:
             self.categories = categories
         if not scores:
-            evaluation_data = self.get_stereotype_scores(responses, show_progress_bars=show_progress_bars, existing_progress_bar=existing_progress_bar)
+            evaluation_data = self.get_stereotype_scores(
+                responses,
+                show_progress_bars=show_progress_bars,
+                existing_progress_bar=existing_progress_bar,
+            )
         result = {}
         for category in self.categories:
             if prompts:

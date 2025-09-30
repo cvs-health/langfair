@@ -19,7 +19,6 @@
 # with LangFair.
 
 import itertools
-import time
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
@@ -34,11 +33,6 @@ from langfair.constants.word_lists import (
     PROFESSION_LIST,
 )
 from langfair.utils.display import (
-    ConditionalBarColumn,
-    ConditionalSpinnerColumn,
-    ConditionalTextColumn,
-    ConditionalTextPercentageColumn,
-    ConditionalTimeElapsedColumn,
     start_progress_bar,
     stop_progress_bar,
 )
@@ -168,7 +162,7 @@ class StereotypicalAssociations:
         if show_progress_bars:
             self.progress_bar = start_progress_bar(existing_progress_bar)
             progress_bar_task = self.progress_bar.add_task(
-                f"Computing Stereotypical Associations scores...",
+                "Computing Stereotypical Associations scores...",
                 total=len(responses),
             )
         for response in responses:
@@ -200,7 +194,7 @@ class StereotypicalAssociations:
         # Filter out None scores
         bias_scores = [score for score in bias_scores if score is not None]
         mean_bias_score = np.array(bias_scores).mean()
-        
+
         stop_progress_bar(self.progress_bar)
         if not bias_scores:
             return None

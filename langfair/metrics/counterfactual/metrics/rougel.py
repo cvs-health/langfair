@@ -12,12 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
 from typing import List, Union
 
 import numpy as np
-from rouge_score import rouge_scorer
 from rich.progress import Progress
+from rouge_score import rouge_scorer
 
 from langfair.metrics.counterfactual.metrics.baseclass.metrics import Metric
 from langfair.utils.display import start_progress_bar, stop_progress_bar
@@ -55,9 +54,10 @@ class RougelSimilarity(Metric):
         self.rouge_scorer = rouge_scorer.RougeScorer([rouge_metric], use_stemmer=True)
         self.rouge_metric = rouge_metric
         self.progress_bar = None
-        
+
     def evaluate(
-        self, texts1: List[str], 
+        self,
+        texts1: List[str],
         texts2: List[str],
         show_progress_bars: bool = True,
         existing_progress_bar: Progress = None,
@@ -75,7 +75,7 @@ class RougelSimilarity(Metric):
             A list, analogous to `texts1` of counterfactually generated outputs from a language model each containing
             mention of the same protected attribute group. The mentioned protected attribute group must be a different
             group within the same protected attribute as mentioned in `texts1`.
-            
+
         show_progress_bars : bool, default=True
             If True, displays progress bars while evaluating metrics.
 
@@ -93,15 +93,15 @@ class RougelSimilarity(Metric):
         if show_progress_bars:
             self.progress_bar = start_progress_bar(existing_progress_bar)
             self.progress_bar_task = self.progress_bar.add_task(
-                f"Computing Counterfactual ROUGE-L scores...",
+                "Computing Counterfactual ROUGE-L scores...",
                 total=len(texts1),
             )
-        
+
         rouge_scores = []
         for t1, t2 in zip(texts1, texts2):
             score = self.rouge_scorer.score(t1, t2)[self.rouge_metric].fmeasure
             rouge_scores.append(score)
-            if self.progress_bar: 
-                self.progress_bar.update(self.progress_bar_task, advance=1) 
+            if self.progress_bar:
+                self.progress_bar.update(self.progress_bar_task, advance=1)
         stop_progress_bar(self.progress_bar)
         return np.mean(rouge_scores) if self.how == "mean" else rouge_scores

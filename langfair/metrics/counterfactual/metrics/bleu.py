@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
 from typing import List, Union
 
 import nltk
@@ -44,14 +43,15 @@ class BleuSimilarity(Metric):
         self.name = "Bleu Similarity"
         self.how = how
         self.progress_bar = None
-        
+
         try:
             word_tokenize("Check if this function can access the required corpus")
         except LookupError:
             nltk.download("punkt_tab")
 
     def evaluate(
-        self, texts1: List[str], 
+        self,
+        texts1: List[str],
         texts2: List[str],
         show_progress_bars: bool = True,
         existing_progress_bar: Progress = None,
@@ -69,7 +69,7 @@ class BleuSimilarity(Metric):
             A list, analogous to `texts1` of counterfactually generated outputs from a language model each containing
             mention of the same protected attribute group. The mentioned protected attribute group must be a different
             group within the same protected attribute as mentioned in `texts1`.
-            
+
         show_progress_bars : bool, default=True
             If True, displays progress bars while evaluating metrics.
 
@@ -87,15 +87,15 @@ class BleuSimilarity(Metric):
         if show_progress_bars:
             self.progress_bar = start_progress_bar(existing_progress_bar)
             self.progress_bar_task = self.progress_bar.add_task(
-                f"Computing Counterfactual BLEU scores...",
+                "Computing Counterfactual BLEU scores...",
                 total=len(texts1),
             )
         bleu_scores = []
         for t1, t2 in zip(texts1, texts2):
             score = self._calc_bleu(t1, t2)
             bleu_scores.append(score)
-            if self.progress_bar: 
-                self.progress_bar.update(self.progress_bar_task, advance=1) 
+            if self.progress_bar:
+                self.progress_bar.update(self.progress_bar_task, advance=1)
         stop_progress_bar(self.progress_bar)
         return np.mean(bleu_scores) if self.how == "mean" else bleu_scores
 
