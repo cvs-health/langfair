@@ -15,7 +15,7 @@
 import gc
 import json
 import os
-import platform
+import sys
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
@@ -26,8 +26,8 @@ from langfair.generator.redteaming import (
 )
 
 pytestmark = pytest.mark.skipif(
-    (os.getenv("CI") == "true") and (platform.system() == "Linux"),
-    reason="Skipping test in Ubuntu CI due to disk space issues.",
+    os.environ.get("CI") == "true" and sys.platform.startswith("linux"),
+    reason="Skipping Ubuntu CI tests due to disk space constraints",
 )
 
 
