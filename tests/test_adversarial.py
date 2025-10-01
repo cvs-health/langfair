@@ -13,9 +13,12 @@
 # limitations under the License.
 
 import gc
+import glob
 import json
 import os
+import shutil
 import sys
+import tempfile
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
@@ -24,6 +27,23 @@ from langfair.generator.redteaming import (
     INSTRUCTION_DICT,
     AdversarialGenerator,
 )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_disk():
+    """Clean up temp and cache directories to free disk space in CI."""
+    try:
+        temp_dir = tempfile.gettempdir()
+        for path in glob.glob(os.path.join(temp_dir, "*")):
+            if os.path.isdir(path):
+                shutil.rmtree(path, ignore_errors=True)
+            else:
+                os.remove(path)
+
+        shutil.rmtree(os.path.expanduser("~/.cache"), ignore_errors=True)
+        print("Disk cleanup completed.")
+    except Exception as e:
+        print("Disk cleanup failed:", e)
 
 
 @pytest.fixture(autouse=True)
