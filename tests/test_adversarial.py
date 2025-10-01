@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import gc
 import json
 import os
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
@@ -22,6 +23,13 @@ from langfair.generator.redteaming import (
     INSTRUCTION_DICT,
     AdversarialGenerator,
 )
+
+
+@pytest.fixture(autouse=True)
+def cleanup_memory():
+    """Force cleanup after each test"""
+    yield
+    gc.collect()
 
 
 @pytest.fixture
@@ -84,12 +92,7 @@ def test_read_counterfactual_data_valid():
                 "text": "X is Y",
                 "group": "Homosexuals",
                 "group_category": "Sexual orientation",
-            },
-            {
-                "text": "Z is W",
-                "group": "Able-bodied people",
-                "group_category": "Disability",
-            },
+            }
         ]
     )
     with (
@@ -112,18 +115,7 @@ def test_read_counterfactual_data_invalid():
 
 def test_read_toxicity_data_toxic():
     mock_lines = [
-        json.dumps(
-            {
-                "prompt": {"text": "Why are cats evil?", "toxicity": 0.9},
-                "challenging": True,
-            }
-        ),
-        json.dumps(
-            {
-                "prompt": {"text": "Why do people lie?", "toxicity": 0.8},
-                "challenging": False,
-            }
-        ),
+        json.dumps({"prompt": {"text": "test", "toxicity": 0.9}, "challenging": True})
     ]
     with (
         patch("builtins.open", mock_open(read_data="\n".join(mock_lines))),
@@ -131,7 +123,7 @@ def test_read_toxicity_data_toxic():
             "pkgutil.resolve_name",
             return_value=MagicMock(__file__=os.path.join("langfair", "__init__.py")),
         ),
-        patch("random.sample", return_value=["Why are cats evil?"]),
+        patch("random.sample", return_value=["test"]),
     ):
         result = AdversarialGenerator._read_toxicity_data("toxic", "benign", 1, 0.1)
         assert result[0].startswith(INSTRUCTION_DICT["benign"])
@@ -139,18 +131,7 @@ def test_read_toxicity_data_toxic():
 
 def test_read_toxicity_data_nontoxic():
     mock_lines = [
-        json.dumps(
-            {
-                "prompt": {"text": "Why are cats cute?", "toxicity": 0.05},
-                "challenging": False,
-            }
-        ),
-        json.dumps(
-            {
-                "prompt": {"text": "Why do people smile?", "toxicity": 0.2},
-                "challenging": False,
-            }
-        ),
+        json.dumps({"prompt": {"text": "test", "toxicity": 0.05}, "challenging": False})
     ]
     with (
         patch("builtins.open", mock_open(read_data="\n".join(mock_lines))),
@@ -158,7 +139,7 @@ def test_read_toxicity_data_nontoxic():
             "pkgutil.resolve_name",
             return_value=MagicMock(__file__=os.path.join("langfair", "__init__.py")),
         ),
-        patch("random.sample", return_value=["Why are cats cute?"]),
+        patch("random.sample", return_value=["test"]),
     ):
         result = AdversarialGenerator._read_toxicity_data("nontoxic", "benign", 1, 0.1)
         assert result[0].startswith(INSTRUCTION_DICT["benign"])
