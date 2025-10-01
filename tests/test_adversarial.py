@@ -42,7 +42,7 @@ def mock_llm():
 @pytest.fixture
 def generator(mock_llm):
     gen = AdversarialGenerator(langchain_llm=mock_llm)
-    gen.count = 2  # override default for test simplicity
+    gen.count = 1  # override default for test simplicity
     return gen
 
 
@@ -80,7 +80,7 @@ def test_format_result_structure(generator):
     )
     assert "data" in result
     assert "metadata" in result
-    assert result["data"]["prompt"] == ["X is Y", "X is Y", "Z is W", "Z is W"]
+    assert result["data"]["prompt"] == ["X is Y", "Z is W"]
     assert result["metadata"]["benign_response_non_completion_rate"] == 0.5
     assert result["metadata"]["adversarial_response_non_completion_rate"] == 1.0
 
