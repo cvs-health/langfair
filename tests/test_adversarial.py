@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import gc
 import json
 import os
+import platform
+import unittest
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
@@ -25,13 +26,10 @@ from langfair.generator.redteaming import (
 )
 
 
-@pytest.fixture(autouse=True)
-def cleanup_memory():
-    """Force cleanup after each test"""
-    yield
-    gc.collect()
-
-
+@unittest.skipIf(
+    (os.getenv("CI") == "true") & (platform.system() == "Linux"),
+    "Skipping test in Ubuntu CI due to disk space issues.",
+)
 @pytest.fixture
 def mock_llm():
     llm = MagicMock()
