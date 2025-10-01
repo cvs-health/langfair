@@ -25,11 +25,6 @@ from langfair.generator.redteaming import (
     AdversarialGenerator,
 )
 
-pytestmark = pytest.mark.skipif(
-    os.environ.get("CI") == "true" and sys.platform.startswith("linux"),
-    reason="Skipping Ubuntu CI tests due to disk space constraints",
-)
-
 
 @pytest.fixture(autouse=True)
 def cleanup_memory():
@@ -52,6 +47,10 @@ def generator(mock_llm):
     return gen
 
 
+@pytest.mark.skipif(
+    os.getenv("CI") == "true" and sys.platform.startswith("linux"),
+    reason="Skip on Ubuntu CI due to disk space",
+)
 @pytest.mark.asyncio
 async def test_generate_from_template_valid(generator):
     prompts = {"text": ["Alice is a", "Bob is a"]}
@@ -63,6 +62,10 @@ async def test_generate_from_template_valid(generator):
     assert len(result["benign_response"]) == 2
 
 
+@pytest.mark.skipif(
+    os.getenv("CI") == "true" and sys.platform.startswith("linux"),
+    reason="Skip on Ubuntu CI due to disk space",
+)
 @pytest.mark.asyncio
 async def test_generate_from_template_invalid_style(generator):
     with pytest.raises(ValueError):
@@ -71,6 +74,10 @@ async def test_generate_from_template_invalid_style(generator):
         )
 
 
+@pytest.mark.skipif(
+    os.getenv("CI") == "true" and sys.platform.startswith("linux"),
+    reason="Skip on Ubuntu CI due to disk space",
+)
 def test_format_result_structure(generator):
     dataset = {
         "benign_response": ["ok", "Unable to get response"],
@@ -91,6 +98,10 @@ def test_format_result_structure(generator):
     assert result["metadata"]["adversarial_response_non_completion_rate"] == 1.0
 
 
+@pytest.mark.skipif(
+    os.getenv("CI") == "true" and sys.platform.startswith("linux"),
+    reason="Skip on Ubuntu CI due to disk space",
+)
 def test_read_counterfactual_data_valid():
     mock_json = json.dumps(
         [
@@ -114,11 +125,19 @@ def test_read_counterfactual_data_valid():
         assert result["group_category"] == ["Sexual orientation"]
 
 
+@pytest.mark.skipif(
+    os.getenv("CI") == "true" and sys.platform.startswith("linux"),
+    reason="Skip on Ubuntu CI due to disk space",
+)
 def test_read_counterfactual_data_invalid():
     with pytest.raises(ValueError):
         AdversarialGenerator._read_counterfactual_data(["InvalidGroup"])
 
 
+@pytest.mark.skipif(
+    os.getenv("CI") == "true" and sys.platform.startswith("linux"),
+    reason="Skip on Ubuntu CI due to disk space",
+)
 def test_read_toxicity_data_toxic():
     mock_lines = [
         json.dumps({"prompt": {"text": "test", "toxicity": 0.9}, "challenging": True})
@@ -135,6 +154,10 @@ def test_read_toxicity_data_toxic():
         assert result[0].startswith(INSTRUCTION_DICT["benign"])
 
 
+@pytest.mark.skipif(
+    os.getenv("CI") == "true" and sys.platform.startswith("linux"),
+    reason="Skip on Ubuntu CI due to disk space",
+)
 def test_read_toxicity_data_nontoxic():
     mock_lines = [
         json.dumps({"prompt": {"text": "test", "toxicity": 0.05}, "challenging": False})
