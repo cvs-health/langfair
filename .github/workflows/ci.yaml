@@ -24,24 +24,30 @@ jobs:
           - "3.10"
           - "3.11"
           - "3.12"
-          - "3.13"
-        exclude:
-          # Temporarily exclude Python 3.13 on Windows
-          # Remove this exclusion once Python 3.13 is stable on Windows runners
-          - os: windows-latest
-            python-version: "3.13"
 
     name: Test
     runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4.2.2
         with:
           persist-credentials: false
 
+      - name: Free Disk Space (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        uses: jlumbroso/free-disk-space@main
+        with:
+         tool-cache: false
+         android: true
+         dotnet: true
+         haskell: true
+         large-packages: true
+         docker-images: true
+         swap-storage: true     
+
       - name: Set up Python
-        uses: actions/setup-python@v6.0.0
+        uses: actions/setup-python@v5.6.0
         with:
           python-version: ${{matrix.python-version}}
 
@@ -60,12 +66,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4.2.2
         with:
           persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@v6.0.0
+        uses: actions/setup-python@v5.6.0
         with:
           python-version: "3.12"
 
@@ -99,7 +105,7 @@ jobs:
       image: semgrep/semgrep:1.132.1
     if: (github.actor != 'dependabot[bot]')
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - run: semgrep scan --sarif --config auto --config "p/trailofbits" > semgrep.sarif
