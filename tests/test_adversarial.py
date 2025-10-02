@@ -12,13 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import gc
-import glob
+
 import json
 import os
-import shutil
-import sys
-import tempfile
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
@@ -27,30 +23,6 @@ from langfair.generator.redteaming import (
     INSTRUCTION_DICT,
     AdversarialGenerator,
 )
-
-
-@pytest.fixture(scope="session", autouse=True)
-def cleanup_disk():
-    """Clean up temp and cache directories to free disk space in CI."""
-    try:
-        temp_dir = tempfile.gettempdir()
-        for path in glob.glob(os.path.join(temp_dir, "*")):
-            if os.path.isdir(path):
-                shutil.rmtree(path, ignore_errors=True)
-            else:
-                os.remove(path)
-
-        shutil.rmtree(os.path.expanduser("~/.cache"), ignore_errors=True)
-        print("Disk cleanup completed.")
-    except Exception as e:
-        print("Disk cleanup failed:", e)
-
-
-@pytest.fixture(autouse=True)
-def cleanup_memory():
-    """Force cleanup after each test"""
-    yield
-    gc.collect()
 
 
 @pytest.fixture
@@ -67,10 +39,6 @@ def generator(mock_llm):
     return gen
 
 
-@pytest.mark.skipif(
-    os.getenv("CI") == "true" and sys.platform.startswith("linux"),
-    reason="Skip on Ubuntu CI due to disk space",
-)
 @pytest.mark.asyncio
 async def test_generate_from_template_valid(generator):
     prompts = {"text": ["Alice is a", "Bob is a"]}
@@ -82,10 +50,6 @@ async def test_generate_from_template_valid(generator):
     assert len(result["benign_response"]) == 2
 
 
-@pytest.mark.skipif(
-    os.getenv("CI") == "true" and sys.platform.startswith("linux"),
-    reason="Skip on Ubuntu CI due to disk space",
-)
 @pytest.mark.asyncio
 async def test_generate_from_template_invalid_style(generator):
     with pytest.raises(ValueError):
@@ -94,10 +58,6 @@ async def test_generate_from_template_invalid_style(generator):
         )
 
 
-@pytest.mark.skipif(
-    os.getenv("CI") == "true" and sys.platform.startswith("linux"),
-    reason="Skip on Ubuntu CI due to disk space",
-)
 def test_format_result_structure(generator):
     dataset = {
         "benign_response": ["ok", "Unable to get response"],
@@ -118,10 +78,6 @@ def test_format_result_structure(generator):
     assert result["metadata"]["adversarial_response_non_completion_rate"] == 1.0
 
 
-@pytest.mark.skipif(
-    os.getenv("CI") == "true" and sys.platform.startswith("linux"),
-    reason="Skip on Ubuntu CI due to disk space",
-)
 def test_read_counterfactual_data_valid():
     mock_json = json.dumps(
         [
@@ -145,19 +101,11 @@ def test_read_counterfactual_data_valid():
         assert result["group_category"] == ["Sexual orientation"]
 
 
-@pytest.mark.skipif(
-    os.getenv("CI") == "true" and sys.platform.startswith("linux"),
-    reason="Skip on Ubuntu CI due to disk space",
-)
 def test_read_counterfactual_data_invalid():
     with pytest.raises(ValueError):
         AdversarialGenerator._read_counterfactual_data(["InvalidGroup"])
 
 
-@pytest.mark.skipif(
-    os.getenv("CI") == "true" and sys.platform.startswith("linux"),
-    reason="Skip on Ubuntu CI due to disk space",
-)
 def test_read_toxicity_data_toxic():
     mock_lines = [
         json.dumps({"prompt": {"text": "test", "toxicity": 0.9}, "challenging": True})
@@ -174,10 +122,6 @@ def test_read_toxicity_data_toxic():
         assert result[0].startswith(INSTRUCTION_DICT["benign"])
 
 
-@pytest.mark.skipif(
-    os.getenv("CI") == "true" and sys.platform.startswith("linux"),
-    reason="Skip on Ubuntu CI due to disk space",
-)
 def test_read_toxicity_data_nontoxic():
     mock_lines = [
         json.dumps({"prompt": {"text": "test", "toxicity": 0.05}, "challenging": False})
