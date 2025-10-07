@@ -37,7 +37,10 @@ def fast_sleep(monkeypatch):
 def test_start_progress_bar_without_existing():
     progress = start_progress_bar()
     assert isinstance(progress, Progress)
-    assert progress.live.is_started
+    task_id = progress.add_task("[Task]Test", total=10)
+    progress.update(task_id, completed=5)
+    task = progress.tasks[task_id]
+    assert task.completed == 5
 
 
 def test_start_progress_bar_with_existing():
