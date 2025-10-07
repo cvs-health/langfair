@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+
+import pytest
 from rich.progress import Progress
 
 from langfair.utils.display import (
@@ -23,6 +26,12 @@ from langfair.utils.display import (
     start_progress_bar,
     stop_progress_bar,
 )
+
+
+# Speed up tests by disabling sleep
+@pytest.fixture(autouse=True)
+def fast_sleep(monkeypatch):
+    monkeypatch.setattr(time, "sleep", lambda x: None)
 
 
 def test_start_progress_bar_without_existing():
