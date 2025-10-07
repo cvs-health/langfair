@@ -13,8 +13,10 @@
 # limitations under the License.
 
 
+import os
 import time
 
+from rich.console import Console
 from rich.progress import (
     BarColumn,
     Progress,
@@ -65,6 +67,8 @@ class ConditionalSpinnerColumn(SpinnerColumn):
 
 def start_progress_bar(existing_progress_bar: Progress = None) -> Progress:
     """Helper function to instantiate rich Progress"""
+    console = Console(force_terminal=False)
+    disable_live = os.getenv("TESTING", "false").lower() == "true"
     if existing_progress_bar:
         progress_bar = existing_progress_bar
     else:
@@ -75,6 +79,8 @@ def start_progress_bar(existing_progress_bar: Progress = None) -> Progress:
             ConditionalBarColumn(),
             ConditionalTextPercentageColumn(completion_text),
             ConditionalTimeElapsedColumn(),
+            console=console,
+            disable=disable_live,
         )
     progress_bar.start()
     return progress_bar
