@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import itertools
+
 import pytest
 from langchain_openai import AzureChatOpenAI
 
@@ -20,7 +22,7 @@ from langfair.generator import ResponseGenerator
 
 @pytest.mark.asyncio
 async def test_generator(monkeypatch):
-    # count = 3
+    count = 3
     MOCKED_PROMPTS = ["Prompt 1", "Prompt 2", "Prompt 3"]
 
     MOCKED_RESPONSES = [
@@ -28,7 +30,9 @@ async def test_generator(monkeypatch):
         "Mocked response 2",
         "Unable to get response",
     ]
-
+    MOCKED_DUPLICATED_RESPONSES = [
+        prompt for prompt, i in itertools.product(MOCKED_RESPONSES, range(count))
+    ]
     MOCKED_RESPONSE_DICT = dict(zip(MOCKED_PROMPTS, MOCKED_RESPONSES))
 
     async def mock_async_api_call(prompt, count, *args, **kwargs):
@@ -45,3 +49,8 @@ async def test_generator(monkeypatch):
     generator_object = ResponseGenerator(langchain_llm=mock_object)
 
     monkeypatch.setattr(generator_object, "_async_api_call", mock_async_api_call)
+    data = await generator_object.generate_responses(
+        prompts=MOCKED_PROMPTS, count=count
+    )
+    assert data["data"]["response"] == MOCKED_DUPLICATED_RESPONSES
+    assert data["metadata"]["non_completion_rate"] == 1 / 3
