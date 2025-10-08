@@ -114,7 +114,7 @@ jobs:
 
       # Upload SARIF file generated in previous step
       - name: Upload SARIF result to the GitHub Security Dashboard
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: semgrep.sarif
         if: always()
