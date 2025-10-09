@@ -25,8 +25,6 @@ from langfair.utils.display import (
     ConditionalTextColumn,
     ConditionalTextPercentageColumn,
     ConditionalTimeElapsedColumn,
-    start_progress_bar,
-    stop_progress_bar,
 )
 
 
@@ -47,7 +45,7 @@ def fast_sleep(monkeypatch):
 
 
 def test_start_progress_bar_without_existing():
-    progress = start_progress_bar()
+    progress = display_module.start_progress_bar()
     assert isinstance(progress, Progress)
     task_id = progress.add_task("[Task]Test", total=10)
     progress.update(task_id, completed=5)
@@ -57,30 +55,30 @@ def test_start_progress_bar_without_existing():
 
 def test_start_progress_bar_with_existing():
     existing = Progress()
-    progress = start_progress_bar(existing)
+    progress = display_module.start_progress_bar(existing)
     assert progress is existing
     assert progress.live.is_started
 
 
 def test_stop_progress_bar_stops():
-    progress = start_progress_bar()
-    stop_progress_bar(progress)
+    progress = display_module.start_progress_bar()
+    display_module.stop_progress_bar(progress)
     assert not progress.live.is_started
 
 
 def test_task_creation_and_update():
-    progress = start_progress_bar()
+    progress = display_module.start_progress_bar()
     task_id = progress.add_task("[Task]Downloading", total=100)
     progress.update(task_id, completed=40)
     task = progress.tasks[task_id]
     assert task.description == "[Task]Downloading"
     assert task.completed == 40
     assert task.total == 100
-    stop_progress_bar(progress)
+    display_module.stop_progress_bar(progress)
 
 
 def test_conditional_columns_render_normal_task():
-    progress = start_progress_bar()
+    progress = display_module.start_progress_bar()
     task_id = progress.add_task("[Task]Processing", total=80)
     progress.update(task_id, completed=20)
     task = progress.tasks[task_id]
@@ -97,7 +95,7 @@ def test_conditional_columns_render_normal_task():
 
 
 def test_conditional_columns_render_no_progress_bar():
-    progress = start_progress_bar()
+    progress = display_module.start_progress_bar()
     task_id = progress.add_task("[No Progress Bar]Hidden", total=50)
     progress.update(task_id, completed=10)
     task = progress.tasks[task_id]
