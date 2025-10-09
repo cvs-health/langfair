@@ -13,10 +13,12 @@
 # limitations under the License.
 
 import time
+from unittest.mock import MagicMock
 
 import pytest
 from rich.progress import Progress
 
+import langfair.utils.display as display_module
 from langfair.utils.display import (
     ConditionalBarColumn,
     ConditionalSpinnerColumn,
@@ -26,6 +28,16 @@ from langfair.utils.display import (
     start_progress_bar,
     stop_progress_bar,
 )
+
+
+@pytest.fixture(autouse=True)
+def patch_display_progress(monkeypatch):
+    monkeypatch.setattr(
+        display_module, "start_progress_bar", lambda *args, **kwargs: MagicMock()
+    )
+    monkeypatch.setattr(
+        display_module, "stop_progress_bar", lambda *args, **kwargs: None
+    )
 
 
 # Speed up tests by disabling sleep
