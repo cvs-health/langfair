@@ -107,7 +107,7 @@ jobs:
 
       # upload the results for the CodeQL GitHub app to annotate the code
       - name: Save SARIF results as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: semgrep-scan-results
           path: semgrep.sarif
