@@ -13,8 +13,6 @@
 # limitations under the License.
 
 import time
-from unittest.mock import MagicMock
-
 import pytest
 from rich.progress import Progress
 
@@ -27,15 +25,8 @@ from langfair.utils.display import (
     ConditionalTimeElapsedColumn,
 )
 
-
-@pytest.fixture(autouse=True)
-def patch_display_progress(monkeypatch):
-    monkeypatch.setattr(
-        display_module, "start_progress_bar", lambda *args, **kwargs: MagicMock()
-    )
-    monkeypatch.setattr(
-        display_module, "stop_progress_bar", lambda *args, **kwargs: None
-    )
+# Ensure real Progress is used for all tests in this file (bypasses conftest monkeypatch)
+pytestmark = pytest.mark.real_progress
 
 
 # Speed up tests by disabling sleep
