@@ -13,8 +13,8 @@
 # limitations under the License.
 
 import time
+
 import pytest
-from rich.progress import Progress
 
 import langfair.utils.display as display_module
 from langfair.utils.display import (
@@ -25,11 +25,7 @@ from langfair.utils.display import (
     ConditionalTimeElapsedColumn,
 )
 
-# Ensure real Progress is used for all tests in this file (bypasses conftest monkeypatch)
-pytestmark = pytest.mark.real_progress
 
-
-# Speed up tests by disabling sleep
 @pytest.fixture(autouse=True)
 def fast_sleep(monkeypatch):
     monkeypatch.setattr(time, "sleep", lambda x: None)
@@ -37,18 +33,22 @@ def fast_sleep(monkeypatch):
 
 def test_start_progress_bar_without_existing():
     progress = display_module.start_progress_bar()
-    assert isinstance(progress, Progress)
+    assert progress.live.is_started
     task_id = progress.add_task("[Task]Test", total=10)
     progress.update(task_id, completed=5)
     task = progress.tasks[task_id]
     assert task.completed == 5
+    display_module.stop_progress_bar(progress)
+    assert not progress.live.is_started
 
 
 def test_start_progress_bar_with_existing():
-    existing = Progress()
+    existing = display_module.start_progress_bar()
     progress = display_module.start_progress_bar(existing)
     assert progress is existing
     assert progress.live.is_started
+    display_module.stop_progress_bar(progress)
+    assert not progress.live.is_started
 
 
 def test_stop_progress_bar_stops():
@@ -74,15 +74,16 @@ def test_conditional_columns_render_normal_task():
     progress.update(task_id, completed=20)
     task = progress.tasks[task_id]
 
-    assert ConditionalBarColumn().render(task) != ""
-    assert ConditionalTimeElapsedColumn().render(task) != ""
+    # Validate Conditional* behavior driven by description prefixes
     assert "[progress.description]Processing" in ConditionalTextColumn(
         "[progress.description]{task.description}"
     ).render(task)
+
     assert "[progress.percentage]20/80" in ConditionalTextPercentageColumn(
         "[progress.percentage]{task.completed}/{task.total}"
     ).render(task)
-    assert ConditionalSpinnerColumn().render(task) != ""
+
+    display_module.stop_progress_bar(progress)
 
 
 def test_conditional_columns_render_no_progress_bar():

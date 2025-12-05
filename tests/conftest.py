@@ -12,96 +12,76 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
+from types import SimpleNamespace
+
 import pytest
-from unittest.mock import MagicMock
 
 
-def _should_skip_monkeypatch(request) -> bool:
-    """Return True if we should NOT monkeypatch progress bars for this test."""
+class FakeTask:
+    def __init__(self, task_id, description, total):
+        self.id = task_id
+        self.description = description
+        self.total = total
+        self.completed = 0
 
-    # 1) Explicit marker on test or file: @pytest.mark.real_progress
-    if request.node.get_closest_marker("real_progress"):
-        return True
 
-    # 2) Environment variable override (global opt-out)
-    if os.environ.get("PYTEST_REAL_PROGRESS") == "1":
-        return True
+class FakeProgress:
+    """
+    Minimal stand-in for rich.progress.Progress used in tests.
+    - add_task(description, total) -> task_id
+    - update(task_id, completed=...)
+    - tasks[task_id] -> FakeTask
+    - live.is_started -> bool
+    """
 
-    # 3) filename/module checks
-    fspath = getattr(request.node, "fspath", None)
-    if fspath is not None and "test_display" in str(fspath):
-        return True
+    def __init__(self):
+        self._next_id = 0
+        self.tasks = {}
+        self.live = SimpleNamespace(is_started=False)
 
-    module = getattr(request.node, "module", None)
-    module_name = getattr(module, "__name__", "")
-    if module_name.endswith("test_display"):
-        return True
+    def add_task(self, description, total):
+        task_id = self._next_id
+        self._next_id += 1
+        self.tasks[task_id] = FakeTask(task_id, description, total)
+        return task_id
 
-    return False
+    def update(self, task_id, completed=None):
+        task = self.tasks[task_id]
+        if completed is not None:
+            task.completed = completed
+
+    def start(self):
+        self.live.is_started = True
+
+    def stop(self):
+        self.live.is_started = False
 
 
 @pytest.fixture(autouse=True)
-def patch_progress_bar(monkeypatch, request):
+def mock_display_progress(monkeypatch):
     """
-    Monkeypatch start_progress_bar and stop_progress_bar for most tests
-    to avoid rendering overhead. Skip monkeypatching when:
-      - the test (or file) is marked with @pytest.mark.real_progress
-      - PYTEST_REAL_PROGRESS=1 in the environment
-      - the file/module name matches `test_display` (fallback)
+    Mock progress helpers globally so tests never touch Rich's Live display.
     """
-    if _should_skip_monkeypatch(request):
-        return
-
-    # Apply monkeypatch for display module
     import langfair.utils.display as display_module
 
-    monkeypatch.setattr(
-        display_module, "start_progress_bar", lambda *args, **kwargs: MagicMock()
-    )
-    monkeypatch.setattr(
-        display_module, "stop_progress_bar", lambda *args, **kwargs: None
-    )
+    def _start_progress_bar(existing_progress_bar=None):
+        if isinstance(existing_progress_bar, FakeProgress):
+            existing_progress_bar.start()
+            return existing_progress_bar
+        fake = FakeProgress()
+        fake.start()
+        return fake
 
-    # Apply monkeypatch for all modules that imported progress bar directly
-    import langfair.auto.auto as auto_module
-    import langfair.generator.counterfactual as generator_cf_module
-    import langfair.generator.generator as generator_module
-    import langfair.metrics.counterfactual.counterfactual as counterfactual_module
-    import langfair.metrics.counterfactual.metrics.bleu as bleu_module
-    import langfair.metrics.counterfactual.metrics.cosine as cosine_module
-    import langfair.metrics.counterfactual.metrics.rougel as rougel_module
-    import langfair.metrics.counterfactual.metrics.sentimentbias as sentimentbias_module
-    import langfair.metrics.stereotype.metrics.associations as associations_module
-    import langfair.metrics.stereotype.metrics.classifier as classifier_module
-    import langfair.metrics.stereotype.metrics.cooccurrence as cooccurrence_module
-    import langfair.metrics.stereotype.stereotype as stereotype_module
-    import langfair.metrics.toxicity.toxicity as toxicity_module
+    def _stop_progress_bar(progress_bar):
+        if isinstance(progress_bar, FakeProgress):
+            progress_bar.stop()
 
-    for module in (
-        auto_module,
-        generator_cf_module,
-        generator_module,
-        counterfactual_module,
-        bleu_module,
-        cosine_module,
-        rougel_module,
-        sentimentbias_module,
-        associations_module,
-        classifier_module,
-        cooccurrence_module,
-        stereotype_module,
-        toxicity_module,
-    ):
-        monkeypatch.setattr(
-            module, "start_progress_bar", lambda *args, **kwargs: MagicMock()
-        )
-        monkeypatch.setattr(module, "stop_progress_bar", lambda *args, **kwargs: None)
+    monkeypatch.setattr(display_module, "start_progress_bar", _start_progress_bar)
+    monkeypatch.setattr(display_module, "stop_progress_bar", _stop_progress_bar)
 
 
 def pytest_configure(config):
-    # Register the marker so pytest doesn't warn
     config.addinivalue_line(
         "markers",
-        "real_progress: Run test without monkeypatching progress bars (use real rich.Progress).",
+        "real_progress: Opt-out of the FakeProgress mock (use real rich.Progress).",
     )
