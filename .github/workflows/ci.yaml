@@ -33,8 +33,6 @@ jobs:
 
     name: Test
     runs-on: ${{ matrix.os }}
-    env:
-      TESTING: true 
 
     steps:
       - name: Checkout code

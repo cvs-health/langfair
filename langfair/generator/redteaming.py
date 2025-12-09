@@ -122,7 +122,6 @@ class AdversarialGenerator(ResponseGenerator):
         dataset = await self._generate_from_template(
             prompt_templates=prompt_templates, system_styles=system_styles, count=count
         )
-        print("Responses successfully generated!")
         return self._format_result(
             dataset=dataset,
             prompt_templates=prompt_templates,
