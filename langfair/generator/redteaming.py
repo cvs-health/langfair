@@ -224,7 +224,6 @@ class AdversarialGenerator(ResponseGenerator):
             )
         dataset = {}
         for system_style in system_styles:
-            print(f"Generating responses with {system_style} system prompts...")
             system_prompt = SYSTEM_PROMPT_DICT[system_style]
             with contextlib.redirect_stdout(io.StringIO()):
                 tmp = await self.generate_responses(

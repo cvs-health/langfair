@@ -216,9 +216,9 @@ class ResponseGenerator:
             assert count == 1, "temperature must be greater than 0 if count > 1"
         self._update_count(count)
         self.system_message = SystemMessage(system_prompt)
-
+                
+        total = len(prompts) * self.count
         if show_progress_bars:
-            total = len(prompts) * self.count
             self.progress_bar = start_progress_bar(existing_progress_bar)
             self.progress_task = self.progress_bar.add_task(
                 f"Generating {self.count} responses per prompt...",
