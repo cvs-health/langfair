@@ -50,7 +50,7 @@ jobs:
          haskell: true
          large-packages: true
          docker-images: true
-         swap-storage: true       
+         swap-storage: true     
 
       - name: Set up Python
         uses: actions/setup-python@v6.0.0
