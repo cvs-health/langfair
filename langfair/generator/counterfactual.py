@@ -10,6 +10,7 @@
 
 import asyncio
 import itertools
+import time
 import warnings
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -399,9 +400,10 @@ class CounterfactualGenerator(ResponseGenerator):
         for group in groups:
             prompt_key = group + "_prompt"
             if self.progress_bar:
+                total = len(prompts_dict[prompt_key]) * self.count
                 self.progress_task = self.progress_bar.add_task(
                     f"[Task]Generating {count} responses for each {group} prompt...",
-                    total=len(prompts_dict[prompt_key]) * self.count,
+                    total=total,
                 )
             try:
                 (
@@ -419,6 +421,9 @@ class CounterfactualGenerator(ResponseGenerator):
             for response in tmp_response_list:
                 tmp_responses.extend(response)
             responses_dict[group + "_response"] = self._enforce_strings(tmp_responses)
+            if self.progress_bar:
+                self.progress_bar.update(self.progress_task, completed=total)
+            time.sleep(0.2)
         stop_progress_bar(self.progress_bar)
         return {
             "data": {

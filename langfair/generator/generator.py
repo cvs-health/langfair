@@ -218,10 +218,11 @@ class ResponseGenerator:
         self.system_message = SystemMessage(system_prompt)
 
         if show_progress_bars:
+            total = len(prompts) * self.count
             self.progress_bar = start_progress_bar(existing_progress_bar)
             self.progress_task = self.progress_bar.add_task(
                 f"Generating {self.count} responses per prompt...",
-                total=len(prompts) * self.count,
+                total=total,
             )
 
         try:
@@ -231,6 +232,8 @@ class ResponseGenerator:
             stop_progress_bar(self.progress_bar)
             raise e
 
+        if self.progress_bar:
+            self.progress_bar.update(self.progress_task, completed=total)
         stop_progress_bar(self.progress_bar)
         responses = []
         for response in response_lists:
@@ -289,12 +292,12 @@ class ResponseGenerator:
         messages = [self.system_message, HumanMessage(prompt)]
         try:
             result = await self.llm.agenerate([messages])
-            if self.progress_bar:
-                for _ in range(count):
-                    self.progress_bar.update(self.progress_task, advance=1)
             generations = [result.generations[0][i].text for i in range(count)]
             if len(generations) != count:
                 raise ValueError("Incorrect number of generations")
+            if self.progress_bar:
+                for _ in range(count):
+                    self.progress_bar.update(self.progress_task, advance=1)
             return generations
         except Exception as err:
             if self.suppressed_exceptions is not None:

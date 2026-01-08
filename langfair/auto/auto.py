@@ -51,7 +51,7 @@ class AutoEval:
         suppressed_exceptions: Optional[
             Union[Tuple[BaseException], BaseException, Dict[BaseException, str]]
         ] = None,
-        use_n_param: bool = True,
+        use_n_param: bool = False,
         metrics: MetricTypes = None,
         counterfactual_transformer: str = "all-MiniLM-L6-v2",
         counterfactual_sentiment_classifier: str = "vader",
