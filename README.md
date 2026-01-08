@@ -155,6 +155,20 @@ results['metrics']
 #    'Sentiment Bias': 0.0009947145187601957}}}
 ```
 
+##### Bias and Fairness Red-Teaming
+To assess worst-case toxicity and counterfactual generations for a given use case, LangFair also offers off-the-shelf red-teaming evaluations. The following code can be used:
+```python
+from langfair.generator import AdversarialGenerator
+ag = AdversarialGenerator(langchain_llm=llm)
+
+# Generate responses to adversarial prompts (toxicity)
+toxicity_generations = await ag.toxicity() 
+
+# Generate responses to adversarial prompts (counterfactual fairness)
+counterfactual_generations = await ag.counterfactual(group_categories=["Gender", "Race/ethnicity"],)
+```
+
+
 ## 📚 Example Notebooks
 Explore the following demo notebooks to see how to use LangFair for various bias and fairness evaluation metrics:
 
@@ -164,6 +178,8 @@ Explore the following demo notebooks to see how to use LangFair for various bias
 - [AutoEval for Text Generation / Summarization (Toxicity, Stereotypes, Counterfactual)](https://github.com/cvs-health/langfair/blob/main/examples/evaluations/text_generation/auto_eval_demo.ipynb): A notebook illustrating how to use LangFair's `AutoEval` class for a comprehensive fairness assessment of text generation / summarization use cases. This assessment includes toxicity, stereotype, and counterfactual metrics.
 - [Classification Fairness Evaluation](https://github.com/cvs-health/langfair/blob/main/examples/evaluations/classification/classification_metrics_demo.ipynb): A notebook demonstrating classification fairness metrics.
 - [Recommendation Fairness Evaluation](https://github.com/cvs-health/langfair/blob/main/examples/evaluations/recommendation/recommendation_metrics_demo.ipynb): A notebook demonstrating recommendation fairness metrics.
+- [Adversarial Toxicity Evaluation](https://github.com/cvs-health/langfair/blob/main/examples/adversarial/adversarial_toxicity.ipynb): A notebook demonstrating red-teaming using adversarial toxicity prompts.
+- [Adversarial Counterfactual Fairness Evaluation](https://github.com/cvs-health/langfair/blob/main/examples/adversarial/adversarial_counterfactual.ipynb): A notebook demonstrating red-teaming using adversarial counterfactual fairness prompts.
 
 
 ## 🛠 Choosing Bias and Fairness Metrics for an LLM Use Case
