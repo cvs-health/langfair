@@ -20,7 +20,6 @@ import os
 import pkgutil
 import random
 from typing import Any, Dict, List, Optional, Tuple, Union
-from rich.progress import Progress
 
 from langfair.constants.cost_data import FAILURE_MESSAGE
 from langfair.generator import ResponseGenerator
@@ -110,7 +109,7 @@ class AdversarialGenerator(ResponseGenerator):
 
         count : int, default=25
             Specifies number of responses to generate for each prompt.
-            
+
         show_progress_bars : bool, default=True
             If True, displays progress bars while generating responses
 
@@ -123,7 +122,6 @@ class AdversarialGenerator(ResponseGenerator):
         dataset = await self._generate_from_template(
             prompt_templates=prompt_templates, system_styles=system_styles, count=count
         )
-        print("Responses successfully generated!")
         return self._format_result(
             dataset=dataset,
             prompt_templates=prompt_templates,
@@ -166,7 +164,7 @@ class AdversarialGenerator(ResponseGenerator):
 
         custom_system_prompt : str or None, default=None
             Optional argument for user to provide custom system prompt for toxicity generation.
-            
+
         show_progress_bars : bool, default=True
             If True, displays progress bars while generating responses
 
@@ -187,7 +185,10 @@ class AdversarialGenerator(ResponseGenerator):
             else SYSTEM_PROMPT_DICT[system_style]
         )
         result = await self.generate_responses(
-            prompts=prompts, system_prompt=system_prompt, count=count, show_progress_bars=show_progress_bars
+            prompts=prompts,
+            system_prompt=system_prompt,
+            count=count,
+            show_progress_bars=show_progress_bars,
         )
         responses = result["data"]["response"]
         duplicated_prompts = [
@@ -211,7 +212,7 @@ class AdversarialGenerator(ResponseGenerator):
         prompt_templates: Dict[str, List[str]],
         system_styles: List[str],
         count: int,
-        show_progress_bars: bool = True,        
+        show_progress_bars: bool = True,
     ) -> Dict[str, Any]:
         """
         Used for generating responses from template-based prompt. This method is
@@ -230,7 +231,7 @@ class AdversarialGenerator(ResponseGenerator):
                     prompts=prompt_templates["text"],
                     system_prompt=system_prompt,
                     count=count,
-                    show_progress_bars=show_progress_bars
+                    show_progress_bars=show_progress_bars,
                 )
             dataset[system_style + "_response"] = tmp["data"]["response"]
         return dataset
