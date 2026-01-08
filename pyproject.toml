@@ -42,7 +42,7 @@ nltk = ">=3.8.2"
 sacremoses = "^0.1.1"
 rouge-score = "^0.1.2"
 detoxify = "^0.5.2"
-langchain = "^0.3.7"
+langchain = ">=0.3.7"
 asyncio = "^3.4.3"
 sentence-transformers = ">=3.10"
 typing = {version = "^3.7.4", python = "<3.10"}
