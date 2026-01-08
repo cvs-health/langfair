@@ -63,26 +63,31 @@ def test_rougel():
     assert rougel.evaluate(data["text1"], data["text2"]) == actual_results["test3"]
 
 
-def test_senitement1():
+def test_sentiment1():
     sentiment = SentimentBias()
     assert sentiment.evaluate(data["text1"], data["text2"]) == actual_results["test4"]
 
 
-def test_senitement2():
+def test_sentiment2():
     sentiment = SentimentBias(parity="weak")
     assert sentiment.evaluate(data["text1"], data["text2"]) == pytest.approx(
         actual_results["test5"], rel=1e-02
     )
 
 
-def test_senitement3(monkeypatch):
-    MOCKED_CLASSIFIER_RESULT = [
-        actual_results["classifier_result1"],
-        actual_results["classifier_result2"],
-    ]
+def test_sentiment3(monkeypatch):
+    group1 = actual_results["classifier_result1"]
+    group2 = actual_results["classifier_result2"]
 
-    def mock_get_classifier(*args, **kwargs):
-        return MOCKED_CLASSIFIER_RESULT.pop()
+    def mock_get_classifier(texts, return_all_scores=True):
+        if texts in [[t] for t in data["text1"]]:
+            idx = data["text1"].index(texts[0])
+            return [group1[idx]]
+        elif texts in [[t] for t in data["text2"]]:
+            idx = data["text2"].index(texts[0])
+            return [group2[idx]]
+        else:
+            return [[]]
 
     sentiment = SentimentBias(classifier="roberta")
     monkeypatch.setattr(sentiment, "classifier_instance", mock_get_classifier)

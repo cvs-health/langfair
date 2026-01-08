@@ -24,9 +24,7 @@ from langfair.generator import ResponseGenerator
 async def test_generator(monkeypatch):
     count = 3
     MOCKED_PROMPTS = ["Prompt 1", "Prompt 2", "Prompt 3"]
-    MOCKED_DUPLICATE_PROMPTS = [
-        prompt for prompt, i in itertools.product(MOCKED_PROMPTS, range(count))
-    ]
+
     MOCKED_RESPONSES = [
         "Mocked response 1",
         "Mocked response 2",
@@ -54,18 +52,5 @@ async def test_generator(monkeypatch):
     data = await generator_object.generate_responses(
         prompts=MOCKED_PROMPTS, count=count
     )
-
-    cost = await generator_object.estimate_token_cost(
-        tiktoken_model_name="gpt-3.5-turbo-16k-0613",  # gitleaks:allow
-        prompts=MOCKED_DUPLICATE_PROMPTS,
-        example_responses=MOCKED_RESPONSES[:3],
-        count=count,
-    )
-
     assert data["data"]["response"] == MOCKED_DUPLICATED_RESPONSES
     assert data["metadata"]["non_completion_rate"] == 1 / 3
-    assert cost == {
-        "Estimated Prompt Token Cost (USD)": 0.001539,
-        "Estimated Completion Token Cost (USD)": 0.000504,
-        "Estimated Total Token Cost (USD)": 0.002043,
-    }

@@ -14,12 +14,18 @@
 
 from typing import Dict, List, Union
 
+from rich.progress import Progress
+
 from langfair.metrics.stereotype.metrics import (
     CooccurrenceBiasMetric,
     StereotypeClassifier,
     StereotypicalAssociations,
 )
 from langfair.metrics.stereotype.metrics.baseclass.metrics import Metric
+from langfair.utils.display import (
+    start_progress_bar,
+    stop_progress_bar,
+)
 
 MetricType = Union[list[str], list[Metric]]
 DefaultMetricClasses = {
@@ -55,6 +61,8 @@ class StereotypeMetrics:
             self.metric_names = metrics
             self._validate_metrics(metrics)
             self._default_instances()
+        self.progress_bar = None
+        self.progress_bar_task = None
 
     def evaluate(
         self,
@@ -62,6 +70,8 @@ class StereotypeMetrics:
         prompts: List[str] = None,
         return_data: bool = False,
         categories: List[str] = ["gender", "race"],
+        show_progress_bars: bool = True,
+        existing_progress_bar: Progress = None,
     ) -> Dict[str, float]:
         """
         This method evaluate the stereotype metrics values for the provided pair of texts.
@@ -82,6 +92,12 @@ class StereotypeMetrics:
         categories: list, subset of ['gender', 'race']
             Specifies attributes for stereotype classifier metrics. Includes both race and gender by default.
 
+        show_progress_bars : bool, default=True
+            If True, displays progress bars while evaluating metrics.
+
+        existing_progress_bar : rich.progress.Progress, default=None
+            If provided, the progress bar will be updated with the existing progress bar.
+
         Returns
         -------
         dict
@@ -91,6 +107,10 @@ class StereotypeMetrics:
         ----------
         .. footbibliography::
         """
+        self.progress_bar = (
+            start_progress_bar(existing_progress_bar) if show_progress_bars else None
+        )
+
         metric_values = {}
         for metric in self.metrics:
             if metric.name in ["Stereotype Classifier"]:
@@ -99,10 +119,17 @@ class StereotypeMetrics:
                     prompts=prompts,
                     return_data=return_data,
                     categories=categories,
+                    show_progress_bars=show_progress_bars,
+                    existing_progress_bar=self.progress_bar,
                 )
                 metric_values.update(tmp_value["metrics"])
             else:
-                metric_values[metric.name] = metric.evaluate(responses=responses)
+                metric_values[metric.name] = metric.evaluate(
+                    responses=responses,
+                    show_progress_bars=show_progress_bars,
+                    existing_progress_bar=self.progress_bar,
+                )
+        stop_progress_bar(self.progress_bar)
         if return_data:
             return {"metrics": metric_values, "data": tmp_value["data"]}
         return {"metrics": metric_values}

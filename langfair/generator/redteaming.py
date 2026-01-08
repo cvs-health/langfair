@@ -91,6 +91,7 @@ class AdversarialGenerator(ResponseGenerator):
         group_categories: List[str] = ALL_GROUP_CATEGORIES,
         system_styles: List[str] = ["benign", "adversarial"],
         count: int = 25,
+        show_progress_bars: bool = True,
     ) -> Dict[str, Any]:
         """
         This method generates data for counterfactual assessment.
@@ -109,6 +110,9 @@ class AdversarialGenerator(ResponseGenerator):
         count : int, default=25
             Specifies number of responses to generate for each prompt.
 
+        show_progress_bars : bool, default=True
+            If True, displays progress bars while generating responses
+
         Returns
         ----------
         A dictionary with two keys: 'data', containing prompts and responses, and 'metadata', containing metadata about the generation process.
@@ -118,7 +122,6 @@ class AdversarialGenerator(ResponseGenerator):
         dataset = await self._generate_from_template(
             prompt_templates=prompt_templates, system_styles=system_styles, count=count
         )
-        print("Responses successfully generated!")
         return self._format_result(
             dataset=dataset,
             prompt_templates=prompt_templates,
@@ -134,6 +137,7 @@ class AdversarialGenerator(ResponseGenerator):
         custom_system_prompt: Optional[str] = None,
         sampling_seed: int = 123,
         count: int = 25,
+        show_progress_bars: bool = True,
     ) -> Dict[str, Any]:
         """
         Generates toxicity dataset using either benign or adversarial system prompt. If using
@@ -161,6 +165,9 @@ class AdversarialGenerator(ResponseGenerator):
         custom_system_prompt : str or None, default=None
             Optional argument for user to provide custom system prompt for toxicity generation.
 
+        show_progress_bars : bool, default=True
+            If True, displays progress bars while generating responses
+
         Returns
         ----------
         A dictionary with two keys: 'data', containing prompts and responses, and 'metadata', containing metadata about the generation process.
@@ -178,7 +185,10 @@ class AdversarialGenerator(ResponseGenerator):
             else SYSTEM_PROMPT_DICT[system_style]
         )
         result = await self.generate_responses(
-            prompts=prompts, system_prompt=system_prompt, count=count
+            prompts=prompts,
+            system_prompt=system_prompt,
+            count=count,
+            show_progress_bars=show_progress_bars,
         )
         responses = result["data"]["response"]
         duplicated_prompts = [
@@ -202,6 +212,7 @@ class AdversarialGenerator(ResponseGenerator):
         prompt_templates: Dict[str, List[str]],
         system_styles: List[str],
         count: int,
+        show_progress_bars: bool = True,
     ) -> Dict[str, Any]:
         """
         Used for generating responses from template-based prompt. This method is
@@ -213,13 +224,13 @@ class AdversarialGenerator(ResponseGenerator):
             )
         dataset = {}
         for system_style in system_styles:
-            print(f"Generating responses with {system_style} system prompts...")
             system_prompt = SYSTEM_PROMPT_DICT[system_style]
             with contextlib.redirect_stdout(io.StringIO()):
                 tmp = await self.generate_responses(
                     prompts=prompt_templates["text"],
                     system_prompt=system_prompt,
                     count=count,
+                    show_progress_bars=show_progress_bars,
                 )
             dataset[system_style + "_response"] = tmp["data"]["response"]
         return dataset

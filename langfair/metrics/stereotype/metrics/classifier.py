@@ -14,12 +14,17 @@
 
 from typing import Any, Dict, List, Optional, Union
 
+from rich.progress import Progress
 from transformers import pipeline
 
 from langfair.metrics.utils.classifier_metrics import (
     ExpectedMaximum,
     Fraction,
     Probability,
+)
+from langfair.utils.display import (
+    start_progress_bar,
+    stop_progress_bar,
 )
 
 MetricType = Union[None, list[str]]
@@ -66,6 +71,7 @@ class StereotypeClassifier:
         self.threshold = threshold
         self.batch_size = batch_size
         self.name = "Stereotype Classifier"
+        self.progress_bar = None
 
         self.metrics = metrics
         if isinstance(metrics[0], str):
@@ -81,7 +87,12 @@ class StereotypeClassifier:
             truncation=True,
         )
 
-    def get_stereotype_scores(self, responses: List[str]) -> Dict[str, Any]:
+    def get_stereotype_scores(
+        self,
+        responses: List[str],
+        show_progress_bars: bool = True,
+        existing_progress_bar: Progress = None,
+    ) -> Dict[str, Any]:
         """
         Calculate stereotype scores for a list of outputs.
 
@@ -91,12 +102,31 @@ class StereotypeClassifier:
             A list of generated outputs from a language model on which classifier-based
             stereotype metrics will be calculated.
 
+        show_progress_bars : bool, default=True
+            If True, displays progress bars while evaluating metrics.
+
+        existing_progress_bar : rich.progress.Progress, default=None
+            If provided, the progress bar will be updated with the existing progress bar.
+
         Returns
         -------
         dict
             Dictionary containing response-level stereotype scores returned by stereotype classifier
         """
-        score_dicts = self.classifier_instance(responses)
+        if show_progress_bars:
+            self.progress_bar = start_progress_bar(existing_progress_bar)
+            self.progress_bar_task = self.progress_bar.add_task(
+                "Computing Stereotype Classifier scores...",
+                total=len(responses),
+            )
+
+        score_dicts = []
+        for response in responses:
+            if self.progress_bar:
+                self.progress_bar.update(self.progress_bar_task, advance=1)
+            score_dict_r = self.classifier_instance(response)
+            score_dicts.extend(score_dict_r)
+
         stereotype_scores = {
             key: [d[key] for d in score_dicts] for key in score_dicts[0]
         }
@@ -110,6 +140,8 @@ class StereotypeClassifier:
                 data["stereotype_score_" + category.lower()].append(
                     score if label == "stereotype_" + category.lower() else 0.0
                 )
+
+        stop_progress_bar(self.progress_bar)
         return data
 
     def evaluate(
@@ -119,6 +151,8 @@ class StereotypeClassifier:
         prompts: Optional[List[str]] = None,
         return_data: bool = False,
         categories: List[str] = ["gender", "race"],
+        show_progress_bars: bool = True,
+        existing_progress_bar: Progress = None,
     ) -> Dict[str, Any]:
         """
         Generate stereotype scores and calculate classifier-based stereotype metrics.
@@ -139,6 +173,12 @@ class StereotypeClassifier:
         return_df : bool, default=True
             Specifies whether to include a dictionary containing response-level stereotype scores in returned result.
 
+        show_progress_bars : bool, default=True
+            If True, displays progress bars while evaluating metrics.
+
+        existing_progress_bar : rich.progress.Progress, default=None
+            If provided, the progress bar will be updated with the existing progress bar.
+
         Returns
         -------
         dict
@@ -146,12 +186,12 @@ class StereotypeClassifier:
         """
         if categories is not None:
             self.categories = categories
-
         if not scores:
-            print("Computing stereotype scores...")
-            evaluation_data = self.get_stereotype_scores(responses)
-
-        print("Evaluating metrics...")
+            evaluation_data = self.get_stereotype_scores(
+                responses,
+                show_progress_bars=show_progress_bars,
+                existing_progress_bar=existing_progress_bar,
+            )
         result = {}
         for category in self.categories:
             if prompts:
@@ -172,8 +212,6 @@ class StereotypeClassifier:
                         self.threshold,
                     )
                 )
-
-        # If specified, return dataframe
         if return_data:
             return {"metrics": result, "data": evaluation_data}
         return {"metrics": result}
