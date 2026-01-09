@@ -25,11 +25,16 @@ from typing import Dict, List, Optional, Tuple
 import nltk
 import numpy as np
 from nltk.tokenize import word_tokenize
+from rich.progress import Progress
 
 from langfair.constants.word_lists import (
     ADJECTIVE_LIST,
     GENDER_TO_WORD_LISTS,
     PROFESSION_LIST,
+)
+from langfair.utils.display import (
+    start_progress_bar,
+    stop_progress_bar,
 )
 
 # Target categories
@@ -73,6 +78,7 @@ class StereotypicalAssociations:
         self.demographic_group_word_lists = demographic_group_word_lists
         self.stereotype_word_list = stereotype_word_list
         self.target_category: Optional[str] = target_category
+        self.progress_bar = None
 
         assert self.target_category in ["adjective", "profession"], """
             only "adjective" and "profession" are supported for `target_category` 
@@ -116,7 +122,12 @@ class StereotypicalAssociations:
         except LookupError:
             nltk.download("punkt_tab")
 
-    def evaluate(self, responses: List[str]) -> Optional[float]:
+    def evaluate(
+        self,
+        responses: List[str],
+        show_progress_bars: bool = True,
+        existing_progress_bar: Progress = None,
+    ) -> Optional[float]:
         """
         Compute the mean stereotypical association bias of the target words and demographic groups.
 
@@ -135,6 +146,12 @@ class StereotypicalAssociations:
             A list of generated outputs from a language model on which Stereotypical Associations
             metric will be calculated.
 
+        show_progress_bars : bool, default=True
+            If True, displays progress bars while evaluating metrics.
+
+        existing_progress_bar : rich.progress.Progress, default=None
+            If provided, the progress bar will be updated with the existing progress bar.
+
         Returns
         -------
         float
@@ -142,7 +159,15 @@ class StereotypicalAssociations:
         """
         # Count the number of times each target_word and group co-occur
         pair_to_count: Dict[Tuple[str, str], int] = defaultdict(int)
+        if show_progress_bars:
+            self.progress_bar = start_progress_bar(existing_progress_bar)
+            progress_bar_task = self.progress_bar.add_task(
+                "Computing Stereotypical Associations scores...",
+                total=len(responses),
+            )
         for response in responses:
+            if self.progress_bar:
+                self.progress_bar.update(progress_bar_task, advance=1)
             tokens = word_tokenize(response.lower())
             for target_word, group in itertools.product(
                 self.target_words, self.demographic_groups
@@ -158,7 +183,6 @@ class StereotypicalAssociations:
                     num_group_tokens * num_target_tokens
                 )  # e.g. number of times an asian word co-occur with an adj
                 pair_to_count[(target_word, group)] += count
-
         # Compute a bias score for each target word
         bias_scores = [
             self._group_counts_to_bias(
@@ -169,11 +193,12 @@ class StereotypicalAssociations:
 
         # Filter out None scores
         bias_scores = [score for score in bias_scores if score is not None]
+        mean_bias_score = np.array(bias_scores).mean()
 
-        # Compute the mean bias score
+        stop_progress_bar(self.progress_bar)
         if not bias_scores:
             return None
-        return np.array(bias_scores).mean()
+        return mean_bias_score
 
     def _group_counts_to_bias(self, group_counts: List[int]) -> Optional[float]:
         """

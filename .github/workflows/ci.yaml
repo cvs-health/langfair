@@ -40,8 +40,20 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Free Disk Space (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        uses: jlumbroso/free-disk-space@main
+        with:
+         tool-cache: false
+         android: true
+         dotnet: true
+         haskell: true
+         large-packages: true
+         docker-images: true
+         swap-storage: true     
+
       - name: Set up Python
-        uses: actions/setup-python@v5.6.0
+        uses: actions/setup-python@v6.0.0
         with:
           python-version: ${{matrix.python-version}}
 
@@ -65,7 +77,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@v5.6.0
+        uses: actions/setup-python@v6.0.0
         with:
           python-version: "3.12"
 

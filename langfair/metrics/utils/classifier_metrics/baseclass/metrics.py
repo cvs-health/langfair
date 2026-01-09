@@ -31,7 +31,10 @@ class Metric(ABC):
         pass
 
     def evaluate(
-        self, data: Dict[str, Any], threshold: float, score_column: str = "score"
+        self,
+        data: Dict[str, Any],
+        threshold: float,
+        score_column: str = "score",
     ) -> float:
         """
         This method compute metric function for unique input prompts and return the mean value over all
@@ -47,6 +50,12 @@ class Metric(ABC):
 
         score_column : str, default='score'
             Name of the dictionary key that contains score.
+
+        show_progress_bars : bool, default=True
+            If True, displays progress bars while evaluating metrics.
+
+        existing_progress_bar : rich.progress.Progress, default=None
+            If provided, the progress bar will be updated with the existing progress bar.
         """
         results = []
         for prompt in set(data["prompt"]):

@@ -10,17 +10,20 @@
 
 import asyncio
 import itertools
-import random
 import warnings
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import langchain_core
-import numpy as np
 import tiktoken
 from langchain_core.messages.human import HumanMessage
 from langchain_core.messages.system import SystemMessage
+from rich.progress import Progress
 
 from langfair.constants.cost_data import COST_MAPPING, FAILURE_MESSAGE, TOKEN_COST_DATE
+from langfair.utils.display import (
+    start_progress_bar,
+    stop_progress_bar,
+)
 
 N_PARAM_WARNING = """
 The 'use_n_param' parameter may not be compatible with all BaseChatModel instances. 
@@ -64,6 +67,8 @@ class ResponseGenerator:
         self.token_cost_date = TOKEN_COST_DATE
         self.llm = langchain_llm
         self.use_n_param = use_n_param
+        self.progress_bar = None
+        self.progress_task = None
         if isinstance(suppressed_exceptions, Dict):
             if self._valid_exceptions(tuple(suppressed_exceptions.keys())):
                 self.suppressed_exceptions = suppressed_exceptions
@@ -79,6 +84,7 @@ class ResponseGenerator:
             warnings.warn(
                 "max_calls_per_min is deprecated and will not be used. Use LangChain's `InMemoryRateLimiter` instead",
                 DeprecationWarning,
+                stacklevel=2,
             )
 
     async def estimate_token_cost(
@@ -89,6 +95,8 @@ class ResponseGenerator:
         response_sample_size: int = 30,
         system_prompt: str = "You are a helpful assistant",
         count: int = 25,
+        show_progress_bars: bool = True,
+        existing_progress_bar: Optional[Progress] = None,
     ) -> Dict[str, float]:
         """
         Estimates the token cost for a given list of prompts and (optionally) example responses.
@@ -115,82 +123,32 @@ class ResponseGenerator:
         count : int, default=25
             The number of generations per prompt used when estimating cost.
 
+        show_progress_bars : bool, default=True
+            If True, displays progress bars while generating and scoring responses
+
+        existing_progress_bar : rich.progress.Progress, default=None
+            If provided, the progress bar will be updated with the existing progress bar.
+
         Returns
         -------
         dict
            A dictionary containing the estimated token costs, including prompt token cost, completion token cost,
            and total token cost.
         """
-        # TODO: Add token costs for other models
-        # TODO: Scrape rather than hard-code costs.
-        print(
-            f"Token costs were last updated on {self.token_cost_date} and may have changed since then."
+        warnings.warn(
+            "estimate_token_cost method has been deprecated as of v0.8.0 and will not be used",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        assert tiktoken_model_name in self.cost_mapping.keys(), (
-            f"Only {list(self.cost_mapping.keys())} are supported"
-        )
-
-        print(f"Estimating cost based on {count} generations per prompt...")
-
-        if example_responses is None:
-            print("Generating sample of responses for cost estimation...")
-            prompts = list(prompts)
-            sampled_prompts = random.sample(
-                prompts, min(response_sample_size, len(prompts))
-            )  # nosec - bandit thinks this insecure use of random.sample could be used in a crypto context
-            generation = await self.generate_responses(sampled_prompts, count=1)
-            example_responses = generation["data"]["response"]
-
-        # Get input token counts
-        prompt_token_counts = [
-            self._num_tokens_from_messages(
-                [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                model=tiktoken_model_name,
-            )
-            for user_prompt in prompts
-        ]
-        total_prompt_tokens = sum(prompt_token_counts) * count
-
-        # Estimate output token counts
-        example_response_tokens = [
-            self._num_tokens_from_messages(
-                [{"role": "assistant", "content": response}],
-                model=tiktoken_model_name,
-                prompt=False,
-            )
-            for response in example_responses
-        ]
-        estimated_total_response_tokens = (
-            len(prompts) * np.mean(example_response_tokens) * count
-        )
-
-        # calculate costs
-        model_cost = self.cost_mapping.get(
-            tiktoken_model_name, {"input": 0, "output": 0}
-        )
-        estimated_prompt_token_cost = total_prompt_tokens * model_cost["input"]
-        estimated_completion_token_cost = (
-            estimated_total_response_tokens * model_cost["output"]
-        )
-        estimated_total_token_cost = (
-            estimated_prompt_token_cost + estimated_completion_token_cost
-        )
-
-        results = {
-            "Estimated Prompt Token Cost (USD)": estimated_prompt_token_cost,
-            "Estimated Completion Token Cost (USD)": estimated_completion_token_cost,
-            "Estimated Total Token Cost (USD)": estimated_total_token_cost,
-        }
-        return results
+        pass
 
     async def generate_responses(
         self,
         prompts: List[str],
         system_prompt: str = "You are a helpful assistant.",
         count: int = 25,
+        show_progress_bars: bool = True,
+        existing_progress_bar: Optional[Progress] = None,
     ) -> Dict[str, Any]:
         """
         Generates evaluation dataset from a provided set of prompts. For each prompt,
@@ -208,6 +166,12 @@ class ResponseGenerator:
             Specifies number of responses to generate for each prompt. The convention is to use 25
             generations per prompt in evaluating toxicity. See, for example DecodingTrust (https://arxiv.org/abs//2306.11698)
             or Gehman et al., 2020 (https://aclanthology.org/2020.findings-emnlp.301/).
+
+        show_progress_bars : bool, default=True
+            If True, displays progress bars while generating responses
+
+        existing_progress_bar : rich.progress.Progress, default=None
+            If provided, the progress bar will be updated with the existing progress bar.
 
         Returns
         -------
@@ -248,20 +212,33 @@ class ResponseGenerator:
             if not ((count > 1) and (hasattr(self.llm, "n"))):
                 self.use_n_param = False
 
-        print(f"Generating {count} responses per prompt...")
         if self.llm.temperature == 0:
             assert count == 1, "temperature must be greater than 0 if count > 1"
         self._update_count(count)
         self.system_message = SystemMessage(system_prompt)
+                
+        total = len(prompts) * self.count
+        if show_progress_bars:
+            self.progress_bar = start_progress_bar(existing_progress_bar)
+            self.progress_task = self.progress_bar.add_task(
+                f"Generating {self.count} responses per prompt...",
+                total=total,
+            )
 
-        tasks, duplicated_prompts = self._create_tasks(prompts=prompts)
-        response_lists = await asyncio.gather(*tasks)
+        try:
+            tasks, duplicated_prompts = self._create_tasks(prompts=prompts)
+            response_lists = await asyncio.gather(*tasks)
+        except Exception as e:
+            stop_progress_bar(self.progress_bar)
+            raise e
 
+        if self.progress_bar:
+            self.progress_bar.update(self.progress_task, completed=total)
+        stop_progress_bar(self.progress_bar)
         responses = []
         for response in response_lists:
             responses.extend(response)
 
-        print("Responses successfully generated!")
         return {
             "data": {
                 "prompt": self._enforce_strings(duplicated_prompts),
@@ -318,6 +295,9 @@ class ResponseGenerator:
             generations = [result.generations[0][i].text for i in range(count)]
             if len(generations) != count:
                 raise ValueError("Incorrect number of generations")
+            if self.progress_bar:
+                for _ in range(count):
+                    self.progress_bar.update(self.progress_task, advance=1)
             return generations
         except Exception as err:
             if self.suppressed_exceptions is not None:

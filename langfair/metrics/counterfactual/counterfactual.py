@@ -15,10 +15,12 @@
 from typing import Any, Dict, Union
 
 import numpy as np
+from rich.progress import Progress
 
 from langfair.generator.counterfactual import CounterfactualGenerator
 from langfair.metrics.counterfactual import metrics
 from langfair.metrics.counterfactual.metrics.baseclass.metrics import Metric
+from langfair.utils.display import start_progress_bar, stop_progress_bar
 
 MetricType = Union[list[str], list[Metric]]
 DefaultMetricObjects = {
@@ -80,6 +82,7 @@ class CounterfactualMetrics:
         self.transformer = transformer
         self.how = how
         self.metrics = metrics
+        self.progress_bar = None
         if isinstance(metrics[0], str):
             self.metric_names = metrics
             self._validate_metrics(metrics)
@@ -91,6 +94,8 @@ class CounterfactualMetrics:
         texts2: list,
         attribute: str = "gender",
         return_data: bool = False,
+        show_progress_bars: bool = True,
+        existing_progress_bar: Progress = None,
     ) -> Dict[str, Any]:
         """
         This method evaluate the counterfactual metrics values for the provided pair of texts.
@@ -112,6 +117,12 @@ class CounterfactualMetrics:
         return_data : bool, default=False
             Indicates whether to include response-level counterfactual scores in results dictionary returned by this method.
 
+        show_progress_bars : bool, default=True
+            If True, displays progress bars while evaluating metrics.
+
+        existing_progress_bar : rich.progress.Progress, default=None
+            If provided, the progress bar will be updated with the existing progress bar.
+
         Returns
         -------
         dict
@@ -125,32 +136,54 @@ class CounterfactualMetrics:
             assert attribute in [
                 "gender",
                 "race",
-            ], """langfair: To neutralize tokens, 'attribute' should 
-            be either "gender" or "race"."""
+            ], (
+                """To neutralize tokens, 'attribute' should be either "gender" or "race"."""
+            )
             masked_texts1 = self.cf_generator.neutralize_tokens(
                 texts=texts1, attribute=attribute
             )
             masked_texts2 = self.cf_generator.neutralize_tokens(
                 texts=texts2, attribute=attribute
             )
+
+        self.progress_bar = (
+            start_progress_bar(existing_progress_bar) if show_progress_bars else None
+        )
+
         metric_values = {}
         response_scores = {"texts1": texts1, "texts2": texts2}
         for metric in self.metrics:
             if metric.name == "Sentiment Bias":
-                scores = metric.evaluate(texts1=texts1, texts2=texts2)
+                scores = metric.evaluate(
+                    texts1=texts1,
+                    texts2=texts2,
+                    show_progress_bars=show_progress_bars,
+                    existing_progress_bar=self.progress_bar,
+                )
                 metric_values[metric.name] = metric.parity_value
             else:
                 if (
                     metric.name in ["Bleu Similarity", "RougeL Similarity"]
                     and self.neutralize_tokens
                 ):
-                    scores = metric.evaluate(texts1=masked_texts1, texts2=masked_texts2)
+                    scores = metric.evaluate(
+                        texts1=masked_texts1,
+                        texts2=masked_texts2,
+                        show_progress_bars=show_progress_bars,
+                        existing_progress_bar=self.progress_bar,
+                    )
                 else:
-                    scores = metric.evaluate(texts1=texts1, texts2=texts2)
+                    scores = metric.evaluate(
+                        texts1=texts1,
+                        texts2=texts2,
+                        show_progress_bars=show_progress_bars,
+                        existing_progress_bar=self.progress_bar,
+                    )
                 metric_values[metric.name] = np.mean(scores)
 
             response_scores[metric.name] = scores
 
+        stop_progress_bar(self.progress_bar)
         result = {"metrics": metric_values}
         if return_data:
             result["data"] = response_scores
@@ -176,5 +209,5 @@ class CounterfactualMetrics:
         """Validate that specified metrics metrics are supported."""
         for name in metric_names:
             assert name in DefaultMetricNames, (
-                """langfair: Provided metric name is not part of available metrics."""
+                """Provided metric name is not part of available metrics."""
             )

@@ -21,11 +21,16 @@ import nltk
 import numpy as np
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
+from rich.progress import Progress
 
 from langfair.constants.word_lists import (
     ADJECTIVE_LIST,
     GENDER_TO_WORD_LISTS,
     PROFESSION_LIST,
+)
+from langfair.utils.display import (
+    start_progress_bar,
+    stop_progress_bar,
 )
 
 # Ensuring that nltk library can access the nltk_data in 'resources' directory
@@ -112,8 +117,14 @@ class CooccurrenceBiasMetric:
         self.beta = beta
         self.how = how
         self.name = "Cooccurrence Bias"
+        self.progress_bar = None
 
-    def evaluate(self, responses: List[str]) -> Union[float, Dict[str, float]]:
+    def evaluate(
+        self,
+        responses: List[str],
+        show_progress_bars: bool = True,
+        existing_progress_bar: Progress = None,
+    ) -> Union[float, Dict[str, float]]:
         """
         Compute the relative co-occurrence rates of target words with
         protected attribute words.
@@ -124,6 +135,12 @@ class CooccurrenceBiasMetric:
             A list of generated outputs from a language model on which co-occurrence bias score
             metric will be calculated.
 
+        show_progress_bars : bool, default=True
+            If True, displays progress bars while evaluating metrics.
+
+        existing_progress_bar : rich.progress.Progress, default=None
+            If provided, the progress bar will be updated with the existing progress bar.
+
         Returns
         -------
         float
@@ -133,12 +150,16 @@ class CooccurrenceBiasMetric:
         ----------
         .. footbibliography::
         """
+        if show_progress_bars:
+            self.progress_bar = start_progress_bar(existing_progress_bar)
+
         # Conduct intermediate operations before COBS calculations
         tot_co_counts, tot_cooccur, reference_words, all_words, attribute_word_lists = (
             self._prep_lists(responses)
         )
 
         if not all_words:
+            stop_progress_bar(self.progress_bar)
             return None
 
         cobs_scores = {}
@@ -166,23 +187,37 @@ class CooccurrenceBiasMetric:
                         / (group2_numerator / group2_denominator)
                     )
                 )
-
-        # Save valid COBS scores
         cobs_scores_list = [float(s) for s in cobs_scores.values() if s is not None]
-        if len(cobs_scores_list) == 0:
-            print(
-                "None of the target words co-occur with both lists of attribute words. Unable to calculate COBS score."
-            )
-            return None
 
-        # Return either average COBS score or dictinary with COBS(w) for each w
-        return np.mean(cobs_scores_list) if self.how == "mean" else cobs_scores
+        if len(cobs_scores_list) == 0:
+            if show_progress_bars:
+                self.progress_bar.add_task(
+                    "[No Progress Bar] None of the target words co-occur with both lists of attribute words. Unable to calculate COBS score."
+                )
+            elif not existing_progress_bar:
+                print(
+                    "None of the target words co-occur with both lists of attribute words. Unable to calculate COBS score."
+                )
+            mean_cobs_score = None
+        else:
+            mean_cobs_score = (
+                np.mean(cobs_scores_list) if self.how == "mean" else cobs_scores
+            )
+        stop_progress_bar(self.progress_bar)
+        return mean_cobs_score
 
     def _prep_lists(
-        self, responses: List[str]
+        self,
+        responses: List[str],
     ) -> Tuple[List[str], List[str], List[str], List[str], List[str]]:
         """
         Create lists for COBS(w) calculation from list of responses.
+
+        Parameters
+        ----------
+        responses : list of strings
+            A list of generated outputs from a language model on which co-occurrence bias score
+            metric will be calculated.
         """
         # Tokenize sentences, get list of all words, and get set of non-protected, non-stop words
         tokenized_texts = [self._get_clean_token_list(t) for t in responses]
@@ -205,11 +240,21 @@ class CooccurrenceBiasMetric:
             (len(attribute_word_lists["group1"]) > 0)
             and (len(attribute_word_lists["group2"]) > 0)
         ):
-            print(
-                "The provided sentences do not contain words from both word lists. Unable to calculate Co-occurrence bias score."
-            )
+            if self.progress_bar:
+                self.progress_bar.add_task(
+                    "[No Progress Bar] The provided sentences do not contain words from both word lists. Unable to calculate Co-occurrence bias score."
+                )
+            else:
+                print(
+                    "The provided sentences do not contain words from both word lists. Unable to calculate Co-occurrence bias score."
+                )
             return None, None, None, None, None
         tot_co_counts = {}
+        if self.progress_bar:
+            progress_bar_task = self.progress_bar.add_task(
+                "Computing Co-Occurrence Bias Scores...",
+                total=len(tokenized_texts),
+            )
         for text in tokenized_texts:
             # Get procted attribute cooccurrence counts for current sentence
             co_counts = self._calculate_cooccurrence_scores(text, self.beta)
@@ -224,6 +269,8 @@ class CooccurrenceBiasMetric:
                 }
                 for word in set(co_counts) | set(tot_co_counts)
             }
+            if self.progress_bar:
+                self.progress_bar.update(progress_bar_task, advance=1)
 
         # Get total cooccurrence counts for all words for COBS calculation
         tot_cooccur = {"group1": 0, "group2": 0}
