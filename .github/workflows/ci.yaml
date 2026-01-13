@@ -36,7 +36,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           persist-credentials: false
 
@@ -72,7 +72,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           persist-credentials: false
 
@@ -111,7 +111,7 @@ jobs:
       image: semgrep/semgrep:1.132.1
     if: (github.actor != 'dependabot[bot]')
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
       - run: semgrep scan --sarif --config auto --config "p/trailofbits" > semgrep.sarif
