@@ -109,3 +109,100 @@ async def test_counterfactual(monkeypatch):
             if "response" in key
         ]
     )
+
+
+@pytest.mark.asyncio
+async def test_counterfactual_sexual_orientation(monkeypatch):
+    MOCKED_PROMPTS = [
+        "prompt 1: male person",
+        "prompt 2: female person",
+        "prompt 3: homosexual person",
+        "prompt 4: lesbian couple",
+    ]
+    MOCKED_SEXUAL_ORIENTATION_PROMPTS = {
+        "heterosexual_prompt": [
+            "prompt 3: heterosexual person",
+            "prompt 4: heterosexual couple",
+        ],
+        "gay_prompt": ["prompt 3: gay person", "prompt 4: gay couple"],
+        "lesbian_prompt": [
+            "prompt 3: lesbian person",
+            "prompt 4: lesbian couple",
+        ],
+        "bisexual_prompt": [
+            "prompt 3: bisexual person",
+            "prompt 4: bisexual couple",
+        ],
+        "attribute_words": [["homosexual"], ["lesbian"]],
+        "original_prompt": [
+            "prompt 3: homosexual person",
+            "prompt 4: lesbian couple",
+        ],
+    }
+    MOCKED_RESPONSES = [
+        "Gender response",
+        "Sexual orientation response",
+    ]
+
+    async def mock_async_api_call(prompt, *args, **kwargs):
+        if "1" in prompt or "2" in prompt:
+            return [MOCKED_RESPONSES[0]]
+        elif "3" in prompt or "4" in prompt:
+            return [MOCKED_RESPONSES[-1]]
+
+    mock_object = AzureChatOpenAI(
+        deployment_name="YOUR-DEPLOYMENT",
+        temperature=0,
+        api_key="SECRET_API_KEY",
+        api_version="2024-05-01-preview",
+        azure_endpoint="https://mocked.endpoint.com",
+    )
+
+    counterfactual_object = CounterfactualGenerator(langchain_llm=mock_object)
+
+    monkeypatch.setattr(counterfactual_object, "_async_api_call", mock_async_api_call)
+
+    # Test parse_texts for sexual orientation
+    sexual_orientation_prompts = counterfactual_object.parse_texts(
+        texts=MOCKED_PROMPTS, attribute="sexual_orientation"
+    )
+    assert sexual_orientation_prompts == [[], [], ["homosexual"], ["lesbian"]]
+
+    # Test create_prompts for sexual orientation
+    sexual_orientation_prompts = counterfactual_object.create_prompts(
+        prompts=MOCKED_PROMPTS, attribute="sexual_orientation"
+    )
+    assert sexual_orientation_prompts == MOCKED_SEXUAL_ORIENTATION_PROMPTS
+
+    # Test generate_responses for sexual orientation
+    cf_data = await counterfactual_object.generate_responses(
+        prompts=MOCKED_PROMPTS, attribute="sexual_orientation", count=1
+    )
+    assert all(
+        [
+            cf_data["data"][key] == [MOCKED_RESPONSES[-1]] * 2
+            for key in cf_data["data"]
+            if "response" in key
+        ]
+    )
+
+    # Test check_ftu for sexual orientation
+    ftu_result = counterfactual_object.check_ftu(
+        prompts=MOCKED_PROMPTS, attribute="sexual_orientation"
+    )
+    assert ftu_result["metadata"]["ftu_satisfied"] is True
+    assert ftu_result["metadata"]["n_prompts_with_attribute_words"] == 2
+
+    # Test neutralize_tokens for sexual orientation
+    neutralized = counterfactual_object.neutralize_tokens(
+        texts=["prompt 3: homosexual person", "prompt 4: lesbian couple"],
+        attribute="sexual_orientation",
+    )
+    assert "[MASK]" in neutralized[0]
+    assert "[MASK]" in neutralized[1]
+
+    # Test validation error for invalid attribute
+    with pytest.raises(ValueError):
+        counterfactual_object.parse_texts(
+            texts=MOCKED_PROMPTS, attribute="invalid_attribute"
+        )

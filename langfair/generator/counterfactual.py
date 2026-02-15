@@ -31,6 +31,8 @@ from langfair.constants.word_lists import (
     PERSON_WORDS,
     RACE_WORDS_NOT_REQUIRING_CONTEXT,
     RACE_WORDS_REQUIRING_CONTEXT,
+    SEXUAL_ORIENTATION_WORDS_NOT_REQUIRING_CONTEXT,
+    SEXUAL_ORIENTATION_WORDS_REQUIRING_CONTEXT,
 )
 from langfair.generator.generator import ResponseGenerator
 from langfair.utils.display import (
@@ -60,6 +62,22 @@ STRICT_RACE_WORDS.extend(
 )  # Extend to include words that indicate race whether or not a person word follows
 STRICT_RACE_WORDS = list(set(STRICT_RACE_WORDS))
 ALL_RACE_WORDS = RACE_WORDS_REQUIRING_CONTEXT + RACE_WORDS_NOT_REQUIRING_CONTEXT
+
+STRICT_SEXUAL_ORIENTATION_WORDS = []
+for sow in (
+    SEXUAL_ORIENTATION_WORDS_REQUIRING_CONTEXT
+):  # Include token-pairs that indicate reference to the sexual orientation of a person
+    for pw in PERSON_WORDS:
+        STRICT_SEXUAL_ORIENTATION_WORDS.append(sow + " " + pw)
+
+STRICT_SEXUAL_ORIENTATION_WORDS.extend(
+    SEXUAL_ORIENTATION_WORDS_NOT_REQUIRING_CONTEXT
+)  # Extend to include words that indicate sexual orientation whether or not a person word follows
+STRICT_SEXUAL_ORIENTATION_WORDS = list(set(STRICT_SEXUAL_ORIENTATION_WORDS))
+ALL_SEXUAL_ORIENTATION_WORDS = (
+    SEXUAL_ORIENTATION_WORDS_REQUIRING_CONTEXT
+    + SEXUAL_ORIENTATION_WORDS_NOT_REQUIRING_CONTEXT
+)
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 
@@ -105,6 +123,7 @@ class CounterfactualGenerator(ResponseGenerator):
         self.attribute_to_word_lists = {
             "race": ALL_RACE_WORDS,
             "gender": ALL_GENDER_WORDS,
+            "sexual_orientation": ALL_SEXUAL_ORIENTATION_WORDS,
         }
         self.attribute_to_ref_dicts = {"gender": GENDER_TO_WORD_LISTS}
         self.gender_to_word_lists = GENDER_TO_WORD_LISTS
@@ -112,10 +131,12 @@ class CounterfactualGenerator(ResponseGenerator):
         self.gender_neutral_mapping = GENDER_NEUTRAL_MAPPING
         self.all_race_words = ALL_RACE_WORDS
         self.strict_race_words = STRICT_RACE_WORDS
+        self.strict_sexual_orientation_words = STRICT_SEXUAL_ORIENTATION_WORDS
         self.detokenizer = sacremoses.MosesDetokenizer("en")
         self.group_mapping = {
             "gender": ["male", "female"],
             "race": ["white", "black", "hispanic", "asian"],
+            "sexual_orientation": ["heterosexual", "gay", "lesbian", "bisexual"],
         }
 
         try:
@@ -145,7 +166,7 @@ class CounterfactualGenerator(ResponseGenerator):
         tiktoken_model_name: str
            The name of the OpenAI model to use for token counting.
 
-        attribute: str, either 'gender' or 'race'
+        attribute: str, either 'gender', 'race', or 'sexual_orientation'
             Specifies attribute to be used for counterfactual generation
 
         example_responses : list of strings, default=None
@@ -196,9 +217,9 @@ class CounterfactualGenerator(ResponseGenerator):
         texts : list of strings
             A list of texts to be parsed for protected attribute words
 
-        attribute : {'race','gender'}, default=None
-            Specifies what to parse for among race words and gender words. Must be specified
-            if custom_list is None
+        attribute : {'race','gender','sexual_orientation'}, default=None
+            Specifies what to parse for among race words, gender words, and sexual orientation
+            words. Must be specified if custom_list is None
 
         custom_list : List[str], default=None
             Custom list of tokens to use for parsing prompts. Must be provided if attribute is None.
@@ -233,9 +254,9 @@ class CounterfactualGenerator(ResponseGenerator):
         prompts : List[str]
             A list of prompts on which counterfactual substitution and response generation will be done
 
-        attribute : {'gender', 'race'}, default=None
-            Specifies whether to use race or gender for counterfactual substitution. Must be provided if
-            custom_dict is None.
+        attribute : {'gender', 'race', 'sexual_orientation'}, default=None
+            Specifies whether to use race, gender, or sexual orientation for counterfactual
+            substitution. Must be provided if custom_dict is None.
 
         custom_dict : Dict[str, List[str]], default=None
             A dictionary containing corresponding lists of tokens for counterfactual substitution. Keys
@@ -267,6 +288,14 @@ class CounterfactualGenerator(ResponseGenerator):
                 for race in self.group_mapping[attribute]
             }
 
+        elif attribute == "sexual_orientation":
+            prompts_dict = {
+                orientation + "_prompt": self._counterfactual_sub_sexual_orientation(
+                    texts=prompts, target_orientation=orientation
+                )
+                for orientation in self.group_mapping[attribute]
+            }
+
         else:
             if custom_dict:
                 ref_dict = custom_dict
@@ -292,30 +321,36 @@ class CounterfactualGenerator(ResponseGenerator):
         self, texts: List[str], attribute: str = "gender"
     ) -> List[str]:
         """
-        Neutralize gender and race words contained in a list of texts. Replaces gender words with a
-        gender-neutral equivalent and race words with "[MASK]".
+        Neutralize gender, race, and sexual orientation words contained in a list of texts.
+        Replaces gender words with a gender-neutral equivalent and race or sexual orientation
+        words with "[MASK]".
 
         Parameters
         ----------
         texts : List[str]
-            A list of texts on which gender or race neutralization will occur
+            A list of texts on which gender, race, or sexual orientation neutralization will occur
 
-        attribute : {'gender', 'race'}, default='gender'
-            Specifies whether to use race or gender for neutralization
+        attribute : {'gender', 'race', 'sexual_orientation'}, default='gender'
+            Specifies whether to use race, gender, or sexual orientation for neutralization
 
         Returns
         -------
         list
-            List of texts neutralized for race or gender
+            List of texts neutralized for race, gender, or sexual orientation
         """
         assert attribute in [
             "gender",
             "race",
-        ], "Only gender and race attributes are supported."
+            "sexual_orientation",
+        ], "Only gender, race, and sexual_orientation attributes are supported."
         if attribute == "gender":
             return [self._neutralize_gender(text) for text in texts]
         elif attribute == "race":
             return self._counterfactual_sub_race(texts=texts, target_race="[MASK]")
+        elif attribute == "sexual_orientation":
+            return self._counterfactual_sub_sexual_orientation(
+                texts=texts, target_orientation="[MASK]"
+            )
 
     async def generate_responses(
         self,
@@ -335,9 +370,9 @@ class CounterfactualGenerator(ResponseGenerator):
         prompts : list of strings
             A list of prompts on which counterfactual substitution and response generation will be done
 
-        attribute : {'gender', 'race'}, default=None
-            Specifies whether to use race or gender for counterfactual substitution. Must be provided if
-            custom_dict is None.
+        attribute : {'gender', 'race', 'sexual_orientation'}, default=None
+            Specifies whether to use race, gender, or sexual orientation for counterfactual
+            substitution. Must be provided if custom_dict is None.
 
         custom_dict : Dict[str, List[str]], default=None
             A dictionary containing corresponding lists of tokens for counterfactual substitution. Keys
@@ -457,9 +492,9 @@ class CounterfactualGenerator(ResponseGenerator):
         prompts : list of strings
             A list of prompts to be parsed for protected attribute words
 
-        attribute : {'race','gender'}, default=None
-            Specifies what to parse for among race words and gender words. Must be specified
-            if custom_list is None
+        attribute : {'race','gender','sexual_orientation'}, default=None
+            Specifies what to parse for among race words, gender words, and sexual orientation
+            words. Must be specified if custom_list is None
 
         custom_list : List[str], default=None
             Custom list of tokens to use for parsing prompts. Must be provided if attribute is None.
@@ -599,6 +634,8 @@ class CounterfactualGenerator(ResponseGenerator):
             return self._get_race_subsequences(text)
         elif attribute == "gender":
             return list(set(tokens) & set(self.attribute_to_word_lists[attribute]))
+        elif attribute == "sexual_orientation":
+            return self._get_sexual_orientation_subsequences(text)
         elif custom_list:
             return list(set(tokens) & set(custom_list))
 
@@ -674,6 +711,42 @@ class CounterfactualGenerator(ResponseGenerator):
         return seq
 
     @staticmethod
+    def _get_sexual_orientation_subsequences(text: str) -> List[str]:
+        """Used to check for sexual orientation string sequences"""
+        seq = text.lower()
+        return [subseq for subseq in STRICT_SEXUAL_ORIENTATION_WORDS if subseq in seq]
+
+    def _counterfactual_sub_sexual_orientation(
+        self,
+        texts: List[str],
+        target_orientation: str,
+    ) -> List[str]:
+        """Implements counterfactual substitution for sexual orientation"""
+        new_texts = []
+        for text in texts:
+            new_text = self._replace_sexual_orientation(text, target_orientation)
+            new_texts.append(new_text)
+        return new_texts
+
+    @staticmethod
+    def _replace_sexual_orientation(text: str, target_orientation: str) -> str:
+        """Replaces sexual orientation words with a target orientation word"""
+        seq = text.lower()
+        orientation_replacement_mapping = {}
+        for sow in SEXUAL_ORIENTATION_WORDS_REQUIRING_CONTEXT:  # Include token-pairs that indicate reference to the sexual orientation of a person
+            for pw in PERSON_WORDS:
+                key = sow + " " + pw
+                orientation_replacement_mapping[key] = target_orientation + " " + pw
+        for sow in SEXUAL_ORIENTATION_WORDS_NOT_REQUIRING_CONTEXT:
+            orientation_replacement_mapping[sow] = target_orientation
+
+        # Replace longest matches first to avoid partial replacements
+        for subseq in sorted(STRICT_SEXUAL_ORIENTATION_WORDS, key=len, reverse=True):
+            if subseq in seq:
+                seq = seq.replace(subseq, orientation_replacement_mapping[subseq])
+        return seq
+
+    @staticmethod
     def _validate_attributes(
         attribute: Optional[str] = None,
         custom_list: Optional[List[str]] = None,
@@ -683,14 +756,18 @@ class CounterfactualGenerator(ResponseGenerator):
         if for_parsing:
             if custom_list and attribute:
                 raise ValueError("Either custom_list or attribute must be None.")
-            if not (custom_list or attribute in ["race", "gender"]):
+            if not (
+                custom_list or attribute in ["race", "gender", "sexual_orientation"]
+            ):
                 raise ValueError(
-                    "If custom_list is None, attribute must be 'race' or 'gender'."
+                    "If custom_list is None, attribute must be 'race', 'gender', or 'sexual_orientation'."
                 )
         else:
             if custom_dict and attribute:
                 raise ValueError("Either custom_dict or attribute must be None.")
-            if not (custom_dict or attribute in ["race", "gender"]):
+            if not (
+                custom_dict or attribute in ["race", "gender", "sexual_orientation"]
+            ):
                 raise ValueError(
-                    "If custom_dict is None, attribute must be 'race' or 'gender'."
+                    "If custom_dict is None, attribute must be 'race', 'gender', or 'sexual_orientation'."
                 )

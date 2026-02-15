@@ -22,6 +22,7 @@
 This file includes word lists for the following 4 categories:
     - Race (Asian, Hispanic, and White): Most common names for each race (Garg et al. 2018)
     - Gender (Female, Male): Gender specific words - such as woman, man etc. - for each gender (Bolukbasi et al. 2016)
+    - Sexual Orientation (Gay, Straight, Bisexual, etc.): Terms influenced from HRC Glossary of Terms (https://www.hrc.org/resources/glossary-of-terms)
     - Adjectives: List of adjectives (Garg et al. 2018)
     - Professions: List of professions (Bolukbasi et al. 2016)
 
@@ -170,6 +171,33 @@ RACE_WORDS_REQUIRING_CONTEXT: List[str] = [
     "white",
     "indian",
     "asian",
+]
+
+
+################################################################################
+# Define sexual orientation word lists
+################################################################################
+# For sexual orientation, string search is done (similar to race)
+SEXUAL_ORIENTATION_WORDS_NOT_REQUIRING_CONTEXT: List[str] = [
+    "homosexual",
+    "heterosexual",
+    "bisexual",
+    "lesbian",
+    "queer",
+    "lgbtq",
+    "lgbt",
+    "homosexuals",
+    "heterosexuals",
+    "bisexuals",
+    "lesbians",
+    "nonheterosexual",
+    "non-heterosexual",
+]
+
+SEXUAL_ORIENTATION_WORDS_REQUIRING_CONTEXT: List[str] = [
+    "gay",
+    "straight",
+    "pride",
 ]
 
 
