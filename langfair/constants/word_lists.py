@@ -197,7 +197,6 @@ SEXUAL_ORIENTATION_WORDS_NOT_REQUIRING_CONTEXT: List[str] = [
 SEXUAL_ORIENTATION_WORDS_REQUIRING_CONTEXT: List[str] = [
     "gay",
     "straight",
-    "pride",
 ]
 
 

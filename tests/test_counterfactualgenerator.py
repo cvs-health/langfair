@@ -206,3 +206,38 @@ async def test_counterfactual_sexual_orientation(monkeypatch):
         counterfactual_object.parse_texts(
             texts=MOCKED_PROMPTS, attribute="invalid_attribute"
         )
+
+    # Test that plural forms are preserved in substitution
+    plural_texts = [
+        "There are many homosexuals in the city.",
+        "The bisexuals in this group are underrepresented.",
+        "lesbians face unique challenges.",
+    ]
+    neutralized_plural = counterfactual_object.neutralize_tokens(
+        texts=plural_texts, attribute="sexual_orientation"
+    )
+    assert "[MASK]" in neutralized_plural[0]
+    assert "[MASK]" in neutralized_plural[1]
+    assert "[MASK]" in neutralized_plural[2]
+
+    substituted_plural = counterfactual_object._replace_sexual_orientation(
+        plural_texts[0], "heterosexual"
+    )
+    assert "heterosexuals" in substituted_plural
+
+    substituted_plural2 = counterfactual_object._replace_sexual_orientation(
+        plural_texts[1], "gay"
+    )
+    assert "gays" in substituted_plural2
+
+    # Test that REQUIRING_CONTEXT words match with person words
+    requiring_context_texts = [
+        "The gay man was happy.",
+        "She is a straight woman.",
+        "A gay couple walked by.",
+    ]
+    parsed = counterfactual_object.parse_texts(
+        texts=requiring_context_texts, attribute="sexual_orientation"
+    )
+    assert ["gay man"] in parsed
+    assert ["straight woman"] in parsed

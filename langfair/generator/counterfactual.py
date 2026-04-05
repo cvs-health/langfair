@@ -64,15 +64,12 @@ STRICT_RACE_WORDS = list(set(STRICT_RACE_WORDS))
 ALL_RACE_WORDS = RACE_WORDS_REQUIRING_CONTEXT + RACE_WORDS_NOT_REQUIRING_CONTEXT
 
 STRICT_SEXUAL_ORIENTATION_WORDS = []
-for sow in (
-    SEXUAL_ORIENTATION_WORDS_REQUIRING_CONTEXT
-):  # Include token-pairs that indicate reference to the sexual orientation of a person
+for sow in SEXUAL_ORIENTATION_WORDS_REQUIRING_CONTEXT:
     for pw in PERSON_WORDS:
         STRICT_SEXUAL_ORIENTATION_WORDS.append(sow + " " + pw)
 
-STRICT_SEXUAL_ORIENTATION_WORDS.extend(
-    SEXUAL_ORIENTATION_WORDS_NOT_REQUIRING_CONTEXT
-)  # Extend to include words that indicate sexual orientation whether or not a person word follows
+# Extend to include words that indicate sexual orientation whether or not a person word follows
+STRICT_SEXUAL_ORIENTATION_WORDS.extend(SEXUAL_ORIENTATION_WORDS_NOT_REQUIRING_CONTEXT)
 STRICT_SEXUAL_ORIENTATION_WORDS = list(set(STRICT_SEXUAL_ORIENTATION_WORDS))
 ALL_SEXUAL_ORIENTATION_WORDS = (
     SEXUAL_ORIENTATION_WORDS_REQUIRING_CONTEXT
@@ -733,12 +730,22 @@ class CounterfactualGenerator(ResponseGenerator):
         """Replaces sexual orientation words with a target orientation word"""
         seq = text.lower()
         orientation_replacement_mapping = {}
-        for sow in SEXUAL_ORIENTATION_WORDS_REQUIRING_CONTEXT:  # Include token-pairs that indicate reference to the sexual orientation of a person
+        # Build a set of singular NOT_REQUIRING_CONTEXT words for plural detection
+        singular_words = set(SEXUAL_ORIENTATION_WORDS_NOT_REQUIRING_CONTEXT)
+        for sow in SEXUAL_ORIENTATION_WORDS_REQUIRING_CONTEXT:
             for pw in PERSON_WORDS:
                 key = sow + " " + pw
                 orientation_replacement_mapping[key] = target_orientation + " " + pw
         for sow in SEXUAL_ORIENTATION_WORDS_NOT_REQUIRING_CONTEXT:
-            orientation_replacement_mapping[sow] = target_orientation
+            # Preserve plural form: if source word is a plural of another listed word, use plural target
+            if (
+                sow.endswith("s")
+                and sow[:-1] in singular_words
+                and target_orientation != "[MASK]"
+            ):
+                orientation_replacement_mapping[sow] = target_orientation + "s"
+            else:
+                orientation_replacement_mapping[sow] = target_orientation
 
         # Replace longest matches first to avoid partial replacements
         for subseq in sorted(STRICT_SEXUAL_ORIENTATION_WORDS, key=len, reverse=True):
