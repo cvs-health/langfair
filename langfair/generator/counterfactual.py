@@ -31,6 +31,18 @@ from langfair.constants.word_lists import (
     PERSON_WORDS,
     RACE_WORDS_NOT_REQUIRING_CONTEXT,
     RACE_WORDS_REQUIRING_CONTEXT,
+    ALL_AGE_WORDS,
+    AGE_WORDS_STRING_SEARCH,
+    ALL_HEALTH_CONDITION_WORDS,
+    HEALTH_CONDITION_WORDS_STRING_SEARCH,
+    ALL_NATIONALITY_WORDS,
+    NATIONALITY_WORDS_STRING_SEARCH,
+    ALL_APPEARANCE_WORDS,
+    APPEARANCE_WORDS_STRING_SEARCH,
+    ALL_RELIGION_WORDS,
+    ALL_SEXUAL_ORIENTATION_WORDS,
+    ALL_SOCIOECONOMIC_CLASS_WORDS,
+    SOCIOECONOMIC_CLASS_WORDS_STRING_SEARCH,
 )
 from langfair.generator.generator import ResponseGenerator
 from langfair.utils.display import (
@@ -105,8 +117,22 @@ class CounterfactualGenerator(ResponseGenerator):
         self.attribute_to_word_lists = {
             "race": ALL_RACE_WORDS,
             "gender": ALL_GENDER_WORDS,
+            "age": ALL_AGE_WORDS,
+            "health-condition":ALL_HEALTH_CONDITION_WORDS,
+            "nationality":ALL_NATIONALITY_WORDS,
+            "physical-appearance":ALL_APPEARANCE_WORDS,
+            "religion": ALL_RELIGION_WORDS,
+            "sexual-orientation":ALL_SEXUAL_ORIENTATION_WORDS,
+            "socioeconomic-class":ALL_SOCIOECONOMIC_CLASS_WORDS
         }
         self.attribute_to_ref_dicts = {"gender": GENDER_TO_WORD_LISTS}
+        self.attribute_to_string_search_lists = {
+            "age": AGE_WORDS_STRING_SEARCH,
+            "health-condition": HEALTH_CONDITION_WORDS_STRING_SEARCH,
+            "nationality": NATIONALITY_WORDS_STRING_SEARCH,
+            "physical-appearance": APPEARANCE_WORDS_STRING_SEARCH,
+            "socioeconomic-class": SOCIOECONOMIC_CLASS_WORDS_STRING_SEARCH,
+        }
         self.gender_to_word_lists = GENDER_TO_WORD_LISTS
         self.cf_gender_mapping = GENDER_MAPPING
         self.gender_neutral_mapping = GENDER_NEUTRAL_MAPPING
@@ -114,8 +140,15 @@ class CounterfactualGenerator(ResponseGenerator):
         self.strict_race_words = STRICT_RACE_WORDS
         self.detokenizer = sacremoses.MosesDetokenizer("en")
         self.group_mapping = {
-            "gender": ["male", "female"],
+            "gender": ["male", "female", "nonbinary", "queer"],
             "race": ["white", "black", "hispanic", "asian"],
+            "age": ["young", "middle-aged", "old"],
+            "health-condition": ["healthy", "disabled", "chronically_ill", "blind", "pregnant", ],
+            "nationality": ["american", "bolivian", "german", "indian", "albanian", "nigerian", "namibian", "nepali", "iranian", "samoan"],
+            "physical-appearance": ["fit", "attractive", "unattractive", "overweight", "tall", "small"],
+            "religion": ["atheist", "christian", "muslim", "jewish", "hindu", "buddhist"],
+            "sexual-orientation": ["homosexual", "queer", "heterosexual"],
+            "socioeconomic-class": ["upper-class", "middle-class", "working-class"],
         }
 
         try:
@@ -267,10 +300,10 @@ class CounterfactualGenerator(ResponseGenerator):
                 for race in self.group_mapping[attribute]
             }
 
-        else:
+        elif attribute == "gender" or custom_dict:
             if custom_dict:
                 ref_dict = custom_dict
-            elif attribute == "gender":
+            else:
                 ref_dict = self.attribute_to_ref_dicts[attribute]
 
             prompts_dict = {key + "_prompt": [] for key in ref_dict}
@@ -281,6 +314,15 @@ class CounterfactualGenerator(ResponseGenerator):
                 self.counterfactual_prompts = counterfactual_prompts
                 for key in counterfactual_prompts:
                     prompts_dict[key + "_prompt"].append(counterfactual_prompts[key])
+
+        else:
+            prompts_dict = {
+                group + "_prompt": [
+                    self._replace_attribute(text=text, attribute=attribute, target_group=group)
+                    for text in prompts
+                ]
+                for group in self.group_mapping[attribute]
+            }
 
         prompts_dict["original_prompt"] = prompts
         prompts_dict["attribute_words"] = [
@@ -597,8 +639,13 @@ class CounterfactualGenerator(ResponseGenerator):
         tokens = word_tokenize(str(text).lower())
         if attribute == "race":
             return self._get_race_subsequences(text)
-        elif attribute == "gender":
-            return list(set(tokens) & set(self.attribute_to_word_lists[attribute]))
+        elif attribute in self.attribute_to_word_lists:
+            token_matches = list(set(tokens) & set(self.attribute_to_word_lists[attribute]))
+            string_matches = [
+                w for w in self.attribute_to_string_search_lists.get(attribute, [])
+                if w in text.lower()
+            ]
+            return list(set(token_matches + string_matches))
         elif custom_list:
             return list(set(tokens) & set(custom_list))
 
@@ -655,6 +702,14 @@ class CounterfactualGenerator(ResponseGenerator):
         seq = text.lower()
         return [subseq for subseq in STRICT_RACE_WORDS if subseq in seq]
 
+    def _replace_attribute(self, text: str, attribute: str, target_group: str) -> str:
+        """Replaces attribute words in text with target group label"""
+        seq = text.lower()
+        for word in self.attribute_to_word_lists[attribute]:
+            if word in seq:
+                seq = seq.replace(word, target_group)
+        return seq
+
     @staticmethod
     def _replace_race(text: str, target_race: str) -> str:
         """Replaces text with a target word"""
@@ -679,18 +734,24 @@ class CounterfactualGenerator(ResponseGenerator):
         custom_list: Optional[List[str]] = None,
         custom_dict: Optional[Dict[str, str]] = None,
         for_parsing: bool = True,
+        valid_attributes: Optional[List[str]] = None,
     ) -> None:
+        if valid_attributes is None:
+            valid_attributes = [
+                "race", "gender", "age", "health-condition", "nationality",
+                "physical-appearance", "religion", "sexual-orientation", "socioeconomic-class"
+            ]
         if for_parsing:
             if custom_list and attribute:
                 raise ValueError("Either custom_list or attribute must be None.")
-            if not (custom_list or attribute in ["race", "gender"]):
+            if not (custom_list or attribute in valid_attributes):
                 raise ValueError(
-                    "If custom_list is None, attribute must be 'race' or 'gender'."
+                    f"If custom_list is None, attribute must be one of {valid_attributes}."
                 )
         else:
             if custom_dict and attribute:
                 raise ValueError("Either custom_dict or attribute must be None.")
-            if not (custom_dict or attribute in ["race", "gender"]):
+            if not (custom_dict or attribute in valid_attributes):
                 raise ValueError(
-                    "If custom_dict is None, attribute must be 'race' or 'gender'."
+                    f"If custom_dict is None, attribute must be one of {valid_attributes}."
                 )

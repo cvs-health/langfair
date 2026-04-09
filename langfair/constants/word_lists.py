@@ -135,9 +135,45 @@ GENDER_NEUTRAL_WORDS: List[str] = [
     "folks",
 ]
 
+QUEER_WORDS: List[str] = [
+    "they",
+    "child",
+    "their",
+    "them",
+    "parent",
+    "person",
+    "kid",
+    "themself",
+    "individual",
+    "sibling",
+    "children",
+    "parents",
+    "people",
+    "kids",
+    "individuals",
+    "siblings",
+    "cousin",
+    "cousins",
+    "cousin",
+    "cousins",
+    "person",
+    "people",
+    "grandparent",
+    "grandparents",
+    "partner",
+    "partners",
+    "Mx.",
+    "person",
+    "folks",
+]
+
+NONBINARY_WORDS: List[str] = GENDER_NEUTRAL_WORDS
+
 GENDER_TO_WORD_LISTS: Dict[str, List[str]] = {
     "female": FEMALE_WORDS,
     "male": MALE_WORDS,
+    "nonbinary": NONBINARY_WORDS,
+    "queer": QUEER_WORDS,
 }
 
 ################################################################################
@@ -992,3 +1028,985 @@ PERSON_WORDS_LIST = (
     + OTHER_PERSON_NOUNS
 )
 PERSON_WORDS = list(set(PERSON_WORDS_LIST) - set(WORDS_TO_REMOVE))
+
+YOUNG_WORDS: List[str] = [
+    "young", 
+    "younger", 
+    "youth",
+    "adolescent", 
+    "teenager", 
+    "teen", 
+    "teenage", 
+    "teenaged",
+    "juvenile", 
+    "toddler", 
+    "infant", 
+    "baby",
+]
+
+YOUNG_WORDS_STRING_SEARCH: List[str] = [
+    "twenty-year-old", 
+    "20-year-old",
+    "twenty-five-year-old", 
+    "25-year-old",
+    "thirty-year-old", 
+    "30-year-old",
+    "thirty-five-year-old", 
+    "35-year-old",
+    "forty-year-old", 
+    "40-year-old",
+    "twenty-something", 
+    "thirty-something",
+]
+
+MIDDLE_AGED_WORDS: List[str] = [
+    "midlife",
+]
+
+MIDDLE_AGED_WORDS_STRING_SEARCH: List[str] = [
+    "middle-aged",
+    "forty-five-year-old", 
+    "45-year-old",
+    "fifty-year-old", 
+    "50-year-old",
+    "fifty-five-year-old", 
+    "55-year-old",
+    "sixty-year-old", 
+    "60-year-old",
+    "forty-something", 
+    "fifty-something", 
+    "sixty-something",
+]
+
+OLD_WORDS: List[str] = [
+    "old", 
+    "older", 
+    "elderly", 
+    "senior", 
+    "aged", 
+    "elder",
+    "geriatric", 
+    "retiree", 
+    "retired", 
+    "spry",
+    "octogenarian", 
+    "nonagenarian", 
+    "centenarian",
+]
+
+OLD_WORDS_STRING_SEARCH: List[str] = [
+    "senior-citizen", 
+    "young-at-heart",
+    "sixty-five-year-old", 
+    "65-year-old",
+    "seventy-year-old", 
+    "70-year-old",
+    "seventy-five-year-old", 
+    "75-year-old",
+    "eighty-year-old", 
+    "80-year-old",
+    "eighty-five-year-old", 
+    "85-year-old",
+    "ninety-year-old", 
+    "90-year-old",
+    "ninety-five-year-old", 
+    "95-year-old",
+    "seventy-something", 
+    "eighty-something", 
+    "ninety-something",
+]
+
+ADULT_WORDS: List[str] = [
+    "adult",
+]
+
+AGE_WORDS_STRING_SEARCH: List[str] = (
+    YOUNG_WORDS_STRING_SEARCH
+    + MIDDLE_AGED_WORDS_STRING_SEARCH
+    + OLD_WORDS_STRING_SEARCH
+)
+
+ALL_AGE_WORDS: List[str] = (
+    YOUNG_WORDS + MIDDLE_AGED_WORDS + OLD_WORDS + ADULT_WORDS
+    + AGE_WORDS_STRING_SEARCH
+)
+
+
+HEALTHY_WORDS: List[str] = [
+    "healthy",
+    "nondisabled",
+]
+
+HEALTHY_WORDS_STRING_SEARCH: List[str] = [
+    "able-bodied",
+    "non-disabled",
+]
+
+DISABLED_WORDS: List[str] = [
+    "disabled",
+    "handicapped",
+    "wheelchair",
+    "paraplegic",
+    "paralyzed",
+    "quadriplegic",
+    "amputee",
+]
+
+DISABLED_WORDS_STRING_SEARCH: List[str] = [
+    "differently-abled",
+    "differently abled",
+    "wheelchair-bound",
+    "wheelchair-user",
+    "who uses a wheelchair",
+    "with a disability",
+    "with a limb difference",
+    "who is an amputee",
+    "with an amputation",
+    "with limb loss",
+    "with a developmental disability",
+    "with a cognitive disability",
+    "with an intellectual disability",
+]
+
+DEAF_WORDS: List[str] = [
+    "deaf",
+]
+
+DEAF_WORDS_STRING_SEARCH: List[str] = [
+    "hard-of-hearing",
+    "hearing-impaired",
+    "cochlear-implant-using",
+    "with a cochlear implant",
+    "who is deaf",
+    "who is hard of hearing",
+    "with difficulty hearing",
+]
+
+BLIND_WORDS: List[str] = [
+    "blind",
+    "sightless",
+]
+
+BLIND_WORDS_STRING_SEARCH: List[str] = [
+    "visually-impaired",
+    "low-vision",
+    "vision-impaired",
+    "with low vision",
+    "with blindness",
+    "who is visually impaired",
+    "with difficulty seeing",
+]
+
+MOBILITY_IMPAIRED_WORDS: List[str] = []
+
+MOBILITY_IMPAIRED_WORDS_STRING_SEARCH: List[str] = [
+    "with difficulty walking",
+    "with difficulty moving",
+    "who walks with crutches",
+]
+
+NEUROLOGICAL_WORDS: List[str] = [
+    "autistic",
+    "dyslexic",
+    "neuroatypical",
+    "neurodivergent",
+    "neurodiverse",
+    "neurotypical",
+]
+
+NEUROLOGICAL_WORDS_STRING_SEARCH: List[str] = [
+    "non-neurotypical",
+    "learning-disabled",
+    "on the spectrum",
+    "with autism",
+    "with dyslexia",
+    "who incurred a traumatic brain injury",
+]
+
+SPEECH_IMPAIRED_WORDS: List[str] = [
+    "aphasic",
+    "mute",
+]
+
+SPEECH_IMPAIRED_WORDS_STRING_SEARCH: List[str] = [
+    "speech-impaired",
+    "with aphasia",
+    "with a lisp",
+    "who stutters",
+    "with a stutter",
+    "with a speech fluency disorder",
+    "without speech",
+]
+
+GLASSES_WORDS: List[str] = []
+
+GLASSES_WORDS_STRING_SEARCH: List[str] = [
+    "glasses-wearing",
+    "with bifocals",
+]
+
+MEMORY_IMPAIRED_WORDS: List[str] = []
+
+MEMORY_IMPAIRED_WORDS_STRING_SEARCH: List[str] = [
+    "with memory loss",
+]
+
+CHRONICALLY_ILL_WORDS: List[str] = [
+    "ill",
+    "sick",
+]
+
+CHRONICALLY_ILL_WORDS_STRING_SEARCH: List[str] = [
+    "chronically-ill",
+    "chronically-sick",
+]
+
+PREGNANT_WORDS: List[str] = [
+    "pregnant",
+    "expectant",
+]
+
+HEALTH_CONDITION_WORDS_STRING_SEARCH: List[str] = (
+    HEALTHY_WORDS_STRING_SEARCH
+    + DISABLED_WORDS_STRING_SEARCH
+    + DEAF_WORDS_STRING_SEARCH
+    + BLIND_WORDS_STRING_SEARCH
+    + MOBILITY_IMPAIRED_WORDS_STRING_SEARCH
+    + NEUROLOGICAL_WORDS_STRING_SEARCH
+    + SPEECH_IMPAIRED_WORDS_STRING_SEARCH
+    + GLASSES_WORDS_STRING_SEARCH
+    + MEMORY_IMPAIRED_WORDS_STRING_SEARCH
+    + CHRONICALLY_ILL_WORDS_STRING_SEARCH
+)
+
+ALL_HEALTH_CONDITION_WORDS: List[str] = (
+    HEALTHY_WORDS
+    + DISABLED_WORDS
+    + DEAF_WORDS
+    + BLIND_WORDS
+    + MOBILITY_IMPAIRED_WORDS
+    + NEUROLOGICAL_WORDS
+    + SPEECH_IMPAIRED_WORDS
+    + GLASSES_WORDS
+    + MEMORY_IMPAIRED_WORDS
+    + CHRONICALLY_ILL_WORDS
+    + PREGNANT_WORDS
+    + HEALTH_CONDITION_WORDS_STRING_SEARCH
+)
+
+NATIONALITY_WORDS: List[str] = [
+    'afghan',
+    'albanian',
+    'algerian',
+    'andorran',
+    'angolan',
+    'antiguan',
+    'barbudan',
+    'argentine',
+    'armenian',
+    'australian',
+    'austrian',
+    'azerbaijani',
+    'azeri',
+    'bahamian',
+    'bahraini',
+    'bengali',
+    'barbadian',
+    'belarusian',
+    'belgian',
+    'belizean',
+    'beninese',
+    'beninois',
+    'bhutanese',
+    'bolivian',
+    'bosnian',
+    'herzegovinian',
+    'motswana',
+    'botswanan',
+    'brazilian',
+    'bruneian',
+    'bulgarian',
+    'burkinabé',
+    'burmese',
+    'burundian',
+    'cambodian',
+    'cameroonian',
+    'canadian',
+    'chadian',
+    'chilean',
+    'chinese',
+    'colombian',
+    'comoran',
+    'comorian',
+    'congolese',
+    'ivorian',
+    'croatian',
+    'cuban',
+    'cypriot',
+    'czech',
+    'danish',
+    'djiboutian',
+    'dominican',
+    'timorese',
+    'ecuadorian',
+    'egyptian',
+    'salvadoran',
+    'equatoguinean',
+    'eritrean',
+    'estonian',
+    'ethiopian',
+    'fijian',
+    'finnish',
+    'french',
+    'gabonese',
+    'gambian',
+    'georgian',
+    'german',
+    'ghanaian',
+    'gibraltar',
+    'greek',
+    'hellenic',
+    'grenadian',
+    'guatemalan',
+    'guinean',
+    'guyanese',
+    'haitian',
+    'honduran',
+    'hungarian',
+    'magyar',
+    'icelandic',
+    'indian',
+    'indonesian',
+    'iranian',
+    'persian',
+    'iraqi',
+    'irish',
+    'israeli',
+    'italian',
+    'jamaican',
+    'japanese',
+    'jordanian',
+    'kazakhstani',
+    'kazakh',
+    'kenyan',
+    'korean',
+    'kuwaiti',
+    'kyrgyzstani',
+    'kyrgyz',
+    'kirgiz',
+    'kirghiz',
+    'lao',
+    'laotian',
+    'latvian',
+    'lettish',
+    'lebanese',
+    'basotho',
+    'liberian',
+    'libyan',
+    'liechtensteiner',
+    'lithuanian',
+    'luxembourg',
+    'luxembourgish',
+    'macedonian',
+    'malagasy',
+    'malawian',
+    'malaysian',
+    'maldivian',
+    'malian',
+    'malinese',
+    'maltese',
+    'marshallese',
+    'martiniquais',
+    'martinican',
+    'mauritanian',
+    'mauritian',
+    'mexican',
+    'micronesian',
+    'moldovan',
+    'monégasque',
+    'monacan',
+    'mongolian',
+    'montenegrin',
+    'moroccan',
+    'mozambican',
+    'namibian',
+    'nauruan',
+    'nepali',
+    'nepalese',
+    'dutch',
+    'netherlandic',
+    'zelanian',
+    'nicaraguan',
+    'nigerien',
+    'nigerian',
+    'norwegian',
+    'omani',
+    'pakistani',
+    'palauan',
+    'palestinian',
+    'panamanian',
+    'papuan',
+    'paraguayan',
+    'peruvian',
+    'filipino',
+    'philippine',
+    'polish',
+    'portuguese',
+    'qatari',
+    'romanian',
+    'russian',
+    'rwandan',
+    'kittitian',
+    'nevisian',
+    'vincentian',
+    'samoan',
+    'sammarinese',
+    'saudi',
+    'senegalese',
+    'serbian',
+    'seychellois',
+    'singaporean',
+    'slovak',
+    'slovenian',
+    'slovene',
+    'somali',
+    'spanish',
+    'sudanese',
+    'surinamese',
+    'swazi',
+    'swedish',
+    'swiss',
+    'syrian',
+    'tajikistani',
+    'tanzanian',
+    'thai',
+    'togolese',
+    'tokelauan',
+    'tongan',
+    'trinidadian',
+    'tobagonian',
+    'tunisian',
+    'turkish',
+    'turkmen',
+    'tuvaluan',
+    'ugandan',
+    'ukrainian',
+    'emirati',
+    'emirian',
+    'emiri',
+    'uk',
+    'british',
+    'us',
+    'american',
+    'uruguayan',
+    'uzbekistani',
+    'uzbek',
+    'vanuatuan',
+    'vatican',
+    'venezuelan',
+    'vietnamese',
+    'yemeni',
+    'zambian',
+    'zimbabwean',
+]
+
+NATIONALITY_WORDS_STRING_SEARCH: List[str] = [
+    'bissau-guinean',
+    'cabo verdean',
+    'central african',
+    'costa rican',
+    'equatorial guinean',
+    'i-kiribati',
+    'new zealand',
+    'ni-vanuatu',
+    'north korean',
+    'northern marianan',
+    'papua new guinean',
+    'puerto rican',
+    'saint lucian',
+    'saint vincentian',
+    'saudi arabian',
+    'são toméan',
+    'sierra leonean',
+    'solomon island',
+    'south african',
+    'south sudanese',
+    'sri lankan',
+    'united states',
+]
+
+ALL_NATIONALITY_WORDS: List[str] = NATIONALITY_WORDS + NATIONALITY_WORDS_STRING_SEARCH
+
+THIN_WORDS: List[str] = [
+    "bony", 
+    "gangly", 
+    "lanky", 
+    "skinny", 
+    "slender", 
+    "slim", 
+    "svelte", 
+    "thin", 
+    "underweight",
+]
+
+FIT_WORDS: List[str] = [
+    "fit", 
+    "athletic", 
+    "muscular", 
+    "toned", 
+    "lean", 
+    "ripped", 
+    "swole", 
+    "strong",
+]
+
+FIT_WORDS_STRING_SEARCH: List[str] = [
+    "in-shape",
+    "physically fit",
+    "well-built",
+]
+
+OVERWEIGHT_WORDS: List[str] = [
+    "overweight", 
+    "obese", 
+    "fat", 
+    "heavy", 
+    "chubby",
+    "chunky", 
+    "curvy", 
+    "heavyset", 
+    "heftier", 
+    "hefty", 
+    "plump", 
+    "potbellied", 
+    "rotund", 
+    "bulky",
+]
+
+OVERWEIGHT_WORDS_STRING_SEARCH: List[str] = [
+    "full-figured",
+    "heavy-set",
+    "mildly overweight",
+    "morbidly obese",
+    "plus-sized",
+    "slightly overweight",
+]
+
+ATTRACTIVE_WORDS: List[str] = [
+    "attractive", 
+    "beautiful", 
+    "handsome", 
+    "pretty", 
+    "gorgeous",
+    "adorable", 
+    "cute", 
+    "hot", 
+    "hunky", 
+    "sexy",
+]
+
+ATTRACTIVE_WORDS_STRING_SEARCH: List[str] = [
+    "good-looking",
+]
+
+UNATTRACTIVE_WORDS: List[str] = [
+    "unattractive", 
+    "ugly", 
+    "plain", 
+    "homely", 
+    "hideous",
+]
+
+UNATTRACTIVE_WORDS_STRING_SEARCH: List[str] = [
+    "plain-looking",
+]
+
+LARGE_STATURE_WORDS: List[str] = [
+    "tall", 
+    "taller", 
+    "towering",
+    "beefy", 
+    "big", 
+    "bigger", 
+    "brawny", 
+    "burly", 
+    "giant", 
+    "huge", 
+    "large", 
+    "larger", 
+    "massive", 
+    "stocky", 
+    "gigantic",
+]
+
+LARGE_STATURE_WORDS_STRING_SEARCH: List[str] = [
+    "barrel-chested",
+    "big-boned",
+    "large-stature",
+    "very tall",
+]
+
+MEDIUM_STATURE_WORDS: List[str] = []
+
+MEDIUM_STATURE_WORDS_STRING_SEARCH: List[str] = [
+    "average-height",
+    "medium-height",
+    "medium-stature",
+]
+
+SMALL_STATURE_WORDS: List[str] = [
+    "short", 
+    "petite", 
+    "small", 
+    "tiny",
+    "littler", 
+    "scrawny", 
+    "shorter", 
+    "smaller", 
+    "miniature",
+]
+
+SMALL_STATURE_WORDS_STRING_SEARCH: List[str] = [
+    "small-stature",
+    "vertically challenged",
+    "very short",
+    "who's short in stature",
+    "who's of short stature",
+    "who is a little person",
+]
+
+EYE_COLOR_WORDS: List[str] = []
+
+EYE_COLOR_WORDS_STRING_SEARCH: List[str] = [
+    "blue-eyed",
+    "brown-eyed",
+    "green-eyed",
+    "hazel-eyed",
+    "gray-eyed",
+    "grey-eyed",
+    "amber-eyed",
+]
+
+HAIR_WORDS: List[str] = [
+    "bald", 
+    "balding", 
+    "bearded", 
+    "goateed", 
+    "graying", 
+    "hairy",
+    "mustachioed", 
+    "ponytailed", 
+    "scruffy", 
+    "shaggy", 
+    "unshaved",
+    "blond", 
+    "blonde", 
+    "brunette", 
+    "ginger", 
+    "redhead", 
+    "redheaded",
+    "dreadlocked",
+]
+
+HAIR_WORDS_STRING_SEARCH: List[str] = [
+    "bald-headed",
+    "clean-shaven",
+    "gray-haired",
+    "long-haired",
+    "short-haired",
+    "spiky-haired",
+    "white-haired",
+    "black-haired",
+    "brown-haired",
+    "coily-haired",
+    "curly-haired",
+    "dark-haired",
+    "dirty-blonde",
+    "frizzy-haired",
+    "kinky-haired",
+    "light-haired",
+    "straight-haired",
+]
+
+SKIN_COLOR_WORDS: List[str] = []
+
+SKIN_COLOR_WORDS_STRING_SEARCH: List[str] = [
+    "brown-skinned",
+    "dark-skinned",
+    "light-skinned",
+    "olive-skinned",
+]
+
+MISC_APPEARANCE_WORDS: List[str] = [
+    "smelly", 
+    "stinky", 
+    "grungy", 
+    "scrubby",
+]
+
+MISC_APPEARANCE_WORDS_STRING_SEARCH: List[str] = [
+    "acne-covered",
+    "acne-ridden",
+    "four-eyed",
+    "glasses-wearing",
+    "out-of-shape",
+    "well-groomed",
+    "visually impaired",
+    "with an afro",
+]
+
+# Backward-compatible aliases
+TALL_WORDS: List[str] = LARGE_STATURE_WORDS
+SMALL_WORDS: List[str] = SMALL_STATURE_WORDS
+
+APPEARANCE_WORDS_STRING_SEARCH: List[str] = (
+    FIT_WORDS_STRING_SEARCH
+    + OVERWEIGHT_WORDS_STRING_SEARCH
+    + ATTRACTIVE_WORDS_STRING_SEARCH
+    + UNATTRACTIVE_WORDS_STRING_SEARCH
+    + LARGE_STATURE_WORDS_STRING_SEARCH
+    + MEDIUM_STATURE_WORDS_STRING_SEARCH
+    + SMALL_STATURE_WORDS_STRING_SEARCH
+    + EYE_COLOR_WORDS_STRING_SEARCH
+    + HAIR_WORDS_STRING_SEARCH
+    + SKIN_COLOR_WORDS_STRING_SEARCH
+    + MISC_APPEARANCE_WORDS_STRING_SEARCH
+)
+
+ALL_APPEARANCE_WORDS: List[str] = (
+    THIN_WORDS
+    + FIT_WORDS
+    + OVERWEIGHT_WORDS
+    + ATTRACTIVE_WORDS
+    + UNATTRACTIVE_WORDS
+    + LARGE_STATURE_WORDS
+    + MEDIUM_STATURE_WORDS
+    + SMALL_STATURE_WORDS
+    + EYE_COLOR_WORDS
+    + HAIR_WORDS
+    + SKIN_COLOR_WORDS
+    + MISC_APPEARANCE_WORDS
+    + APPEARANCE_WORDS_STRING_SEARCH
+)
+
+
+ATHEIST_WORDS: List[str] = [
+    "atheist", 
+    "atheists", 
+    "atheism",
+    "agnostic", 
+    "nonreligious", 
+    "secular", 
+    "irreligious",
+]
+
+CHRISTIAN_WORDS: List[str] = [
+    "christian", 
+    "christians", 
+    "christianity",
+    "catholic", 
+    "protestant", 
+    "evangelical",
+    "lutheran", 
+    "mormon", 
+    "amish", 
+    "unitarian",
+]
+
+MUSLIM_WORDS: List[str] = [
+    "muslim", 
+    "muslims", 
+    "islamic", 
+    "islam",
+    "shia", 
+    "sunni",
+]
+
+JEWISH_WORDS: List[str] = [
+    "jewish", 
+    "jew", 
+    "jews", 
+    "judaism",
+    "hasidic",
+]
+
+HINDU_WORDS: List[str] = [
+    "hindu", 
+    "hindus", 
+    "hinduism",
+]
+
+BUDDHIST_WORDS: List[str] = [
+    "buddhist", 
+    "buddhists", 
+    "buddhism",
+]
+
+OTHER_RELIGION_WORDS: List[str] = [
+    "sikh", 
+    "sikhs", 
+    "sikhism",
+    "spiritual", 
+    "spiritualist",
+    "pagan", 
+    "wiccan",
+    "rasta", 
+    "rastafarian",
+    "satanist",
+    "confucianist", 
+    "confucian",
+    "taoist", 
+    "taoism",
+    "shintoist", 
+    "shinto",
+    "zoroastrian",
+    "jain", 
+    "jains", 
+    "jainism",
+    "druze",
+    "cheondoist",
+    "bahai",
+    "religious",
+]
+
+ALL_RELIGION_WORDS: List[str] = (
+    ATHEIST_WORDS + CHRISTIAN_WORDS + MUSLIM_WORDS
+    + JEWISH_WORDS + HINDU_WORDS + BUDDHIST_WORDS
+    + OTHER_RELIGION_WORDS
+)
+
+
+ASEXUAL_AROMANTIC_WORDS: List[str] = [
+    "asexual",
+    "ace",
+    "aromantic",
+]
+
+BISEXUAL_WORDS: List[str] = [
+    "bi",
+    "bisexual",
+]
+
+DEMISEXUAL_WORDS: List[str] = [
+    "demisexual",
+]
+
+GAY_WORDS: List[str] = [
+    "gay",
+    "homosexual",
+]
+
+LESBIAN_WORDS: List[str] = [
+    "lesbian",
+]
+
+PANSEXUAL_WORDS: List[str] = [
+    "pan",
+    "pansexual",
+]
+
+POLYAMOROUS_WORDS: List[str] = [
+    "polyamorous",
+    "poly",
+]
+
+QUEER_ORIENTATION_WORDS: List[str] = [
+    "queer",
+    "lgbtq",
+    "lgbt",
+]
+
+HETEROSEXUAL_WORDS: List[str] = [
+    "straight",
+    "hetero",
+    "heterosexual",
+]
+
+# Backward-compatible aliases
+HOMOSEXUAL_WORDS: List[str] = GAY_WORDS + LESBIAN_WORDS
+QUEER_IDENTITY_WORDS: List[str] = QUEER_ORIENTATION_WORDS + BISEXUAL_WORDS + PANSEXUAL_WORDS
+
+ALL_SEXUAL_ORIENTATION_WORDS: List[str] = (
+    ASEXUAL_AROMANTIC_WORDS
+    + BISEXUAL_WORDS
+    + DEMISEXUAL_WORDS
+    + GAY_WORDS
+    + LESBIAN_WORDS
+    + PANSEXUAL_WORDS
+    + POLYAMOROUS_WORDS
+    + QUEER_ORIENTATION_WORDS
+    + HETEROSEXUAL_WORDS
+)
+
+
+UPPER_CLASS_WORDS: List[str] = [
+    "wealthy",
+    "rich",
+    "affluent",
+    "privileged",
+    "moneyed",
+]
+
+UPPER_CLASS_WORDS_STRING_SEARCH: List[str] = [
+    "upper-class",
+    "financially well-off",
+    "high-net-worth",
+    "one-percenter",
+    "well-to-do",
+    "well-off",
+]
+
+MIDDLE_CLASS_WORDS: List[str] = []
+
+MIDDLE_CLASS_WORDS_STRING_SEARCH: List[str] = [
+    "middle-class",
+]
+
+WORKING_CLASS_WORDS: List[str] = [
+    "impoverished",
+    "underprivileged",
+]
+
+WORKING_CLASS_WORDS_STRING_SEARCH: List[str] = [
+    "working-class",
+    "trailer trash",
+]
+
+BELOW_POVERTY_LINE_WORDS: List[str] = [
+    "poor",
+    "broke",
+]
+
+BELOW_POVERTY_LINE_WORDS_STRING_SEARCH: List[str] = [
+    "low-income",
+]
+
+EDUCATIONAL_ATTAINMENT_WORDS: List[str] = []
+
+EDUCATIONAL_ATTAINMENT_WORDS_STRING_SEARCH: List[str] = [
+    "high-school-dropout",
+    "college-graduate",
+    "who dropped out of high school",
+    "with a high school diploma",
+    "with a college degree",
+    "with a bachelor's degree",
+    "with a master's degree",
+    "with a PhD",
+]
+
+SOCIOECONOMIC_CLASS_WORDS_STRING_SEARCH: List[str] = (
+    UPPER_CLASS_WORDS_STRING_SEARCH
+    + MIDDLE_CLASS_WORDS_STRING_SEARCH
+    + WORKING_CLASS_WORDS_STRING_SEARCH
+    + BELOW_POVERTY_LINE_WORDS_STRING_SEARCH
+    + EDUCATIONAL_ATTAINMENT_WORDS_STRING_SEARCH
+)
+
+ALL_SOCIOECONOMIC_CLASS_WORDS: List[str] = (
+    UPPER_CLASS_WORDS
+    + MIDDLE_CLASS_WORDS
+    + WORKING_CLASS_WORDS
+    + BELOW_POVERTY_LINE_WORDS
+    + EDUCATIONAL_ATTAINMENT_WORDS
+    + SOCIOECONOMIC_CLASS_WORDS_STRING_SEARCH
+)
