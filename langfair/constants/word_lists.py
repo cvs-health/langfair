@@ -19,15 +19,19 @@
 
 """Bias words utilised to compute the bias metrics.
 
-This file includes word lists for the following 4 categories:
+This file includes word lists for the following categories:
     - Race (Asian, Hispanic, and White): Most common names for each race (Garg et al. 2018)
     - Gender (Female, Male): Gender specific words - such as woman, man etc. - for each gender (Bolukbasi et al. 2016)
     - Adjectives: List of adjectives (Garg et al. 2018)
     - Professions: List of professions (Bolukbasi et al. 2016)
+    - Health Condition, Physical Appearance, Sexual Orientation,
+      Socioeconomic Class, Nationality: Demographic descriptor terms
+      adapted from the HolisticBias dataset (Smith et al. 2022)
 
 References:
     - Garg et al. 2018      | https://arxiv.org/abs/1711.08412
     - Bolukbasi et al. 2016 | https://arxiv.org/abs/1607.06520
+    - Smith et al. 2022     | https://arxiv.org/abs/2205.09209
 
 Adapted from https://github.com/stanford-crfm/helm/blob/main/src/helm/benchmark/metrics/bias_word_lists.py
 
@@ -135,37 +139,42 @@ GENDER_NEUTRAL_WORDS: List[str] = [
     "folks",
 ]
 
-QUEER_WORDS: List[str] = [
-    "they",
-    "child",
-    "their",
-    "them",
-    "parent",
-    "person",
-    "kid",
-    "themself",
-    "individual",
-    "sibling",
-    "children",
-    "parents",
-    "people",
-    "kids",
-    "individuals",
-    "siblings",
-    "cousin",
-    "cousins",
-    "cousin",
-    "cousins",
-    "person",
-    "people",
-    "grandparent",
-    "grandparents",
-    "partner",
-    "partners",
-    "Mx.",
-    "person",
-    "folks",
+# QUEER_WORDS is index-aligned with MALE_WORDS / FEMALE_WORDS (both 29 items).
+# Pronoun positions hold a list of alternatives (they/xe/ey/zie etc.) so that
+# each call randomly picks one neopronoun set, producing varied queer_prompts.
+# Non-pronoun positions use the same gender-neutral terms as GENDER_NEUTRAL_WORDS.
+QUEER_WORDS: List = [
+    ["they", "xe", "ey", "zie"],            # 0  ← he / she       (subject)
+    "child",                                # 1  ← son / daughter
+    ["their", "xyr", "eir", "zir"],         # 2  ← his / hers      (possessive)
+    ["them", "xem", "em", "zim"],           # 3  ← him / her       (object)
+    "parent",                               # 4  ← father / mother
+    "person",                               # 5  ← man / woman
+    "kid",                                  # 6  ← boy / girl
+    ["themself", "xemself", "emself", "ziemself"],  # 7 ← himself / herself (reflexive)
+    "individual",                           # 8  ← male / female
+    "sibling",                              # 9  ← brother / sister
+    "children",                             # 10 ← sons / daughters
+    "parents",                              # 11 ← fathers / mothers
+    "people",                               # 12 ← men / women
+    "kids",                                 # 13 ← boys / girls
+    "individuals",                          # 14 ← males / females
+    "siblings",                             # 15 ← brothers / sisters
+    "cousin",                               # 16 ← uncle / aunt
+    "cousins",                              # 17 ← uncles / aunts
+    "cousin",                               # 18 ← nephew / niece
+    "cousins",                              # 19 ← nephews / nieces
+    "person",                               # 20 ← gentleman / lady
+    "people",                               # 21 ← gentlemen / ladies
+    "grandparent",                          # 22 ← grandfather / grandmother
+    "grandparents",                         # 23 ← grandfathers / grandmothers
+    "partner",                              # 24 ← boyfriend / girlfriend
+    "partners",                             # 25 ← boyfriends / girlfriends
+    "Mx.",                                  # 26 ← Mr. / Mrs.
+    "person",                               # 27 ← guy / gal
+    "folks",                                # 28 ← guys / gals
 ]
+
 
 NONBINARY_WORDS: List[str] = GENDER_NEUTRAL_WORDS
 
@@ -182,23 +191,43 @@ GENDER_TO_WORD_LISTS: Dict[str, List[str]] = {
 # For race, string search is done
 RACE_WORDS_NOT_REQUIRING_CONTEXT: List[str] = [
     "caucasian",
+    "european american",
+    "european-american",
+    "alaska native",
     "asian-american",
+    "desi",
+    "east asian",
+    "east-asian",
+    "south asian", 
+    "south-asian", 
+    "southeast asian",
+    "southeast-asian",
     "african american",
     "african-american",
     "native american",
     "native-american",
+    "indigenous",
+    "american indian",
+    "american-indian",
+    "native hawaiian",
+    "native-hawaiian",
+    "aboriginal",
     "pacific islander",
     "pacific-islander",
     "latinx",
     "hispanic",
     "latino",
     "latina",
+    "latin american",
+    "latin-american",
     "whites",
     "blacks",
     "indians",
     "anglo-saxon",
     "anglo saxon",
     "asians",
+    "AAPI",
+    "BIPOC",
 ]
 
 RACE_WORDS_REQUIRING_CONTEXT: List[str] = [
@@ -206,6 +235,9 @@ RACE_WORDS_REQUIRING_CONTEXT: List[str] = [
     "white",
     "indian",
     "asian",
+    "european",
+    "middle eastern",
+    "african",
 ]
 
 
@@ -1042,6 +1074,7 @@ YOUNG_WORDS: List[str] = [
     "toddler", 
     "infant", 
     "baby",
+    "child",
 ]
 
 YOUNG_WORDS_STRING_SEARCH: List[str] = [
@@ -1212,6 +1245,7 @@ NEUROLOGICAL_WORDS: List[str] = [
     "neurodivergent",
     "neurodiverse",
     "neurotypical",
+    "depressed",
 ]
 
 NEUROLOGICAL_WORDS_STRING_SEARCH: List[str] = [
@@ -1221,6 +1255,7 @@ NEUROLOGICAL_WORDS_STRING_SEARCH: List[str] = [
     "with autism",
     "with dyslexia",
     "who incurred a traumatic brain injury",
+    "managing depression",
 ]
 
 SPEECH_IMPAIRED_WORDS: List[str] = [
@@ -1675,86 +1710,6 @@ SMALL_STATURE_WORDS_STRING_SEARCH: List[str] = [
     "who is a little person",
 ]
 
-EYE_COLOR_WORDS: List[str] = []
-
-EYE_COLOR_WORDS_STRING_SEARCH: List[str] = [
-    "blue-eyed",
-    "brown-eyed",
-    "green-eyed",
-    "hazel-eyed",
-    "gray-eyed",
-    "grey-eyed",
-    "amber-eyed",
-]
-
-HAIR_WORDS: List[str] = [
-    "bald", 
-    "balding", 
-    "bearded", 
-    "goateed", 
-    "graying", 
-    "hairy",
-    "mustachioed", 
-    "ponytailed", 
-    "scruffy", 
-    "shaggy", 
-    "unshaved",
-    "blond", 
-    "blonde", 
-    "brunette", 
-    "ginger", 
-    "redhead", 
-    "redheaded",
-    "dreadlocked",
-]
-
-HAIR_WORDS_STRING_SEARCH: List[str] = [
-    "bald-headed",
-    "clean-shaven",
-    "gray-haired",
-    "long-haired",
-    "short-haired",
-    "spiky-haired",
-    "white-haired",
-    "black-haired",
-    "brown-haired",
-    "coily-haired",
-    "curly-haired",
-    "dark-haired",
-    "dirty-blonde",
-    "frizzy-haired",
-    "kinky-haired",
-    "light-haired",
-    "straight-haired",
-]
-
-SKIN_COLOR_WORDS: List[str] = []
-
-SKIN_COLOR_WORDS_STRING_SEARCH: List[str] = [
-    "brown-skinned",
-    "dark-skinned",
-    "light-skinned",
-    "olive-skinned",
-]
-
-MISC_APPEARANCE_WORDS: List[str] = [
-    "smelly", 
-    "stinky", 
-    "grungy", 
-    "scrubby",
-]
-
-MISC_APPEARANCE_WORDS_STRING_SEARCH: List[str] = [
-    "acne-covered",
-    "acne-ridden",
-    "four-eyed",
-    "glasses-wearing",
-    "out-of-shape",
-    "well-groomed",
-    "visually impaired",
-    "with an afro",
-]
-
 # Backward-compatible aliases
 TALL_WORDS: List[str] = LARGE_STATURE_WORDS
 SMALL_WORDS: List[str] = SMALL_STATURE_WORDS
@@ -1767,10 +1722,6 @@ APPEARANCE_WORDS_STRING_SEARCH: List[str] = (
     + LARGE_STATURE_WORDS_STRING_SEARCH
     + MEDIUM_STATURE_WORDS_STRING_SEARCH
     + SMALL_STATURE_WORDS_STRING_SEARCH
-    + EYE_COLOR_WORDS_STRING_SEARCH
-    + HAIR_WORDS_STRING_SEARCH
-    + SKIN_COLOR_WORDS_STRING_SEARCH
-    + MISC_APPEARANCE_WORDS_STRING_SEARCH
 )
 
 ALL_APPEARANCE_WORDS: List[str] = (
@@ -1782,10 +1733,6 @@ ALL_APPEARANCE_WORDS: List[str] = (
     + LARGE_STATURE_WORDS
     + MEDIUM_STATURE_WORDS
     + SMALL_STATURE_WORDS
-    + EYE_COLOR_WORDS
-    + HAIR_WORDS
-    + SKIN_COLOR_WORDS
-    + MISC_APPEARANCE_WORDS
     + APPEARANCE_WORDS_STRING_SEARCH
 )
 

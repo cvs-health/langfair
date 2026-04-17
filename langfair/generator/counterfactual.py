@@ -10,6 +10,7 @@
 
 import asyncio
 import itertools
+import random
 import time
 import warnings
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -655,20 +656,33 @@ class CounterfactualGenerator(ResponseGenerator):
         """
         Creates counterfactual variations based on a dictionary of reference lists.
         """
-        ref_dict = {key: [t.lower() for t in val] for key, val in ref_dict.items()}
+        ref_dict = {
+            key: [
+                [s.lower() for s in t] if isinstance(t, list) else t.lower()
+                for t in val
+            ]
+            for key, val in ref_dict.items()
+        }
         lower_tokens = word_tokenize(text.lower())
 
         ref_values = {
-            val: idx for key in ref_dict for idx, val in enumerate(ref_dict[key])
+            val: idx
+            for key in ref_dict
+            for idx, val in enumerate(ref_dict[key])
+            if isinstance(val, str)
         }
         output_dict = {key: [None] * len(lower_tokens) for key in ref_dict}
         for key in ref_dict.keys():
             for i, element in enumerate(lower_tokens):
-                output_dict[key][i] = (
-                    ref_dict[key][ref_values[element]]
-                    if element in ref_values
-                    else element
-                )
+                if element in ref_values:
+                    substitution = ref_dict[key][ref_values[element]]
+                    output_dict[key][i] = (
+                        random.choice(substitution)
+                        if isinstance(substitution, list)
+                        else substitution
+                    )
+                else:
+                    output_dict[key][i] = element
             output_dict[key] = self.detokenizer.detokenize(output_dict[key])
 
         return output_dict
