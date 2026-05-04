@@ -142,9 +142,9 @@ class CounterfactualGenerator(ResponseGenerator):
         self.detokenizer = sacremoses.MosesDetokenizer("en")
         self.group_mapping = {
             "gender": ["male", "female", "nonbinary", "queer"],
-            "race": ["white", "black", "hispanic", "asian"],
+            "race": ["white", "black", "hispanic", "asian", "arabic"],
             "age": ["young", "middle-aged", "old"],
-            "health-condition": ["healthy", "disabled", "chronically_ill", "blind", "pregnant", ],
+            "health-condition": ["physical", "auditory", "non-disabled", "visual", "pregnant", "neurological", "speech"],
             "nationality": ["american", "bolivian", "german", "indian", "albanian", "nigerian", "namibian", "nepali", "iranian", "samoan"],
             "physical-appearance": ["fit", "attractive", "unattractive", "overweight", "tall", "small"],
             "religion": ["atheist", "christian", "muslim", "jewish", "hindu", "buddhist"],
