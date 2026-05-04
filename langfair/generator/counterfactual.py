@@ -25,24 +25,24 @@ from rich.progress import (
 
 from langfair.constants.cost_data import FAILURE_MESSAGE
 from langfair.constants.word_lists import (
-    FEMALE_WORDS,
-    GENDER_NEUTRAL_WORDS,
-    GENDER_TO_WORD_LISTS,
-    MALE_WORDS,
-    PERSON_WORDS,
-    RACE_WORDS_NOT_REQUIRING_CONTEXT,
-    RACE_WORDS_REQUIRING_CONTEXT,
-    ALL_AGE_WORDS,
     AGE_WORDS_STRING_SEARCH,
-    ALL_HEALTH_CONDITION_WORDS,
-    HEALTH_CONDITION_WORDS_STRING_SEARCH,
-    ALL_NATIONALITY_WORDS,
-    NATIONALITY_WORDS_STRING_SEARCH,
+    ALL_AGE_WORDS,
     ALL_APPEARANCE_WORDS,
-    APPEARANCE_WORDS_STRING_SEARCH,
+    ALL_HEALTH_CONDITION_WORDS,
+    ALL_NATIONALITY_WORDS,
     ALL_RELIGION_WORDS,
     ALL_SEXUAL_ORIENTATION_WORDS,
     ALL_SOCIOECONOMIC_CLASS_WORDS,
+    APPEARANCE_WORDS_STRING_SEARCH,
+    FEMALE_WORDS,
+    GENDER_NEUTRAL_WORDS,
+    GENDER_TO_WORD_LISTS,
+    HEALTH_CONDITION_WORDS_STRING_SEARCH,
+    MALE_WORDS,
+    NATIONALITY_WORDS_STRING_SEARCH,
+    PERSON_WORDS,
+    RACE_WORDS_NOT_REQUIRING_CONTEXT,
+    RACE_WORDS_REQUIRING_CONTEXT,
     SOCIOECONOMIC_CLASS_WORDS_STRING_SEARCH,
 )
 from langfair.generator.generator import ResponseGenerator
@@ -119,12 +119,12 @@ class CounterfactualGenerator(ResponseGenerator):
             "race": ALL_RACE_WORDS,
             "gender": ALL_GENDER_WORDS,
             "age": ALL_AGE_WORDS,
-            "health-condition":ALL_HEALTH_CONDITION_WORDS,
-            "nationality":ALL_NATIONALITY_WORDS,
-            "physical-appearance":ALL_APPEARANCE_WORDS,
+            "health-condition": ALL_HEALTH_CONDITION_WORDS,
+            "nationality": ALL_NATIONALITY_WORDS,
+            "physical-appearance": ALL_APPEARANCE_WORDS,
             "religion": ALL_RELIGION_WORDS,
-            "sexual-orientation":ALL_SEXUAL_ORIENTATION_WORDS,
-            "socioeconomic-class":ALL_SOCIOECONOMIC_CLASS_WORDS
+            "sexual-orientation": ALL_SEXUAL_ORIENTATION_WORDS,
+            "socioeconomic-class": ALL_SOCIOECONOMIC_CLASS_WORDS,
         }
         self.attribute_to_ref_dicts = {"gender": GENDER_TO_WORD_LISTS}
         self.attribute_to_string_search_lists = {
@@ -677,7 +677,7 @@ class CounterfactualGenerator(ResponseGenerator):
                 if element in ref_values:
                     substitution = ref_dict[key][ref_values[element]]
                     output_dict[key][i] = (
-                        random.choice(substitution)
+                        random.choice(substitution)  # noqa: S311
                         if isinstance(substitution, list)
                         else substitution
                     )
