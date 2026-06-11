@@ -11,6 +11,7 @@
 import asyncio
 import itertools
 import random
+import re
 import time
 import warnings
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -144,7 +145,7 @@ class CounterfactualGenerator(ResponseGenerator):
             "gender": ["male", "female", "nonbinary", "queer"],
             "race": ["white", "black", "hispanic", "asian", "arabic"],
             "age": ["young", "middle-aged", "old"],
-            "health-condition": ["physical", "auditory", "non-disabled", "visual", "pregnant", "neurological", "speech"],
+            "health-condition": ["healthy", "disabled", "deaf", "blind", "pregnant", "neurodivergent", "chronically-ill"],
             "nationality": ["american", "bolivian", "german", "indian", "albanian", "nigerian", "namibian", "nepali", "iranian", "samoan"],
             "physical-appearance": ["fit", "attractive", "unattractive", "overweight", "tall", "small"],
             "religion": ["atheist", "christian", "muslim", "jewish", "hindu", "buddhist"],
@@ -717,12 +718,21 @@ class CounterfactualGenerator(ResponseGenerator):
         return [subseq for subseq in STRICT_RACE_WORDS if subseq in seq]
 
     def _replace_attribute(self, text: str, attribute: str, target_group: str) -> str:
-        """Replaces attribute words in text with target group label"""
+        """Replaces attribute words in text with target group label.
+
+        Uses a single-pass combined regex (longest patterns first) to prevent
+        cascading substitutions. Single tokens are guarded by negative
+        lookbehind/lookahead for hyphens so that e.g. "forty" does not match
+        inside "middle-forty".
+        """
         seq = text.lower()
-        for word in self.attribute_to_word_lists[attribute]:
-            if word in seq:
-                seq = seq.replace(word, target_group)
-        return seq
+        words = sorted(self.attribute_to_word_lists[attribute], key=len, reverse=True)
+        patterns = [
+            re.escape(w) if (" " in w or "-" in w)
+            else r"(?<![a-zA-Z0-9\-])" + re.escape(w) + r"(?![a-zA-Z0-9\-])"
+            for w in words
+        ]
+        return re.sub("|".join(patterns), lambda _: target_group, seq)
 
     @staticmethod
     def _replace_race(text: str, target_race: str) -> str:

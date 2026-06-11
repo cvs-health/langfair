@@ -121,9 +121,9 @@ def test_new_attributes():
     assert "young_prompt" in result and "old_prompt" in result
 
     result = cdg.create_prompts(["The blind student uses a reader."], attribute="health-condition")
-    assert "non-disabled_prompt" in result and "neurological_prompt" in result
+    assert "healthy_prompt" in result and "disabled_prompt" in result
 
-    result = cdg.create_prompts(["The vatican student studied hard."], attribute="nationality")
+    result = cdg.create_prompts(["The iranian student studied hard."], attribute="nationality")
     assert "american_prompt" in result and "german_prompt" in result
 
     result = cdg.create_prompts(["The overweight patient was checked."], attribute="physical-appearance")
