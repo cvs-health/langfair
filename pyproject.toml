@@ -1,87 +1,119 @@
-[tool.poetry]
+[project]
 name = "langfair"
-version = "0.8.0"
+version = "0.8.1"
 description = "LangFair is a Python library for conducting use-case level LLM bias and fairness assessments"
+authors = [
+    { name = "Dylan Bouchard", email = "dylan.bouchard@cvshealth.com" },
+    { name = "Mohit Singh Chauhan", email = "mohitsingh.chauhan@cvshealth.com" },
+]
+requires-python = ">=3.9,<3.14"
 readme = "README.md"
-authors = ["Dylan Bouchard <dylan.bouchard@cvshealth.com>",
-           "Mohit Singh Chauhan <mohitsingh.chauhan@cvshealth.com>"]
-maintainers = ["Dylan Bouchard <dylan.bouchard@cvshealth.com>", 
-               "Mohit Singh Chauhan <mohitsingh.chauhan@cvshealth.com>",
-               "David Skarbrevik <david.skarbrevik@cvshealth.com>",
-               "Viren Bajaj <bajajv@aetna.com>",
-               "Zeya Ahmad <zeya.ahmad@cvshealth.com>"]
-repository = "https://github.com/cvs-health/langfair"
-homepage = "https://github.com/cvs-health/langfair"
-documentation = "https://cvs-health.github.io/langfair/latest/index.html"
 license = "Apache-2.0 AND MIT"
+maintainers = [
+    { name = "Dylan Bouchard", email = "dylan.bouchard@cvshealth.com" },
+    { name = "Mohit Singh Chauhan", email = "mohitsingh.chauhan@cvshealth.com" },
+    { name = "David Skarbrevik", email = "david.skarbrevik@cvshealth.com" },
+    { name = "Viren Bajaj", email = "bajajv@aetna.com" },
+    { name = "Zeya Ahmad", email = "zeya.ahmad@cvshealth.com" },
+    { name = "Aaron Lohner", email = "aaron.lohner@gmail.com" },
+]
+keywords = [
+    "LLM",
+    "large language model",
+    "bias",
+    "fairness",
+    "Responsible AI",
+]
 classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
-    "Topic :: Software Development :: Libraries :: Python Modules"
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
-packages = [
-    { include = "langfair" },
-    { include = "langfair/metrics" },
-    { include = "langfair/generator" },
-    { include = "langfair/utils"},
+dependencies = [
+    "numpy>=1.26.4,<2",
+    "scipy>=1.13.0,<1.15.0 ; python_full_version >= '3.9' and python_full_version < '3.10'",
+    "scipy>=1.15.0,<2 ; python_full_version >= '3.10'",
+    "vadersentiment>=3.3.2,<4",
+    "evaluate>=0.4.1,<0.5",
+    "nltk>=3.8.2",
+    "sacremoses>=0.1.1,<0.2",
+    "rouge-score>=0.1.2,<0.2",
+    "detoxify>=0.5.2,<0.6",
+    "langchain>=0.3.7",
+    "asyncio>=3.4.3,<4",
+    "sentence-transformers>=3.10",
+    "typing>=3.7.4,<4 ; python_full_version < '3.10'",
+    "tiktoken>=0.7,<0.12",
+    "transformers>=4.52.1",
+    "torch>=2.6.0",
+    "rich==13.8.0",
+    "ipywidgets>=8.1.7,<9",
 ]
-exclude = ["docs", "docs_src"] # never include documentation in build
-keywords = ["LLM", "large language model", "bias", "fairness", "Responsible AI"]
 
-[tool.poetry.dependencies]
-python = ">=3.9,<3.14"
-numpy = "^1.26.4"
-scipy = [
-    {version = ">=1.13.0,<1.15.0", python = ">=3.9,<3.10"},
-    {version = "^1.15.0", python = ">=3.10"}
+[project.urls]
+Homepage = "https://github.com/cvs-health/langfair"
+Repository = "https://github.com/cvs-health/langfair"
+Documentation = "https://cvs-health.github.io/langfair/latest/index.html"
+
+[dependency-groups]
+dev = [
+    "langchain-openai>=0.2.9,<0.3",
+    "pre-commit==3.7.1",
+    "ruff==0.12.9",
+    "pytest>=8.3.3,<9",
+    "pytest-asyncio>=0.24,<1.2",
+    "ipykernel>=6.29.5,<7",
+    "ipywidgets>=8.1.5,<9",
+    "python-dotenv>=1.0.1,<2",
+    "bandit>=1.8.6,<2",
+    "jupyter-core>=5.8.1",
 ]
-vadersentiment = "^3.3.2"
-evaluate = "^0.4.1"
-nltk = ">=3.8.2"
-sacremoses = "^0.1.1"
-rouge-score = "^0.1.2"
-detoxify = "^0.5.2"
-langchain = ">=0.3.7"
-asyncio = "^3.4.3"
-sentence-transformers = ">=3.10"
-typing = {version = "^3.7.4", python = "<3.10"}
-tiktoken = ">=0.7,<0.12"
-transformers = ">=4.52.1"
-torch = ">=2.6.0"
-rich = "13.8.0"
-ipywidgets = "^8.1.7"
+docs = [
+    "sphinx==7.4.7",
+    "pydata_sphinx_theme==0.16.1",
+    "sphinxcontrib-bibtex==2.6.3",
+    "sphinx-autodoc-typehints==2.2.0",
+    "sphinx-gallery==0.18.0",
+]
+extra_llms = [
+    "langchain-mistralai>=0.2.2,<0.3",
+    "langchain-google-vertexai>=2.0.13,<3",
+]
 
-[tool.poetry.group.dev.dependencies]
-langchain-openai = "^0.2.9"
-pre-commit = "3.7.1"
-ruff = "0.12.9"
-pytest = "^8.3.3"
-pytest-asyncio = ">=0.24,<1.2"
-ipykernel = "^6.29.5"
-ipywidgets = "^8.1.5"
-python-dotenv = "^1.0.1"
-bandit = "^1.8.6"
-jupyter-core = ">=5.8.1"
+[tool.uv]
+default-groups = "all"
 
-[tool.poetry.group.docs.dependencies]
-sphinx = "7.4.7"
-pydata_sphinx_theme = "0.16.1"
-sphinxcontrib-bibtex = "2.6.3"
-sphinx-autodoc-typehints = "2.2.0"
-sphinx-gallery = "0.18.0"
+[tool.uv.build-backend]
+module-name = [
+    "langfair",
+    "langfair.metrics",
+    "langfair.generator",
+    "langfair.utils",
+]
+module-root = ""
+source-exclude = [
+    "docs",
+    "docs_src",
+]
+wheel-exclude = [
+    "docs",
+    "docs_src",
+]
 
-[tool.poetry.group.extra_llms.dependencies]
-langchain-mistralai = "^0.2.2"
-langchain-google-vertexai = "^2.0.13"
+[build-system]
+requires = ["uv_build>=0.11.21,<0.12.0"]
+build-backend = "uv_build"
 
 [tool.ruff.lint]
 extend-select = ["I","S"] # lets Ruff catch and fix unsorted imports and run bandit
 ignore = ["E712","S101"]
-
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

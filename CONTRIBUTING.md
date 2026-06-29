@@ -53,7 +53,7 @@ Please ensure your pull request adheres to the following guidelines:
 1. Clone the repository: `git clone https://github.com/cvs-health/langfair.git`
 2. Navigate to the project directory: `cd langfair`
 3. Create and activate a virtual environment (using `venv` or `conda`)
-4. Install dependencies: `poetry install`
+4. Install dependencies: `uv sync`
 5. Install our pre-commit hooks to ensure code style compliance: `pre-commit install`
 6. Run tests to ensure everything is working: `pre-commit run --all-files`
 
@@ -61,9 +61,9 @@ You're ready to develop!
 
 ### Development tasks
 
-Update the Bandit baseline: `poetry run bandit -r . -f json -o bandit_baseline.json`
-Run bandit checks: `poetry run bandit -r . -b bandit_baseline.json`
-Run all Ruff checks: `poetry run ruff check`
+Update the Bandit baseline: `uv run bandit -r . -f json -o bandit_baseline.json`
+Run bandit checks: `uv run bandit -r . -b bandit_baseline.json`
+Run all Ruff checks: `uv run ruff check`
 
 **For documentation contributions**
 Our documentation lives on the gh-pages branch and is hosted via GitHub Pages.
