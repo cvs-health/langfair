@@ -10,6 +10,8 @@
 
 import asyncio
 import itertools
+import random
+import re
 import time
 import warnings
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -24,13 +26,25 @@ from rich.progress import (
 
 from langfair.constants.cost_data import FAILURE_MESSAGE
 from langfair.constants.word_lists import (
+    AGE_WORDS_STRING_SEARCH,
+    ALL_AGE_WORDS,
+    ALL_APPEARANCE_WORDS,
+    ALL_HEALTH_CONDITION_WORDS,
+    ALL_NATIONALITY_WORDS,
+    ALL_RELIGION_WORDS,
+    ALL_SEXUAL_ORIENTATION_WORDS,
+    ALL_SOCIOECONOMIC_CLASS_WORDS,
+    APPEARANCE_WORDS_STRING_SEARCH,
     FEMALE_WORDS,
     GENDER_NEUTRAL_WORDS,
     GENDER_TO_WORD_LISTS,
+    HEALTH_CONDITION_WORDS_STRING_SEARCH,
     MALE_WORDS,
+    NATIONALITY_WORDS_STRING_SEARCH,
     PERSON_WORDS,
     RACE_WORDS_NOT_REQUIRING_CONTEXT,
     RACE_WORDS_REQUIRING_CONTEXT,
+    SOCIOECONOMIC_CLASS_WORDS_STRING_SEARCH,
 )
 from langfair.generator.generator import ResponseGenerator
 from langfair.utils.display import (
@@ -105,8 +119,22 @@ class CounterfactualGenerator(ResponseGenerator):
         self.attribute_to_word_lists = {
             "race": ALL_RACE_WORDS,
             "gender": ALL_GENDER_WORDS,
+            "age": ALL_AGE_WORDS,
+            "health-condition": ALL_HEALTH_CONDITION_WORDS,
+            "nationality": ALL_NATIONALITY_WORDS,
+            "physical-appearance": ALL_APPEARANCE_WORDS,
+            "religion": ALL_RELIGION_WORDS,
+            "sexual-orientation": ALL_SEXUAL_ORIENTATION_WORDS,
+            "socioeconomic-class": ALL_SOCIOECONOMIC_CLASS_WORDS,
         }
         self.attribute_to_ref_dicts = {"gender": GENDER_TO_WORD_LISTS}
+        self.attribute_to_string_search_lists = {
+            "age": AGE_WORDS_STRING_SEARCH,
+            "health-condition": HEALTH_CONDITION_WORDS_STRING_SEARCH,
+            "nationality": NATIONALITY_WORDS_STRING_SEARCH,
+            "physical-appearance": APPEARANCE_WORDS_STRING_SEARCH,
+            "socioeconomic-class": SOCIOECONOMIC_CLASS_WORDS_STRING_SEARCH,
+        }
         self.gender_to_word_lists = GENDER_TO_WORD_LISTS
         self.cf_gender_mapping = GENDER_MAPPING
         self.gender_neutral_mapping = GENDER_NEUTRAL_MAPPING
@@ -114,8 +142,15 @@ class CounterfactualGenerator(ResponseGenerator):
         self.strict_race_words = STRICT_RACE_WORDS
         self.detokenizer = sacremoses.MosesDetokenizer("en")
         self.group_mapping = {
-            "gender": ["male", "female"],
-            "race": ["white", "black", "hispanic", "asian"],
+            "gender": ["male", "female", "nonbinary", "queer"],
+            "race": ["white", "black", "hispanic", "asian", "arabic"],
+            "age": ["young", "middle-aged", "old"],
+            "health-condition": ["healthy", "disabled", "deaf", "blind", "pregnant", "neurodivergent", "chronically-ill"],
+            "nationality": ["american", "bolivian", "german", "indian", "albanian", "nigerian", "namibian", "nepali", "iranian", "samoan"],
+            "physical-appearance": ["fit", "attractive", "unattractive", "overweight", "tall", "small"],
+            "religion": ["atheist", "christian", "muslim", "jewish", "hindu", "buddhist"],
+            "sexual-orientation": ["homosexual", "queer", "heterosexual"],
+            "socioeconomic-class": ["upper-class", "middle-class", "working-class"],
         }
 
         try:
@@ -267,10 +302,10 @@ class CounterfactualGenerator(ResponseGenerator):
                 for race in self.group_mapping[attribute]
             }
 
-        else:
+        elif attribute == "gender" or custom_dict:
             if custom_dict:
                 ref_dict = custom_dict
-            elif attribute == "gender":
+            else:
                 ref_dict = self.attribute_to_ref_dicts[attribute]
 
             prompts_dict = {key + "_prompt": [] for key in ref_dict}
@@ -281,6 +316,15 @@ class CounterfactualGenerator(ResponseGenerator):
                 self.counterfactual_prompts = counterfactual_prompts
                 for key in counterfactual_prompts:
                     prompts_dict[key + "_prompt"].append(counterfactual_prompts[key])
+
+        else:
+            prompts_dict = {
+                group + "_prompt": [
+                    self._replace_attribute(text=text, attribute=attribute, target_group=group)
+                    for text in prompts
+                ]
+                for group in self.group_mapping[attribute]
+            }
 
         prompts_dict["original_prompt"] = prompts
         prompts_dict["attribute_words"] = [
@@ -597,8 +641,13 @@ class CounterfactualGenerator(ResponseGenerator):
         tokens = word_tokenize(str(text).lower())
         if attribute == "race":
             return self._get_race_subsequences(text)
-        elif attribute == "gender":
-            return list(set(tokens) & set(self.attribute_to_word_lists[attribute]))
+        elif attribute in self.attribute_to_word_lists:
+            token_matches = list(set(tokens) & set(self.attribute_to_word_lists[attribute]))
+            string_matches = [
+                w for w in self.attribute_to_string_search_lists.get(attribute, [])
+                if w in text.lower()
+            ]
+            return list(set(token_matches + string_matches))
         elif custom_list:
             return list(set(tokens) & set(custom_list))
 
@@ -608,20 +657,33 @@ class CounterfactualGenerator(ResponseGenerator):
         """
         Creates counterfactual variations based on a dictionary of reference lists.
         """
-        ref_dict = {key: [t.lower() for t in val] for key, val in ref_dict.items()}
+        ref_dict = {
+            key: [
+                [s.lower() for s in t] if isinstance(t, list) else t.lower()
+                for t in val
+            ]
+            for key, val in ref_dict.items()
+        }
         lower_tokens = word_tokenize(text.lower())
 
         ref_values = {
-            val: idx for key in ref_dict for idx, val in enumerate(ref_dict[key])
+            val: idx
+            for key in ref_dict
+            for idx, val in enumerate(ref_dict[key])
+            if isinstance(val, str)
         }
         output_dict = {key: [None] * len(lower_tokens) for key in ref_dict}
         for key in ref_dict.keys():
             for i, element in enumerate(lower_tokens):
-                output_dict[key][i] = (
-                    ref_dict[key][ref_values[element]]
-                    if element in ref_values
-                    else element
-                )
+                if element in ref_values:
+                    substitution = ref_dict[key][ref_values[element]]
+                    output_dict[key][i] = (
+                        random.choice(substitution)  # noqa: S311
+                        if isinstance(substitution, list)
+                        else substitution
+                    )
+                else:
+                    output_dict[key][i] = element
             output_dict[key] = self.detokenizer.detokenize(output_dict[key])
 
         return output_dict
@@ -655,6 +717,23 @@ class CounterfactualGenerator(ResponseGenerator):
         seq = text.lower()
         return [subseq for subseq in STRICT_RACE_WORDS if subseq in seq]
 
+    def _replace_attribute(self, text: str, attribute: str, target_group: str) -> str:
+        """Replaces attribute words in text with target group label.
+
+        Uses a single-pass combined regex (longest patterns first) to prevent
+        cascading substitutions. Single tokens are guarded by negative
+        lookbehind/lookahead for hyphens so that e.g. "forty" does not match
+        inside "middle-forty".
+        """
+        seq = text.lower()
+        words = sorted(self.attribute_to_word_lists[attribute], key=len, reverse=True)
+        patterns = [
+            re.escape(w) if (" " in w or "-" in w)
+            else r"(?<![a-zA-Z0-9\-])" + re.escape(w) + r"(?![a-zA-Z0-9\-])"
+            for w in words
+        ]
+        return re.sub("|".join(patterns), lambda _: target_group, seq)
+
     @staticmethod
     def _replace_race(text: str, target_race: str) -> str:
         """Replaces text with a target word"""
@@ -679,18 +758,24 @@ class CounterfactualGenerator(ResponseGenerator):
         custom_list: Optional[List[str]] = None,
         custom_dict: Optional[Dict[str, str]] = None,
         for_parsing: bool = True,
+        valid_attributes: Optional[List[str]] = None,
     ) -> None:
+        if valid_attributes is None:
+            valid_attributes = [
+                "race", "gender", "age", "health-condition", "nationality",
+                "physical-appearance", "religion", "sexual-orientation", "socioeconomic-class"
+            ]
         if for_parsing:
             if custom_list and attribute:
                 raise ValueError("Either custom_list or attribute must be None.")
-            if not (custom_list or attribute in ["race", "gender"]):
+            if not (custom_list or attribute in valid_attributes):
                 raise ValueError(
-                    "If custom_list is None, attribute must be 'race' or 'gender'."
+                    f"If custom_list is None, attribute must be one of {valid_attributes}."
                 )
         else:
             if custom_dict and attribute:
                 raise ValueError("Either custom_dict or attribute must be None.")
-            if not (custom_dict or attribute in ["race", "gender"]):
+            if not (custom_dict or attribute in valid_attributes):
                 raise ValueError(
-                    "If custom_dict is None, attribute must be 'race' or 'gender'."
+                    f"If custom_dict is None, attribute must be one of {valid_attributes}."
                 )

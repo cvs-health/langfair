@@ -23,8 +23,8 @@ async def test_counterfactual(monkeypatch):
     # TODO: Tests to check if `parse_texts` method works for all words in gender/race word list.
     # TODO: Add tests for `estimate_token_cost` method (first need to fix the bug)
     MOCKED_PROMPTS = [
-        "prompt 1: male person",
-        "prompt 2: female person",
+        "prompt 1: male",
+        "prompt 2: female",
         "prompt 3: white person",
         "prompt 4: black person",
     ]
@@ -33,14 +33,17 @@ async def test_counterfactual(monkeypatch):
         "black_prompt": ["prompt 3: black person", "prompt 4: black person"],
         "hispanic_prompt": ["prompt 3: hispanic person", "prompt 4: hispanic person"],
         "asian_prompt": ["prompt 3: asian person", "prompt 4: asian person"],
+        "arabic_prompt": ["prompt 3: arabic person", "prompt 4: arabic person"],
         "attribute_words": [["white person"], ["black person"]],
         "original_prompt": ["prompt 3: white person", "prompt 4: black person"],
     }
     MOCKED_GENDER_PROMPTS = {
-        "male_prompt": ["prompt 1: male person", "prompt 2: male person"],
-        "female_prompt": ["prompt 1: female person", "prompt 2: female person"],
+        "male_prompt": ["prompt 1: male", "prompt 2: male"],
+        "female_prompt": ["prompt 1: female", "prompt 2: female"],
+        "nonbinary_prompt": ["prompt 1: individual", "prompt 2: individual"],
+        "queer_prompt": ["prompt 1: individual", "prompt 2: individual"],
         "attribute_words": [["male"], ["female"]],
-        "original_prompt": ["prompt 1: male person", "prompt 2: female person"],
+        "original_prompt": ["prompt 1: male", "prompt 2: female"],
     }
     # MOCKED_CF_PROMPTS = list(MOCKED_RACE_PROMPTS.values()) + list(
     #     MOCKED_GENDER_PROMPTS.values()
@@ -109,3 +112,28 @@ async def test_counterfactual(monkeypatch):
             if "response" in key
         ]
     )
+
+
+def test_new_attributes():
+    cdg = CounterfactualGenerator()
+
+    result = cdg.create_prompts(["The elderly patient needs care."], attribute="age")
+    assert "young_prompt" in result and "old_prompt" in result
+
+    result = cdg.create_prompts(["The blind student uses a reader."], attribute="health-condition")
+    assert "healthy_prompt" in result and "disabled_prompt" in result
+
+    result = cdg.create_prompts(["The iranian student studied hard."], attribute="nationality")
+    assert "american_prompt" in result and "german_prompt" in result
+
+    result = cdg.create_prompts(["The overweight patient was checked."], attribute="physical-appearance")
+    assert "fit_prompt" in result and "attractive_prompt" in result
+
+    result = cdg.create_prompts(["The sikh prayed at noon."], attribute="religion")
+    assert "christian_prompt" in result and "muslim_prompt" in result
+
+    result = cdg.create_prompts(["The gay couple adopted a child."], attribute="sexual-orientation")
+    assert "homosexual_prompt" in result and "heterosexual_prompt" in result
+
+    result = cdg.create_prompts(["The wealthy donor contributed."], attribute="socioeconomic-class")
+    assert "upper-class_prompt" in result and "working-class_prompt" in result
