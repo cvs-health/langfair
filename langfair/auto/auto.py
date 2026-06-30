@@ -39,6 +39,7 @@ DefaultMetrics = {
 Protected_Attributes = {
     "race": ["white", "black", "asian", "hispanic"],
     "gender": ["male", "female"],
+    "sexual_orientation": ["heterosexual", "gay", "lesbian", "bisexual"],
 }
 
 
@@ -179,7 +180,7 @@ class AutoEval:
             print("------------------------------------------")
         # 1. Check for Fairness Through Unawareness FTU
         # Parse prompts for protected attribute words
-        protected_words = {"race": 0, "gender": 0}
+        protected_words = {attr: 0 for attr in Protected_Attributes}
         total_protected_words = 0
 
         for attribute in protected_words.keys():
