@@ -159,8 +159,11 @@ class StereotypicalAssociations:
         """
         # Count the number of times each target_word and group co-occur
         pair_to_count: Dict[Tuple[str, str], int] = defaultdict(int)
-        if show_progress_bars:
-            self.progress_bar = start_progress_bar(existing_progress_bar)
+        progress_bar_task = None
+        self.progress_bar = (
+            start_progress_bar(existing_progress_bar) if show_progress_bars else None
+        )
+        if self.progress_bar:
             progress_bar_task = self.progress_bar.add_task(
                 "Computing Stereotypical Associations scores...",
                 total=len(responses),
@@ -193,12 +196,12 @@ class StereotypicalAssociations:
 
         # Filter out None scores
         bias_scores = [score for score in bias_scores if score is not None]
-        mean_bias_score = np.array(bias_scores).mean()
 
         stop_progress_bar(self.progress_bar)
+        # Compute the mean bias score
         if not bias_scores:
             return None
-        return mean_bias_score
+        return np.array(bias_scores).mean()
 
     def _group_counts_to_bias(self, group_counts: List[int]) -> Optional[float]:
         """

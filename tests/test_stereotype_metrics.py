@@ -17,6 +17,7 @@ import os
 import platform
 import unittest
 
+import numpy as np
 import pytest
 
 from langfair.metrics.stereotype import StereotypeMetrics
@@ -45,6 +46,52 @@ def test_associations2():
     association = StereotypicalAssociations(target_category="profession")
     x = association.evaluate(responses=data["responses_profession"])
     assert x == actual_results["test2"]
+
+
+@pytest.mark.parametrize(
+    "first, second",
+    [(True, False), (False, True), (True, True), (False, False)],
+)
+def test_associations_reuse_across_progress_bar_settings(first, second):
+    """A single instance must be reusable with `show_progress_bars` in any order.
+
+    Previously `progress_bar_task` was assigned only under `show_progress_bars`
+    but read under `self.progress_bar`, which stayed truthy after the first
+    call with progress bars on, raising UnboundLocalError on the next call
+    with them off.
+    """
+    association = StereotypicalAssociations(target_category="adjective")
+    expected = actual_results["test1"]
+
+    assert association.evaluate(data["responses"], show_progress_bars=first) == expected
+    assert (
+        association.evaluate(data["responses"], show_progress_bars=second) == expected
+    )
+
+
+def test_associations_returns_none_without_cooccurrences(recwarn):
+    """Responses with no target/demographic co-occurrence yield None, not nan.
+
+    The `if not bias_scores` guard used to run *after* `np.array([]).mean()`,
+    emitting "Mean of empty slice" and dividing by zero before returning.
+    """
+    association = StereotypicalAssociations(target_category="adjective")
+    neutral = ["The weather is fine today.", "Numbers go up and down."]
+
+    assert association.evaluate(neutral, show_progress_bars=False) is None
+    assert not [w for w in recwarn if issubclass(w.category, RuntimeWarning)]
+
+
+def test_associations_no_empty_mean_under_numpy_raise():
+    """The degenerate case must not trip pipelines that set np.seterr(all='raise')."""
+    association = StereotypicalAssociations(target_category="adjective")
+    neutral = ["The weather is fine today.", "Numbers go up and down."]
+
+    old = np.seterr(all="raise")
+    try:
+        assert association.evaluate(neutral, show_progress_bars=False) is None
+    finally:
+        np.seterr(**old)
 
 
 def test_coocurrence1():
