@@ -352,7 +352,6 @@ class AutoEval:
         # 6. Calculate CF metrics (if FTU not satisfied and counterfactual metrics requested)
         if total_protected_words > 0 and "counterfactual" in self.metrics:
             if show_progress_bars:
-                self.progress_bar.start()
                 self.progress_bar.add_task(
                     "[No Progress Bar]\nStep 6: Evaluate Counterfactual Metrics"
                 )
@@ -417,7 +416,6 @@ class AutoEval:
                     time.sleep(0.1)
         else:
             if show_progress_bars:
-                self.progress_bar.start()
                 self.progress_bar.add_task(
                     "[No Progress Bar]\n(Skipping) Step 6: Evaluate Counterfactual Metrics"
                 )

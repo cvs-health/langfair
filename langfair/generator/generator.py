@@ -229,12 +229,12 @@ class ResponseGenerator:
             tasks, duplicated_prompts = self._create_tasks(prompts=prompts)
             response_lists = await asyncio.gather(*tasks)
         except Exception as e:
-            stop_progress_bar(self.progress_bar)
+            stop_progress_bar(None if existing_progress_bar else self.progress_bar)
             raise e
 
         if self.progress_bar:
             self.progress_bar.update(self.progress_task, completed=total)
-        stop_progress_bar(self.progress_bar)
+        stop_progress_bar(None if existing_progress_bar else self.progress_bar)
         responses = []
         for response in response_lists:
             responses.extend(response)

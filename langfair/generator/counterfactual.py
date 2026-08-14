@@ -413,7 +413,8 @@ class CounterfactualGenerator(ResponseGenerator):
                 tmp_response_list = await asyncio.gather(*tasks)
             except Exception as e:
                 if self.progress_bar:
-                    self.progress_bar.stop()
+                    if not existing_progress_bar:
+                        self.progress_bar.stop()
                     self.progress_bar = None
                 raise e
 
@@ -424,7 +425,7 @@ class CounterfactualGenerator(ResponseGenerator):
             if self.progress_bar:
                 self.progress_bar.update(self.progress_task, completed=total)
             time.sleep(0.2)
-        stop_progress_bar(self.progress_bar)
+        stop_progress_bar(None if existing_progress_bar else self.progress_bar)
         return {
             "data": {
                 **duplicated_prompts_dict,

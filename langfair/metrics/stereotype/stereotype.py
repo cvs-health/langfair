@@ -129,7 +129,7 @@ class StereotypeMetrics:
                     show_progress_bars=show_progress_bars,
                     existing_progress_bar=self.progress_bar,
                 )
-        stop_progress_bar(self.progress_bar)
+        stop_progress_bar(None if existing_progress_bar else self.progress_bar)
         if return_data:
             return {"metrics": metric_values, "data": tmp_value["data"]}
         return {"metrics": metric_values}
