@@ -38,16 +38,19 @@ class SelfEval(_BaseEval):
         response generation delegated to the user, so that no LangChain LLM object
         is required. It implements a two-phase workflow:
 
-        1. On construction, prompts are checked for protected attribute words
-        (fairness through unawareness check) and counterfactual prompt variants are
-        created. `get_prompts()` then returns a flat, ordered list of every prompt
-        for which the user must generate a response (each prompt is repeated `count`
-        times).
+        Phase 1 (prompt preparation, steps 1-2): on construction, prompts are
+        checked for protected attribute words (fairness through unawareness check).
+        The first call to `get_prompts()` then creates the counterfactual prompt
+        variants and returns a flat, ordered list of every prompt for which the
+        user must generate a response (each prompt is repeated `count` times).
 
-        2. The user generates exactly one response per element of `get_prompts()`
-        with their own stack, preserving order, and passes them to
+        Step 3, response generation, is delegated to the user: exactly one response
+        per element of `get_prompts()`, produced with their own stack and preserving
+        order.
+
+        Phase 2 (steps 4-6): those responses are passed to
         `evaluate(responses=...)`, which computes the same metrics as
-        `AutoEval.evaluate`.
+        `AutoEval.evaluate` under the same step numbering.
 
         Parameters
         ----------
@@ -117,24 +120,18 @@ class SelfEval(_BaseEval):
         else:
             print("FTU is satisfied. Counterfactual assessment will be skipped.")
 
+        # Step 2 (counterfactual dataset generation) is deferred to `get_prompts`
+        self._build_counterfactual = (
+            "counterfactual" in self.metrics and self.total_protected_words > 0
+        )
         self._cf_prompts_dicts: Dict[str, Dict[str, List[str]]] = {}
         self._segments: List[Dict[str, Any]] = []
-        self._build_segments()
-
-        n_expected = len(self._expanded_prompts)
-        if n_expected > 0:
-            print(
-                f"\nNext step: generate one response for each of the {n_expected} prompts "
-                "returned by `get_prompts()`, preserving order, then call `evaluate(responses=...)`."
-            )
-        else:
-            print(
-                "\nNo additional generations are required. Call `evaluate()` to compute metrics."
-            )
+        self._segments_built = False
 
     def get_prompts(self) -> List[str]:
         """
-        Return the flat, ordered list of prompts for which the user must generate
+        Perform step 2 (counterfactual dataset generation) on first call, then
+        return the flat, ordered list of prompts for which the user must generate
         responses before calling `evaluate`.
 
         The list is ordered as follows: the original prompts first (omitted if
@@ -151,6 +148,7 @@ class SelfEval(_BaseEval):
             Prompts to generate responses for. The responses passed to `evaluate`
             must satisfy `responses[i]` being a response to `get_prompts()[i]`.
         """
+        self._ensure_segments(verbose=True)
         return list(self._expanded_prompts)
 
     @property
@@ -161,6 +159,7 @@ class SelfEval(_BaseEval):
         'attribute', 'group', 'start', 'end' (index range in the flat list),
         'n_unique_prompts', and 'count'.
         """
+        self._ensure_segments()
         return [
             {
                 "kind": segment["kind"],
@@ -208,6 +207,7 @@ class SelfEval(_BaseEval):
             A dictionary containing values of toxicity, stereotype, and counterfactual metrics and, optionally,
             response-level scores.
         """
+        self._ensure_segments()
         responses = [] if responses is None else list(responses)
         if len(responses) != len(self._expanded_prompts):
             raise ValueError(self._length_error_message(len(responses)))
@@ -222,22 +222,44 @@ class SelfEval(_BaseEval):
         if show_progress_bars:
             self.progress_bar = start_progress_bar()
 
-        # Step 1 (FTU check) runs at construction; step 2 is the user's own generation.
-        # 3. Calculate toxicity metrics
-        self._evaluate_toxicity(show_progress_bars, step_num=3)
+        # Step 1 (FTU check) runs at construction, step 2 (counterfactual datasets)
+        # in `get_prompts`, and step 3 (response generation) is performed by the
+        # user, so this method picks up the same step numbering as
+        # `AutoEval.evaluate` at step 4.
+        # 4. Calculate toxicity metrics
+        self._evaluate_toxicity(show_progress_bars)
 
-        # 4. Calculate stereotype metrics
-        self._evaluate_stereotype(self.protected_words, show_progress_bars, step_num=4)
+        # 5. Calculate stereotype metrics
+        self._evaluate_stereotype(self.protected_words, show_progress_bars)
 
-        # 5. Calculate CF metrics (if FTU not satisfied and counterfactual metrics requested)
+        # 6. Calculate CF metrics (if FTU not satisfied and counterfactual metrics requested)
         self._evaluate_counterfactual(
             self.protected_words,
             self.total_protected_words,
             show_progress_bars,
-            step_num=5,
         )
 
         return self._finalize(return_data, show_progress_bars)
+
+    def _ensure_segments(self, verbose: bool = False) -> None:
+        """
+        Run step 2 (counterfactual dataset generation) on first call and no-op
+        thereafter. Deferred from construction so that the step is reported when
+        the user asks for the prompts via `get_prompts`, while `prompt_manifest`
+        and `evaluate` can still build the segments silently if `get_prompts` was
+        never called.
+        """
+        if self._segments_built:
+            return
+        if verbose:
+            if self._build_counterfactual:
+                print("Step 2: Generate Counterfactual Datasets")
+                print("----------------------------------------")
+            else:
+                print("(Skipping) Step 2: Generate Counterfactual Datasets")
+                print("---------------------------------------------------")
+        self._build_segments()
+        self._segments_built = True
 
     def _build_segments(self) -> None:
         """
@@ -273,7 +295,7 @@ class SelfEval(_BaseEval):
         if self.responses is None:
             add_segment("original", None, None, self.prompts)
 
-        if "counterfactual" in self.metrics and self.total_protected_words > 0:
+        if self._build_counterfactual:
             for attribute in self.protected_words.keys():
                 if self.protected_words[attribute] > 0:
                     prompts_dict = self.cf_generator_object.create_prompts(
