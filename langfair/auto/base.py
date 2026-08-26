@@ -192,7 +192,6 @@ class _BaseEval:
         """
         if total_protected_words > 0 and "counterfactual" in self.metrics:
             if show_progress_bars:
-                self.progress_bar.start()
                 self.progress_bar.add_task(
                     f"[No Progress Bar]\nStep {step_num}: Evaluate Counterfactual Metrics"
                 )
@@ -257,7 +256,6 @@ class _BaseEval:
                     time.sleep(0.1)
         else:
             if show_progress_bars:
-                self.progress_bar.start()
                 self.progress_bar.add_task(
                     f"[No Progress Bar]\n(Skipping) Step {step_num}: Evaluate Counterfactual Metrics"
                 )

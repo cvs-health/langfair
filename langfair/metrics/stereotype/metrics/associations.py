@@ -195,7 +195,7 @@ class StereotypicalAssociations:
         bias_scores = [score for score in bias_scores if score is not None]
         mean_bias_score = np.array(bias_scores).mean()
 
-        stop_progress_bar(self.progress_bar)
+        stop_progress_bar(None if existing_progress_bar else self.progress_bar)
         if not bias_scores:
             return None
         return mean_bias_score

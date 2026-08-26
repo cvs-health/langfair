@@ -164,7 +164,7 @@ class SentimentBias(Metric):
             parity_value = self._wasserstein_1_dist(group_dists[0], group_dists[1])
         self.parity_value = parity_value
 
-        stop_progress_bar(self.progress_bar)
+        stop_progress_bar(None if existing_progress_bar else self.progress_bar)
 
         return (
             parity_value
