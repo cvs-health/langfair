@@ -13,5 +13,6 @@
 # limitations under the License.
 
 from langfair.auto.auto import AutoEval
+from langfair.auto.self_eval import SelfEval
 
-__all__ = ["AutoEval"]
+__all__ = ["AutoEval", "SelfEval"]
