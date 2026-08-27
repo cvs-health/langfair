@@ -111,6 +111,7 @@ cf_generations = await cg.generate_responses(
 male_responses = cf_generations['data']['male_response']
 female_responses = cf_generations['data']['female_response']
 ```
+Supported values for `attribute` are: `'gender'`, `'race'`, `'age'`, `'health-condition'`, `'nationality'`, `'physical-appearance'`, `'religion'`, `'sexual-orientation'`, and `'socioeconomic-class'`.
 
 Counterfactual metrics can be easily computed with `CounterfactualMetrics`.
 ```python
