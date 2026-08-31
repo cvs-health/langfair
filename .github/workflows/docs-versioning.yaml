@@ -1,0 +1,69 @@
+name: Build and Version Docs
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt || true
+          pip install sphinx
+
+      - name: Fetch gh-pages branch
+        run: |
+          git fetch origin gh-pages:gh-pages
+
+      - name: Checkout gh-pages branch
+        run: |
+          git checkout gh-pages
+
+      - name: Get release version
+        id: get_version
+        run: |
+          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build docs for new version
+        run: |
+          cd docs_src/latest
+          make github
+
+      - name: Copy new docs to 'latest' and versioned folder
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          cp -r docs/latest docs/"$VERSION"
+
+      - name: Update versions.json files
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          NAME="v${VERSION} (latest)"
+          URL="https://cvs-health.github.io/langfair/latest/index.html"
+          # Update docs/versions.json
+          jq --arg name "$NAME" --arg version "$VERSION" --arg url "$URL" \
+            'map(.preferred = false) + [{"name": $name, "version": $version, "url": $url, "preferred": true}]' \
+            docs/versions.json > docs/versions.json.tmp && mv docs/versions.json.tmp docs/versions.json
+          # Update docs_src/versions.json similarly
+          jq --arg name "$NAME" --arg version "$VERSION" --arg url "$URL" \
+            'map(.preferred = false) + [{"name": $name, "version": $version, "url": $url, "preferred": true}]' \
+            docs_src/versions.json > docs_src/versions.json.tmp && mv docs_src/versions.json.tmp docs_src/versions.json
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/ docs_src/
+          git commit -m "Update docs for ${{ steps.get_version.outputs.version }}"
+          git push origin gh-pages 
