@@ -76,7 +76,7 @@ def start_progress_bar(existing_progress_bar: Progress = None) -> Progress:
             ConditionalTextPercentageColumn(completion_text),
             ConditionalTimeElapsedColumn(),
         )
-    progress_bar.start()
+        progress_bar.start()
     return progress_bar
 
 

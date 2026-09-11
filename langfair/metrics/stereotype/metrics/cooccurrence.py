@@ -159,7 +159,7 @@ class CooccurrenceBiasMetric:
         )
 
         if not all_words:
-            stop_progress_bar(self.progress_bar)
+            stop_progress_bar(None if existing_progress_bar else self.progress_bar)
             return None
 
         cobs_scores = {}
@@ -203,7 +203,7 @@ class CooccurrenceBiasMetric:
             mean_cobs_score = (
                 np.mean(cobs_scores_list) if self.how == "mean" else cobs_scores
             )
-        stop_progress_bar(self.progress_bar)
+        stop_progress_bar(None if existing_progress_bar else self.progress_bar)
         return mean_cobs_score
 
     def _prep_lists(

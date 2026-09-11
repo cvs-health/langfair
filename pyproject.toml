@@ -1,6 +1,6 @@
 [project]
 name = "langfair"
-version = "0.8.1"
+version = "0.8.2"
 description = "LangFair is a Python library for conducting use-case level LLM bias and fairness assessments"
 authors = [
     { name = "Dylan Bouchard", email = "dylan.bouchard@cvshealth.com" },

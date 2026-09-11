@@ -96,7 +96,7 @@ class BleuSimilarity(Metric):
             bleu_scores.append(score)
             if self.progress_bar:
                 self.progress_bar.update(self.progress_bar_task, advance=1)
-        stop_progress_bar(self.progress_bar)
+        stop_progress_bar(None if existing_progress_bar else self.progress_bar)
         return np.mean(bleu_scores) if self.how == "mean" else bleu_scores
 
     @staticmethod

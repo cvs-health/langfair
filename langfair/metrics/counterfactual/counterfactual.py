@@ -183,7 +183,7 @@ class CounterfactualMetrics:
 
             response_scores[metric.name] = scores
 
-        stop_progress_bar(self.progress_bar)
+        stop_progress_bar(None if existing_progress_bar else self.progress_bar)
         result = {"metrics": metric_values}
         if return_data:
             result["data"] = response_scores
