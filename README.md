@@ -155,6 +155,22 @@ results['metrics']
 #    'Sentiment Bias': 0.0009947145187601957}}}
 ```
 
+##### Bring-your-own-responses evaluation with `SelfEval`
+The `SelfEval` class offers the same evaluation as `AutoEval` without requiring a LangChain LLM: response generation is delegated to the user. On construction, `SelfEval` checks prompts for protected attribute words, creates counterfactual prompt variants, and exposes the complete list of prompts to answer via `get_prompts()`. The user generates one response per prompt with any stack, preserving order, and passes them to `evaluate` to compute the metrics.
+```python
+from langfair.auto import SelfEval
+self_eval = SelfEval(prompts=prompts, count=25)
+
+# Phase 1: generate responses with your own stack (any LLM, any framework)
+prompts_to_answer = self_eval.get_prompts()
+responses = [my_llm_generate(prompt) for prompt in prompts_to_answer]
+
+# Phase 2: compute toxicity, stereotype, and counterfactual metrics
+results = self_eval.evaluate(responses=responses)
+results['metrics']
+```
+See the [SelfEval demo notebook](https://github.com/cvs-health/langfair/blob/main/examples/evaluations/text_generation/self_eval_demo/self_eval_demo.ipynb) for a complete example with a file-based hand-off between the two phases.
+
 ##### Bias and Fairness Red-Teaming
 To assess worst-case toxicity and counterfactual generations for a given use case, LangFair also offers off-the-shelf red-teaming evaluations. The following code can be used:
 ```python
@@ -176,6 +192,7 @@ Explore the following demo notebooks to see how to use LangFair for various bias
 - [Counterfactual Fairness Evaluation](https://github.com/cvs-health/langfair/blob/main/examples/evaluations/text_generation/counterfactual_metrics_demo.ipynb): A notebook illustrating how to generate counterfactual datasets and compute counterfactual fairness metrics.
 - [Stereotype Evaluation](https://github.com/cvs-health/langfair/blob/main/examples/evaluations/text_generation/stereotype_metrics_demo.ipynb): A notebook demonstrating stereotype metrics.
 - [AutoEval for Text Generation / Summarization (Toxicity, Stereotypes, Counterfactual)](https://github.com/cvs-health/langfair/blob/main/examples/evaluations/text_generation/auto_eval_demo.ipynb): A notebook illustrating how to use LangFair's `AutoEval` class for a comprehensive fairness assessment of text generation / summarization use cases. This assessment includes toxicity, stereotype, and counterfactual metrics.
+- [SelfEval with Bring-Your-Own Responses (Toxicity, Stereotypes, Counterfactual)](https://github.com/cvs-health/langfair/blob/main/examples/evaluations/text_generation/self_eval_demo/self_eval_demo.ipynb): A notebook illustrating how to use LangFair's `SelfEval` class for the same comprehensive fairness assessment as `AutoEval` when response generation is performed by the user, without a LangChain LLM.
 - [Classification Fairness Evaluation](https://github.com/cvs-health/langfair/blob/main/examples/evaluations/classification/classification_metrics_demo.ipynb): A notebook demonstrating classification fairness metrics.
 - [Recommendation Fairness Evaluation](https://github.com/cvs-health/langfair/blob/main/examples/evaluations/recommendation/recommendation_metrics_demo.ipynb): A notebook demonstrating recommendation fairness metrics.
 - [Adversarial Toxicity Evaluation](https://github.com/cvs-health/langfair/blob/main/examples/adversarial/adversarial_toxicity.ipynb): A notebook demonstrating red-teaming using adversarial toxicity prompts.

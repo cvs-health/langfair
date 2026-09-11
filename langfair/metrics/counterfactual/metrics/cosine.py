@@ -112,7 +112,7 @@ class CosineSimilarity(Metric):
             cosine_list.append(self._calc_cosine_sim(e1, e2))
             if self.progress_bar:
                 self.progress_bar.update(self.progress_bar_task, advance=1)
-        stop_progress_bar(self.progress_bar)
+        stop_progress_bar(None if existing_progress_bar else self.progress_bar)
         return np.mean(cosine_list) if self.how == "mean" else cosine_list
 
     def _calc_cosine_sim(self, embeddings1: Any, embeddings2: Any) -> List[float]:
